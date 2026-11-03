@@ -1,0 +1,17 @@
+# Local development database only.
+# The full application Dockerfiles and CI/CD are added in Lab 5.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: cpms-db
+    environment:
+      POSTGRES_USER: cpms
+      POSTGRES_PASSWORD: cpms
+      POSTGRES_DB: cpms
+    ports:
+      - "5432:5432"
+    volumes:
+      - cpms-db-data:/var/lib/postgresql/data
+
+volumes:
+  cpms-db-data:

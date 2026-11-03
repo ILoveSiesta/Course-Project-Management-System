@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+# env & secrets
+.env
+*.env
+!.env.example
+# build output
+dist/
+build/
+# logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+# test results & reports
+test-results/
+playwright-report/
+coverage/
+
+# course handouts (kept locally, not part of the product)
+/*.pdf

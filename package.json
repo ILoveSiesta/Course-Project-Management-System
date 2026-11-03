@@ -1,0 +1,23 @@
+{
+  "name": "course-project-management-system",
+  "version": "0.0.0",
+  "private": true,
+  "description": "CPE334 group project - Theme 6: Course Project Management System",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ILoveSiesta/Course-Project-Management-System.git"
+  },
+  "scripts": {
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "build": "npm run build --prefix server && npm run build --prefix client",
+    "test": "npm run test --prefix server && npm run test --prefix client",
+    "test:e2e": "playwright test",
+    "test:all": "npm run test && playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}
