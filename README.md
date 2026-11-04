@@ -76,7 +76,10 @@ npm run test:e2e   # Playwright (starts server and client automatically)
 
 1. สร้าง Issue ที่ผูกกับ feature/contract
 2. แตก branch `feature/F-XX-short-name` (หรือ `fix/...`) จาก sprint staging branch (`sprint-1`, `sprint-2`, ...)
-3. เขียน contract/test ก่อน → implement → รัน test → อัปเดต docs
+3. Commit ตามลำดับนี้ใน branch (เป็นหลักฐาน TDD):
+   1. `docs(F-XX): contract` — contract ใน `docs/sprints/sprint-N/` (ใช้ `_contract-template.md`)
+   2. `test(F-XX): ...` — test ของพฤติกรรมที่ต้องการ ซึ่งยัง fail (red)
+   3. `feat(F-XX): ...` — implement จน test ผ่าน (green) แล้วอัปเดต docs/traceability
 4. เปิด PR เข้า sprint staging — เพื่อนในทีมรีวิว (ห้าม approve PR ตัวเอง)
 5. รวม feature แล้วรัน integration/acceptance checks บน staging
 6. เปิด release PR จาก staging → `main` แล้ว tag (`v0.1.0`, ...)
@@ -84,3 +87,4 @@ npm run test:e2e   # Playwright (starts server and client automatically)
 ## Demo accounts
 
 สร้างจาก seed script ในเครื่อง (ข้อมูลสังเคราะห์เท่านั้น) — ดู `server/prisma/seed.ts`
+รายชื่อทีมและบัญชีอยู่ใน `docs/system-sds.md` หัวข้อ 2.4 ส่วนรหัสผ่านกำหนดผ่าน `SEED_DEMO_PASSWORD` ใน `server/.env` (ไม่ commit)

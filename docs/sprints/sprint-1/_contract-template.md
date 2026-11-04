@@ -1,5 +1,9 @@
 # F-XX <Feature name> — Engineering Contract
 
+> Commit this contract as the **first** commit of the feature branch (`docs(F-XX): contract`), then the failing
+> tests (`test(F-XX): ...`), then the implementation (`feat(F-XX): ...`). Revise it with a new version row
+> rather than rewriting history. After merge, add the AC and test IDs to `docs/traceability.md`.
+
 | Version | Date | Author(s) | Change |
 |---|---|---|---|
 | 0.1 | | | Initial contract |
