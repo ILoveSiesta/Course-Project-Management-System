@@ -1,9 +1,3 @@
-// Prisma schema for the Course Project Management System.
-// Your DATABASE_URL lives in server/.env
-//
-// Models are added from the approved data model in docs/system-sds.md
-// together with a migration, as part of each feature contract.
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,4 +5,53 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  SUPERVISOR
+}
+
+model User {
+  id                    Int                    @id @default(autoincrement())
+  email                 String                 @unique
+  name                  String
+  role                  Role
+  passwordHash          String
+  createdAt             DateTime               @default(now())
+  memberships           TeamMembership[]
+  supervisorAssignments SupervisorAssignment[]
+}
+
+model RevokedToken {
+  jti       String   @id
+  expiresAt DateTime
+}
+
+model Team {
+  id                    Int                    @id @default(autoincrement())
+  name                  String                 @unique
+  createdAt             DateTime               @default(now())
+  memberships           TeamMembership[]
+  supervisorAssignments SupervisorAssignment[]
+}
+
+model TeamMembership {
+  id        Int      @id @default(autoincrement())
+  teamId    Int
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  studentId Int      @unique
+  student   User     @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+}
+
+model SupervisorAssignment {
+  id           Int      @id @default(autoincrement())
+  teamId       Int
+  team         Team     @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  supervisorId Int
+  supervisor   User     @relation(fields: [supervisorId], references: [id], onDelete: Restrict)
+  createdAt    DateTime @default(now())
+
+  @@unique([teamId, supervisorId])
 }

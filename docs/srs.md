@@ -7,6 +7,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.1 | 2026-11-03 | ILoveSiesta | Document skeleton |
 | 0.2 | 2026-11-04 | ILoveSiesta | First full draft: context, actors, scope, FR/BR/NFR, assumptions, proposed decisions (pending review by phet526) |
 | 0.3 | 2026-11-04 | ILoveSiesta | D-01 changed: late submissions accepted with days late (BR-05); team management moved to Sprint 3 (D-06, FR-07); Sprint 2–3 rules reduced to one-line statements to be detailed in their sprint |
+| 0.4 | 2026-11-04 | phet526 | Decisions D-01..D-09 status updated to Agreed (D-06 confirm with TA) per PR #7 review agreement |
 
 ## 1. Stakeholder problem and context
 
@@ -139,7 +140,7 @@ Sprint = the sprint planned to implement the requirement (see `docs/sprints/plan
 | NFR-04 | Security | Sessions expire. | Access tokens expire after at most 2 hours; a token is rejected after logout | API tests with an expired token and a logged-out token | 1 |
 | NFR-05 | Reliability | API errors are safe and consistent. | All 4xx/5xx responses use `{ error: { code, message } }` and contain no stack trace or SQL text | API tests for validation, not-found and forced-error cases | 1 |
 | NFR-06 | Integrity | Concurrent submissions do not corrupt versions. | 10 parallel submissions by the same team produce unique consecutive versions, never exceeding the BR-07 limit | Integration test firing parallel requests against PostgreSQL | 1 |
-| NFR-07 | Reproducibility | A new developer can run the system from the README. | Fresh clone → running app with seed data using only README commands | Teammate follows README on a clean machine/container before each release | 1 |
+| NFR-07 | Reproducibility | A new developer can run the system from the README. | Fresh clone → running app with seed data using only README commands | Teammate run before release (manual check, #6) | 1 |
 | NFR-08 | Durability | Data survives application restart and redeployment. | Records created before a restart/redeploy are retrievable afterwards | Post-deployment check on GCP (Lab 5) | 2 |
 | NFR-09 | Delivery | Changes are checked before release. | Every PR runs build + automated tests in CI; a failing required check blocks merge | CI configuration and a demonstrated failing check (Lab 5) | 2 |
 | NFR-10 | Performance | List and report pages respond quickly with realistic data. | p95 API response ≤ 500 ms for list/report endpoints with 20 teams, 10 milestones each and 3 versions per milestone | Automated smoke test measuring response times against a seeded dataset | 3 |
@@ -159,16 +160,16 @@ Sprint = the sprint planned to implement the requirement (see `docs/sprints/plan
 
 ## 8. Decisions and open questions
 
-Status: **Proposed** = drafted by ILoveSiesta, awaiting phet526 review in the DOCS PR; **Agreed** = accepted by both; **Confirm with TA** = needs instructor/TA confirmation.
+Status: **Proposed** = drafted, awaiting review; **Agreed** = accepted by both students; **Confirm with TA** = needs instructor/TA confirmation.
 
 | ID | Question | Decision / resolution | Status | Date |
 |---|---|---|---|---|
-| D-01 | Can a team submit after the milestone deadline? | Yes. Late submissions are accepted, marked late and record days late, rounded up to whole 24-hour periods (BR-05). Sprint 1. | Agreed by ILoveSiesta; pending phet526 | 2026-11-04 |
-| D-02 | How many revisions are allowed per milestone? | Up to 3 versions per team per milestone, on time or late (BR-06, BR-07). | Proposed | 2026-11-04 |
-| D-03 | When may students see feedback and grades? | Feedback is visible to the team as soon as it is recorded. Grades are hidden until the supervisor releases them for the milestone (BR-11). | Proposed | 2026-11-04 |
-| D-04 | Can a team have more than one supervisor? | Yes. A team has one or more assigned supervisors; any of them may act on the team (BR-02). | Proposed | 2026-11-04 |
-| D-05 | Can a student be in more than one team? | No. A student belongs to at most one team (BR-10). | Proposed | 2026-11-04 |
-| D-06 | Who manages teams? (Theme 6 defines only Student and Supervisor roles; the brief says the product "manages teams" but does not name who.) | Sprint 1: teams, membership and supervisor assignments come from seed data only. Sprint 3 (planned): supervisors manage teams they supervise (FR-07). | Proposed; Confirm with TA whether a team-management UI is required | 2026-11-04 |
-| D-07 | What does a submission contain? | Title, optional description and one link; no file upload (A-03). | Proposed | 2026-11-04 |
-| D-08 | Can feedback be edited? | No. Feedback is append-only; a supervisor adds a new feedback entry to correct or extend earlier feedback (BR-09). | Proposed | 2026-11-04 |
-| D-09 | How does logout work with tokens? | Logout revokes the current token on the server so it is rejected even before it expires (FR-03, NFR-04). Details in the System SDS. | Proposed | 2026-11-04 |
+| D-01 | Can a team submit after the milestone deadline? | Yes. Late submissions are accepted, marked late and record days late, rounded up to whole 24-hour periods (BR-05). Sprint 1. | Agreed | 2026-11-04 |
+| D-02 | How many revisions are allowed per milestone? | Up to 3 versions per team per milestone, on time or late (BR-06, BR-07). | Agreed | 2026-11-04 |
+| D-03 | When may students see feedback and grades? | Feedback is visible to the team as soon as it is recorded. Grades are hidden until the supervisor releases them for the milestone (BR-11). | Agreed | 2026-11-04 |
+| D-04 | Can a team have more than one supervisor? | Yes. A team has one or more assigned supervisors; any of them may act on the team (BR-02). | Agreed | 2026-11-04 |
+| D-05 | Can a student be in more than one team? | No. A student belongs to at most one team (BR-10). | Agreed | 2026-11-04 |
+| D-06 | Who manages teams? (Theme 6 defines only Student and Supervisor roles; the brief says the product "manages teams" but does not name who.) | Sprint 1: teams, membership and supervisor assignments come from seed data only. Sprint 3 (planned): supervisors manage teams they supervise (FR-07). | Agreed; confirm with TA | 2026-11-04 |
+| D-07 | What does a submission contain? | Title, optional description and one link; no file upload (A-03). | Agreed | 2026-11-04 |
+| D-08 | Can feedback be edited? | No. Feedback is append-only; a supervisor adds a new feedback entry to correct or extend earlier feedback (BR-09). | Agreed | 2026-11-04 |
+| D-09 | How does logout work with tokens? | Logout revokes the current token on the server so it is rejected even before it expires (FR-03, NFR-04). Details in the System SDS. | Agreed | 2026-11-04 |
