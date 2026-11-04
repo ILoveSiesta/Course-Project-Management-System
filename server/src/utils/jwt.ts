@@ -1,8 +1,14 @@
 import jwt from "jsonwebtoken";
 import { randomUUID } from "crypto";
+import "./env.js";
 
-const JWT_SECRET = process.env.JWT_SECRET || "change-me-local-only";
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "2h";
+export function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("Missing required environment variable: JWT_SECRET");
+  }
+  return secret;
+}
 
 export interface TokenPayload {
   sub: number;
@@ -12,21 +18,29 @@ export interface TokenPayload {
   exp?: number;
 }
 
-export function signToken(user: { id: number; role: string }): string {
+export function signToken(
+  user: { id: number; role: string },
+  options?: { expiresIn?: string }
+): string {
   const jti = randomUUID();
+  const expiresIn = options?.expiresIn || process.env.JWT_EXPIRES_IN || "2h";
+
   return jwt.sign(
     {
       sub: user.id,
       role: user.role,
       jti,
     },
-    JWT_SECRET,
+    getJwtSecret(),
     {
-      expiresIn: JWT_EXPIRES_IN as any,
+      algorithm: "HS256",
+      expiresIn: expiresIn as any,
     }
   );
 }
 
 export function verifyToken(token: string): TokenPayload {
-  return jwt.verify(token, JWT_SECRET) as unknown as TokenPayload;
+  return jwt.verify(token, getJwtSecret(), {
+    algorithms: ["HS256"],
+  }) as unknown as TokenPayload;
 }

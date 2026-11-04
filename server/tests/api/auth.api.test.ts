@@ -1,15 +1,38 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import request from "supertest";
+import express from "express";
 import { app } from "../../src/app.js";
+import { authRouter } from "../../src/routes/auth.routes.js";
 import { getPrisma } from "../../src/prisma.js";
+import { seed } from "../../prisma/seed.js";
+import { signToken } from "../../src/utils/jwt.js";
+import { authenticate, requireRole } from "../../src/middleware/auth.js";
 import bcrypt from "bcryptjs";
 
+const DEMO_PASSWORD = process.env.SEED_DEMO_PASSWORD || "demo-password";
+
+// Test-only app to verify authenticate and requireRole middleware independently of domain routes
+const testApp = express();
+testApp.use(express.json());
+testApp.use("/api/auth", authRouter);
+testApp.get(
+  "/test/supervisor-only",
+  authenticate,
+  requireRole("SUPERVISOR"),
+  (_req, res) => res.status(200).json({ status: "ok" })
+);
+
 describe("F-01 Authentication and Team Data API", () => {
+  beforeAll(async () => {
+    // Ensure database has seeded records regardless of initial DB state
+    await seed();
+  });
+
   describe("POST /api/auth/login", () => {
     it("TEST-01-01: logs in with valid student credentials and returns a token and user profile", async () => {
       const res = await request(app)
         .post("/api/auth/login")
-        .send({ email: "student1@cpms.test", password: "demo-password" });
+        .send({ email: "student1@cpms.test", password: DEMO_PASSWORD });
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty("token");
@@ -22,7 +45,7 @@ describe("F-01 Authentication and Team Data API", () => {
     it("TEST-01-02: logs in with valid supervisor credentials and returns role SUPERVISOR", async () => {
       const res = await request(app)
         .post("/api/auth/login")
-        .send({ email: "supervisor1@cpms.test", password: "demo-password" });
+        .send({ email: "supervisor1@cpms.test", password: DEMO_PASSWORD });
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty("token");
@@ -68,7 +91,7 @@ describe("F-01 Authentication and Team Data API", () => {
     it("TEST-01-06: returns current user profile when given a valid token", async () => {
       const loginRes = await request(app)
         .post("/api/auth/login")
-        .send({ email: "student1@cpms.test", password: "demo-password" });
+        .send({ email: "student1@cpms.test", password: DEMO_PASSWORD });
 
       const token = loginRes.body.token;
 
@@ -100,13 +123,24 @@ describe("F-01 Authentication and Team Data API", () => {
       expect(res.status).toBe(401);
       expect(res.body.error.code).toBe("UNAUTHENTICATED");
     });
+
+    it("TEST-01-08b: rejects expired token with 401 UNAUTHENTICATED", async () => {
+      const expiredToken = signToken({ id: 1, role: "STUDENT" }, { expiresIn: "-1s" });
+
+      const res = await request(app)
+        .get("/api/auth/me")
+        .set("Authorization", `Bearer ${expiredToken}`);
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe("UNAUTHENTICATED");
+    });
   });
 
   describe("POST /api/auth/logout", () => {
     it("TEST-01-09: revokes the token so subsequent requests fail with 401 UNAUTHENTICATED", async () => {
       const loginRes = await request(app)
         .post("/api/auth/login")
-        .send({ email: "student1@cpms.test", password: "demo-password" });
+        .send({ email: "student1@cpms.test", password: DEMO_PASSWORD });
 
       const token = loginRes.body.token;
 
@@ -129,19 +163,33 @@ describe("F-01 Authentication and Team Data API", () => {
     it("TEST-01-10: rejects a student accessing a supervisor-only endpoint with 403 FORBIDDEN", async () => {
       const loginRes = await request(app)
         .post("/api/auth/login")
-        .send({ email: "student1@cpms.test", password: "demo-password" });
+        .send({ email: "student1@cpms.test", password: DEMO_PASSWORD });
 
-      const token = loginRes.body.token;
+      const studentToken = loginRes.body.token;
 
-      const res = await request(app)
-        .post("/api/teams/1/milestones")
-        .set("Authorization", `Bearer ${token}`)
-        .send({ title: "Forbidden Milestone", deadline: new Date(Date.now() + 86400000).toISOString() });
+      const res = await request(testApp)
+        .get("/test/supervisor-only")
+        .set("Authorization", `Bearer ${studentToken}`);
 
       expect(res.status).toBe(403);
       expect(res.body).toEqual({
         error: { code: "FORBIDDEN", message: "Forbidden" },
       });
+    });
+
+    it("TEST-01-10b: allows a supervisor accessing the supervisor-only endpoint", async () => {
+      const loginRes = await request(app)
+        .post("/api/auth/login")
+        .send({ email: "supervisor1@cpms.test", password: DEMO_PASSWORD });
+
+      const supervisorToken = loginRes.body.token;
+
+      const res = await request(testApp)
+        .get("/test/supervisor-only")
+        .set("Authorization", `Bearer ${supervisorToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ status: "ok" });
     });
   });
 
@@ -158,10 +206,10 @@ describe("F-01 Authentication and Team Data API", () => {
       }
     });
 
-    it("TEST-01-12: unique constraints prevent duplicate email and duplicate student team membership", async () => {
+    it("TEST-01-12: unique constraints prevent duplicate email, duplicate team name, duplicate student membership, and duplicate supervisor assignment", async () => {
       const prisma = getPrisma();
 
-      // Duplicate user email should fail
+      // 1. Duplicate user email
       await expect(
         prisma.user.create({
           data: {
@@ -173,7 +221,16 @@ describe("F-01 Authentication and Team Data API", () => {
         })
       ).rejects.toThrow();
 
-      // Duplicate student in team membership should fail
+      // 2. Duplicate team name
+      await expect(
+        prisma.team.create({
+          data: {
+            name: "Team Alpha",
+          },
+        })
+      ).rejects.toThrow();
+
+      // 3. Duplicate student in team membership
       const student1 = await prisma.user.findUnique({ where: { email: "student1@cpms.test" } });
       const teamBeta = await prisma.team.findUnique({ where: { name: "Team Beta" } });
 
@@ -182,6 +239,19 @@ describe("F-01 Authentication and Team Data API", () => {
           data: {
             teamId: teamBeta!.id,
             studentId: student1!.id,
+          },
+        })
+      ).rejects.toThrow();
+
+      // 4. Duplicate supervisor assignment on the same team
+      const supervisor1 = await prisma.user.findUnique({ where: { email: "supervisor1@cpms.test" } });
+      const teamAlpha = await prisma.team.findUnique({ where: { name: "Team Alpha" } });
+
+      await expect(
+        prisma.supervisorAssignment.create({
+          data: {
+            teamId: teamAlpha!.id,
+            supervisorId: supervisor1!.id,
           },
         })
       ).rejects.toThrow();

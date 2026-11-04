@@ -1,12 +1,19 @@
 import React, { useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
 
 export const Login: React.FC = () => {
-  const { login } = useAuth();
+  const { user, login } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // If already logged in, redirect to role home
+  if (user) {
+    return <Navigate to={user.role === "STUDENT" ? "/student" : "/supervisor"} replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -15,6 +22,7 @@ export const Login: React.FC = () => {
 
     try {
       await login(email, password);
+      // Let the re-render or navigate handle redirection
     } catch (err: any) {
       setError(err?.message || "Invalid email or password");
     } finally {

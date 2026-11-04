@@ -1,4 +1,8 @@
+import "./utils/env.js";
+import { validateRequiredEnv } from "./utils/env.js";
 import { app } from "./app.js";
+
+validateRequiredEnv();
 
 const PORT = Number(process.env.PORT) || 3000;
 
