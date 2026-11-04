@@ -7,7 +7,8 @@
 | Version | Date | Author(s) | Change |
 |---|---|---|---|
 | 0.1 | 2026-11-04 | phet526 | Initial contract for F-01 (Issue #2) |
-| 0.2 | 2026-11-04 | phet526 | Implemented and verified against all STS tests |
+| 0.2 | 2026-11-04 | phet526 | Implemented and verified against initial STS tests |
+| 0.3 | 2026-11-04 | phet526 | Addressed PR review: env validation without fallback, test DB auto-seed, test role guard independently, added expired token & schema constraint tests, client routing via react-router-dom |
 
 ## 1. Linked requirements
 
@@ -48,10 +49,11 @@
   - Error alert for invalid credentials or connection errors.
   - Successful login saves token to `sessionStorage` and redirects to `/student` or `/supervisor` based on role.
 - **Role-based Home Routing:**
-  - Student logged in: `/student` (shows Student Home, current user name, role, and logout button).
-  - Supervisor logged in: `/supervisor` (shows Supervisor Home, current user name, role, and logout button).
-  - Unauthenticated access to `/student` or `/supervisor` redirects to `/login`.
-  - Cross-role navigation (e.g. Student accessing `/supervisor`) redirects to the user's home screen.
+  - Implemented using `react-router-dom` with `ProtectedRoute` guards:
+    - `/login`: Form for sign-in; redirects to role dashboard if already authenticated.
+    - `/student`: Student Dashboard; redirects unauthenticated visitors to `/login` and supervisor users to `/supervisor`.
+    - `/supervisor`: Supervisor Dashboard; redirects unauthenticated visitors to `/login` and student users to `/student`.
+    - `*`: Catch-all redirect to role home (or `/login` if unauthenticated).
 - **Navigation Header:**
   - Displays user name, role badge (`Student` / `Supervisor`), and "Log out" button.
   - Clicking "Log out" calls `POST /api/auth/logout`, clears `sessionStorage`, and redirects to `/login`.
@@ -123,16 +125,20 @@ Models added to `server/prisma/schema.prisma` with migration `f01_auth_teams`:
 | `TEST-01-06` | AC-01-04 | API | Valid Bearer token | `GET /api/auth/me` | Status 200, user profile returned | `server/tests/api/auth.api.test.ts` › get current user profile |
 | `TEST-01-07` | AC-01-05 | API | Missing Authorization header | `GET /api/auth/me` | Status 401, error code `UNAUTHENTICATED` | `server/tests/api/auth.api.test.ts` › unauthenticated request rejected |
 | `TEST-01-08` | AC-01-05 | API | Malformed or invalid token | `GET /api/auth/me` | Status 401, error code `UNAUTHENTICATED` | `server/tests/api/auth.api.test.ts` › invalid token rejected |
+| `TEST-01-08b`| AC-01-05 | API | Expired token | `GET /api/auth/me` | Status 401, error code `UNAUTHENTICATED` | `server/tests/api/auth.api.test.ts` › expired token rejected |
 | `TEST-01-09` | AC-01-06 | API | Valid Bearer token | `POST /api/auth/logout`, then `GET /api/auth/me` | Logout returns 204; subsequent GET returns 401 `UNAUTHENTICATED` | `server/tests/api/auth.api.test.ts` › logout revokes token |
 | `TEST-01-10` | AC-01-07 | API | Student token | Call route with `requireRole('SUPERVISOR')` | Status 403, error code `FORBIDDEN` | `server/tests/api/auth.api.test.ts` › role guard rejects student from supervisor route |
+| `TEST-01-10b`| AC-01-07 | API | Supervisor token | Call route with `requireRole('SUPERVISOR')` | Status 200, status: ok | `server/tests/api/auth.api.test.ts` › role guard allows supervisor |
 | `TEST-01-11` | AC-01-08 | Integration | Database seeded | Check stored password hashes for seeded users | 100% bcrypt hashes with cost ≥ 10 | `server/tests/api/auth.api.test.ts` › passwords are never stored in plaintext |
-| `TEST-01-12` | AC-01-09 | Integration | Seeded database | Insert duplicate user email or student membership | Rejection by unique constraint | `server/tests/api/auth.api.test.ts` › unique constraints enforced |
-| `TEST-01-13` | AC-01-11 | UI | Client rendered | Fill login form and submit | Redirects to role home; logout redirects to login | `client/tests/Auth.test.tsx` › login and logout flow |
+| `TEST-01-12` | AC-01-09 | Integration | Seeded database | Insert duplicate email, team name, student membership, supervisor assignment | Rejection by unique constraints | `server/tests/api/auth.api.test.ts` › unique constraints enforced |
+| `TEST-01-13` | AC-01-11 | UI | Client rendered at /login | Fill student credentials and submit | Redirects to /student, renders dashboard & user info | `client/tests/Auth.test.tsx` › student login & redirect |
+| `TEST-01-13b`| AC-01-11 | UI | Client rendered at /login | Fill supervisor credentials and submit | Redirects to /supervisor, renders dashboard | `client/tests/Auth.test.tsx` › supervisor login & redirect |
+| `TEST-01-13c`| AC-01-11 | UI | Client authenticated | Click "Log out" button | Clears session token, redirects to /login | `client/tests/Auth.test.tsx` › logout clears session |
 
 ## 8. Definition of Done and evidence
 
 - [x] All AC implemented
-- [x] All STS tests executed and passing (command: `npm run build && npm test`, counts: 14 server passed, 3 client passed, 0 failed)
-- [x] TDD red → green evidence for rule work (failing commit: `020907e`, passing commit: `feat(F-01)`)
-- [ ] PR reviewed by teammate and merged into sprint staging (PR #)
+- [x] All STS tests executed and passing (command: `npm run build && npm test`, counts: 16 server passed, 5 client passed, 0 failed)
+- [x] TDD red → green evidence for rule work (failing commit: `020907e`, passing commit: `3bf1b61`, review fix commit: `d24f2c0`)
+- [ ] PR reviewed by teammate and merged into sprint staging (PR #8)
 - [x] Docs updated
