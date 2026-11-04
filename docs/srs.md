@@ -122,7 +122,7 @@ Sprint = the sprint planned to implement the requirement (see `docs/sprints/plan
 | BR-06 | Each accepted submission of a team for a milestone gets version = previous version + 1, starting at 1. Versions are never overwritten or deleted. Two simultaneous submissions never receive the same version number. | FR-12, FR-14 | 1 |
 | BR-07 | A team can have at most 3 submission versions per milestone, whether on time or late. A 4th submission is rejected and nothing is stored (D-02). | FR-14 | 1 |
 | BR-08 | A submission requires a title (1–120 characters) and an absolute `http` or `https` link (≤ 2048 characters). Description is optional (≤ 2000 characters). | FR-12, FR-14 | 1 |
-| BR-09 | Feedback belongs to exactly one submission version and cannot be edited or deleted. A later resubmission does not move, change or remove feedback on earlier versions. | FR-16, FR-17, FR-15 | 1 |
+| BR-09 | Feedback requires a comment of 1–5000 characters, belongs to exactly one submission version and cannot be edited or deleted. A later resubmission does not move, change or remove feedback on earlier versions. | FR-16, FR-17, FR-15 | 1 |
 | BR-10 | A student belongs to at most one team (D-05). | FR-05, FR-07 | 1 (seed), 3 (team management) |
 | BR-11 | Students see a grade only after the supervisor releases the milestone's grades (D-03). Grade scale and change rules to be specified in Sprint 2. | FR-18, FR-19 | 2 |
 | BR-12 | Each team–milestone has a derived status (e.g. Not submitted, Overdue, Submitted, Submitted late, Reviewed). Exact rules to be specified in Sprint 2. | FR-20–FR-22 | 2 |
