@@ -18,4 +18,8 @@ playwright-report/
 coverage/
 
 # course handouts (kept locally, not part of the product)
-/*.pdf
+/course-materials/
+
+# AI agent internal handover
+/agents.md
+/CLAUDE.md
