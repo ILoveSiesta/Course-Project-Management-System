@@ -4,13 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx --env-file=.env watch src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "tsx --env-file=.env src/index.ts",
+    "start": "tsx src/index.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "prisma:seed": "tsx --env-file=.env prisma/seed.ts",
+    "prisma:seed": "tsx prisma/seed.ts",
     "test": "vitest run"
   },
   "prisma": {

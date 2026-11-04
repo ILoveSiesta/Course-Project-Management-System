@@ -1,3 +1,4 @@
+import "../src/utils/env.js";
 import { PrismaClient, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
