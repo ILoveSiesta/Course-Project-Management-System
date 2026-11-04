@@ -1,5 +1,7 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
+import { authRouter } from "./routes/auth.routes.js";
+import { authenticate, requireRole } from "./middleware/auth.js";
 
 export const app = express();
 
@@ -11,7 +13,18 @@ app.get("/api/health", (_req: Request, res: Response) => {
   res.status(200).json({ status: "ok", service: "CPMS API" });
 });
 
-// Feature routers are mounted here as each Sprint feature is implemented.
+// Auth Routes (F-01)
+app.use("/api/auth", authRouter);
+
+// Stub for supervisor-guarded route (F-02 endpoint testing role guard)
+app.post(
+  "/api/teams/:teamId/milestones",
+  authenticate,
+  requireRole("SUPERVISOR"),
+  (_req: Request, res: Response) => {
+    res.status(201).json({ message: "Milestone created" });
+  }
+);
 
 // Unknown API routes
 app.use("/api", (_req: Request, res: Response) => {

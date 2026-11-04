@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import request from "supertest";
 import { app } from "../../src/app.js";
+import { getPrisma } from "../../src/prisma.js";
+import bcrypt from "bcryptjs";
 
 describe("F-01 Authentication and Team Data API", () => {
   describe("POST /api/auth/login", () => {
@@ -131,7 +133,6 @@ describe("F-01 Authentication and Team Data API", () => {
 
       const token = loginRes.body.token;
 
-      // Call a supervisor-guarded route (e.g. POST /api/teams/:id/milestones or dedicated test route)
       const res = await request(app)
         .post("/api/teams/1/milestones")
         .set("Authorization", `Bearer ${token}`)
@@ -141,6 +142,49 @@ describe("F-01 Authentication and Team Data API", () => {
       expect(res.body).toEqual({
         error: { code: "FORBIDDEN", message: "Forbidden" },
       });
+    });
+  });
+
+  describe("Data security and constraints (NFR-01, BR-10)", () => {
+    it("TEST-01-11: stored user passwords are always bcrypt hashes with cost factor >= 10", async () => {
+      const prisma = getPrisma();
+      const users = await prisma.user.findMany();
+      expect(users.length).toBeGreaterThan(0);
+
+      for (const u of users) {
+        expect(u.passwordHash).toMatch(/^\$2[aby]\$\d{2}\$/);
+        const rounds = bcrypt.getRounds(u.passwordHash);
+        expect(rounds).toBeGreaterThanOrEqual(10);
+      }
+    });
+
+    it("TEST-01-12: unique constraints prevent duplicate email and duplicate student team membership", async () => {
+      const prisma = getPrisma();
+
+      // Duplicate user email should fail
+      await expect(
+        prisma.user.create({
+          data: {
+            email: "student1@cpms.test",
+            name: "Duplicate Student",
+            role: "STUDENT",
+            passwordHash: "$2a$10$abcdefghijklmnopqrstuvwxyz123456",
+          },
+        })
+      ).rejects.toThrow();
+
+      // Duplicate student in team membership should fail
+      const student1 = await prisma.user.findUnique({ where: { email: "student1@cpms.test" } });
+      const teamBeta = await prisma.team.findUnique({ where: { name: "Team Beta" } });
+
+      await expect(
+        prisma.teamMembership.create({
+          data: {
+            teamId: teamBeta!.id,
+            studentId: student1!.id,
+          },
+        })
+      ).rejects.toThrow();
     });
   });
 });
