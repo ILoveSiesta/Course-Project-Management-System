@@ -108,7 +108,7 @@ export const SupervisorTeam: React.FC = () => {
 
           <section className="card">
             <h3>Milestones</h3>
-            <MilestoneList milestones={milestones} />
+            <MilestoneList milestones={milestones} linkPrefix="/supervisor/milestones" />
           </section>
 
           <section className="card">

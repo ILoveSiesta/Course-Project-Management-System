@@ -22,6 +22,7 @@ model User {
   memberships           TeamMembership[]
   supervisorAssignments SupervisorAssignment[]
   milestonesCreated     Milestone[]            @relation("MilestoneCreatedBy")
+  submissions           Submission[]
 }
 
 model RevokedToken {
@@ -59,15 +60,33 @@ model SupervisorAssignment {
 }
 
 model Milestone {
-  id          Int      @id @default(autoincrement())
+  id          Int          @id @default(autoincrement())
   teamId      Int
-  team        Team     @relation(fields: [teamId], references: [id], onDelete: Restrict)
-  title       String   @db.VarChar(120)
-  description String?  @db.VarChar(2000)
-  deadline    DateTime @db.Timestamptz(3)
+  team        Team         @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  title       String       @db.VarChar(120)
+  description String?      @db.VarChar(2000)
+  deadline    DateTime     @db.Timestamptz(3)
   createdById Int
-  createdBy   User     @relation("MilestoneCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  createdBy   User         @relation("MilestoneCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
+  submissions Submission[]
 
   @@index([teamId, deadline])
+}
+
+model Submission {
+  id            Int       @id @default(autoincrement())
+  milestoneId   Int
+  milestone     Milestone @relation(fields: [milestoneId], references: [id], onDelete: Restrict)
+  submittedById Int
+  submittedBy   User      @relation(fields: [submittedById], references: [id], onDelete: Restrict)
+  version       Int
+  title         String    @db.VarChar(120)
+  description   String?   @db.VarChar(2000)
+  link          String    @db.VarChar(2048)
+  submittedAt   DateTime  @default(now()) @db.Timestamptz(3)
+  daysLate      Int
+
+  @@unique([milestoneId, version])
+  @@index([milestoneId, submittedAt])
 }

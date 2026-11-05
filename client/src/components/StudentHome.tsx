@@ -46,7 +46,7 @@ export const StudentHome: React.FC = () => {
           <TeamSummary team={team} />
           <section className="card">
             <h3>Milestones</h3>
-            <MilestoneList milestones={milestones} />
+            <MilestoneList milestones={milestones} linkPrefix="/student/milestones" />
           </section>
         </>
       )}

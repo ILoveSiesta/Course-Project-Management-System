@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { authRouter } from "./routes/auth.routes.js";
-import { teamsRouter, milestonesRouter } from "./routes/teams.routes.js";
+import { teamsRouter, milestonesRouter, submissionsRouter } from "./routes/teams.routes.js";
 import { HttpError } from "./utils/httpError.js";
 
 export const app = express();
@@ -17,9 +17,10 @@ app.get("/api/health", (_req: Request, res: Response) => {
 // Auth Routes (F-01)
 app.use("/api/auth", authRouter);
 
-// Teams and milestones (F-02)
+// Teams, milestones and submissions (F-02, F-03)
 app.use("/api/teams", teamsRouter);
 app.use("/api/milestones", milestonesRouter);
+app.use("/api/submissions", submissionsRouter);
 
 // Unknown API routes
 app.use("/api", (_req: Request, res: Response) => {
