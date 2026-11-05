@@ -6,6 +6,7 @@
 | 0.2 | 2026-11-04 | ILoveSiesta | Every FR/BR/NFR in SRS v0.3 mapped to a feature or system responsibility and a sprint |
 | 0.3 | 2026-11-04 | phet526 | Updated F-01 test executions and verification results (PASS on feature/F-01-auth) |
 | 0.4 | 2026-11-04 | phet526 | Updated test references and exact commit SHA (d24f2c0) per PR #8 review |
+| 0.5 | 2026-11-05 | ILoveSiesta | F-02 AC/tests and results (commit b97f30d) |
 
 Feature and responsibility IDs refer to `docs/features.md`.
 
@@ -24,11 +25,11 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | FR-02 Current user | F-01 | 1 | AC-01-04, AC-01-05 | TEST-01-06..08b | `server/tests/api/auth.api.test.ts` | PASS | `d24f2c0` |
 | FR-03 Logout revokes token | F-01 | 1 | AC-01-06 | TEST-01-09 | `server/tests/api/auth.api.test.ts` | PASS | `d24f2c0` |
 | FR-04 Role-based home | F-01 | 1 | AC-01-11 | TEST-01-13..13c; E2E (#6) | `client/tests/Auth.test.tsx` | PASS | `d24f2c0` |
-| FR-05 Student views own team | F-02 | 1 | F-02 contract | F-02 STS | — | PLANNED | — |
-| FR-06 Supervisor lists assigned teams | F-02 | 1 | F-02 contract | F-02 STS | — | PLANNED | — |
+| FR-05 Student views own team | F-02 | 1 | AC-02-01, AC-02-11 | TEST-02-01, TEST-02-12 | `server/tests/api/teams-milestones.api.test.ts`; `client/tests/Milestones.test.tsx` | PASS | `b97f30d` |
+| FR-06 Supervisor lists assigned teams | F-02 | 1 | AC-02-02 | TEST-02-02 | `server/tests/api/teams-milestones.api.test.ts` | PASS | `b97f30d` |
 | FR-07 Team management | F-13 | 3 | Sprint 3 contract | — | — | PLANNED | — |
-| FR-08 Create milestone | F-02 | 1 | F-02 contract | F-02 STS; E2E (#6) | — | PLANNED | — |
-| FR-09 List milestones | F-02 | 1 | F-02 contract | F-02 STS | — | PLANNED | — |
+| FR-08 Create milestone | F-02 | 1 | AC-02-05, AC-02-12 | TEST-02-05, TEST-02-14; E2E (#6) | `server/tests/api/teams-milestones.api.test.ts`; `client/tests/Milestones.test.tsx` | PASS (E2E planned) | `b97f30d` |
+| FR-09 List milestones | F-02 | 1 | AC-02-09, AC-02-10, AC-02-11 | TEST-02-09, TEST-02-10, TEST-02-12, TEST-02-13 | `server/tests/api/teams-milestones.api.test.ts`; `client/tests/Milestones.test.tsx` | PASS | `b97f30d` |
 | FR-10 Edit / extend milestone | F-05 | 2 | Sprint 2 contract | — | — | PLANNED | — |
 | FR-11 Milestone for several teams | F-06 | 2 | Sprint 2 contract | — | — | PLANNED | — |
 | FR-12 Submit work | F-03 | 1 | F-03 contract | F-03 STS; E2E (#6) | — | PLANNED | — |
@@ -48,10 +49,10 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 
 | Requirement | Feature / responsibility | Sprint | AC / verification | Planned test | Actual test | Result | Version |
 |---|---|---|---|---|---|---|---|
-| BR-01 Student scope: own team | SR-01; F-02, F-03, F-04 | 1 (re-verified each sprint) | Cross-team access AC in F-02–F-04 contracts | F-02–F-04 STS | — | PLANNED | — |
-| BR-02 Supervisor scope: assigned teams | SR-01; F-02, F-03, F-04 | 1 (re-verified each sprint) | Unassigned-supervisor AC in F-02–F-04 contracts | F-02–F-04 STS | — | PLANNED | — |
-| BR-03 Supervisor-only operations | SR-01; F-02, F-04 (Sprint 1); F-05, F-06, F-08, F-13 (later) | 1 | AC-01-07; Student → 403 in F-02, F-04 contracts | TEST-01-10; F-02, F-04 STS | `server/tests/api/auth.api.test.ts` | PASS (F-01 guard) | `d24f2c0` |
-| BR-04 Milestone validation, future deadline | F-02 (F-06 later) | 1 | F-02 contract | F-02 STS | — | PLANNED | — |
+| BR-01 Student scope: own team | SR-01; F-02, F-03, F-04 | 1 (re-verified each sprint) | AC-02-03, AC-02-09, AC-02-10; F-03, F-04 contracts | TEST-02-03, TEST-02-09, TEST-02-10; F-03, F-04 STS | `server/tests/api/teams-milestones.api.test.ts` | PASS (F-02 endpoints) | `b97f30d` |
+| BR-02 Supervisor scope: assigned teams | SR-01; F-02, F-03, F-04 | 1 (re-verified each sprint) | AC-02-02, AC-02-03, AC-02-06, AC-02-10; F-03, F-04 contracts | TEST-02-02, TEST-02-03, TEST-02-06, TEST-02-10; F-03, F-04 STS | `server/tests/api/teams-milestones.api.test.ts` | PASS (F-02 endpoints) | `b97f30d` |
+| BR-03 Supervisor-only operations | SR-01; F-02, F-04 (Sprint 1); F-05, F-06, F-08, F-13 (later) | 1 | AC-01-07, AC-02-07; F-04 contract | TEST-01-10, TEST-02-07; F-04 STS | `server/tests/api/auth.api.test.ts`; `server/tests/api/teams-milestones.api.test.ts` | PASS (F-01 guard, F-02 create) | `b97f30d` |
+| BR-04 Milestone validation, future deadline | F-02 (F-06 later) | 1 | AC-02-08 | TEST-02-08, TEST-02-11, TEST-02-15 | `server/tests/api/teams-milestones.api.test.ts`; `server/tests/unit/milestone-validation.test.ts`; `client/tests/Milestones.test.tsx` | PASS | `b97f30d` |
 | BR-05 Late flag and days late | F-03 | 1 | F-03 contract | F-03 STS (unit + API) | — | PLANNED | — |
 | BR-06 Sequential, unique versions | F-03 | 1 | F-03 contract | F-03 STS | — | PLANNED | — |
 | BR-07 Max 3 versions | F-03 | 1 | F-03 contract | F-03 STS; E2E rejection (#6) | — | PLANNED | — |
@@ -68,8 +69,8 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | Requirement | Feature / responsibility | Sprint | Target / verification | Planned test | Actual test | Result | Version |
 |---|---|---|---|---|---|---|---|
 | NFR-01 Hashed passwords | F-01 | 1 | 100% bcrypt hashes, cost ≥ 10 | TEST-01-11 | `server/tests/api/auth.api.test.ts` | PASS | `d24f2c0` |
-| NFR-02 401 on protected endpoints | SR-01 | 1 (extended each sprint) | Every protected endpoint, 4 token cases | TEST-01-07, TEST-01-08, TEST-01-08b | `server/tests/api/auth.api.test.ts` | PASS (F-01 routes) | `d24f2c0` |
-| NFR-03 Backend authorization | SR-01 | 1 (extended each sprint) | 403/404, no data | TEST-01-10; F-02–F-04 STS | `server/tests/api/auth.api.test.ts` | PASS (F-01 guards) | `d24f2c0` |
+| NFR-02 401 on protected endpoints | SR-01 | 1 (extended each sprint) | Every protected endpoint, 4 token cases | TEST-01-07, TEST-01-08, TEST-01-08b, TEST-02-04 | `server/tests/api/auth.api.test.ts`; `server/tests/api/teams-milestones.api.test.ts` | PASS (F-01, F-02 endpoints) | `b97f30d` |
+| NFR-03 Backend authorization | SR-01 | 1 (extended each sprint) | 403/404, no data | TEST-01-10, TEST-02-03, TEST-02-06, TEST-02-07, TEST-02-10; F-03, F-04 STS | `server/tests/api/auth.api.test.ts`; `server/tests/api/teams-milestones.api.test.ts` | PASS (F-01, F-02) | `b97f30d` |
 | NFR-04 Token expiry and logout | F-01 | 1 | ≤ 2 h; revoked after logout | TEST-01-09, TEST-01-08b | `server/tests/api/auth.api.test.ts` | PASS | `d24f2c0` |
 | NFR-05 Safe error shape | SR-02 | 1 | JSON shape, no internals | Skeleton test `server/tests/health.api.test.ts` (404 case); F-01–F-04 STS | `health.api.test.ts` › unknown API route | PASS (404 case only) | `49d3c70` |
 | NFR-06 Concurrent submissions | F-03 | 1 | 10 parallel → unique versions, limit kept | F-03 STS (integration) | — | PLANNED | — |
@@ -78,13 +79,14 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | NFR-09 CI quality gate | SR-03 | 2 | Failing check blocks merge | CI run evidence (Lab 5) | — | PLANNED | — |
 | NFR-10 Response time | SR-05 (with F-11) | 3 | p95 ≤ 500 ms on seeded dataset | Sprint 3 smoke test | — | PLANNED | — |
 | NFR-11 Responsive UI | SR-06 | 3 | 375 px and 1280 px | Sprint 3 Playwright viewports | — | PLANNED | — |
-| NFR-12 Understandable rejections | SR-02 | 1 (extended each sprint) | Reason shown for every rejection | E2E rejection journey (#6) | — | PLANNED | — |
+| NFR-12 Understandable rejections | SR-02 | 1 (extended each sprint) | Reason shown for every rejection | TEST-02-15 (milestone validation messages); E2E rejection journey (#6) | `client/tests/Milestones.test.tsx` | PASS (F-02 form); E2E PLANNED | `b97f30d` |
 
 ## 4. Coverage gaps
 
 - No requirement is unallocated: all 23 FR, 14 BR and 12 NFR map to a feature or system responsibility and a sprint.
 - F-01 AC and tests are implemented and passing on commit `d24f2c0`.
-- Sprint 1 features F-02–F-04 and E2E #6 will add their AC and tests in their respective branches.
+- F-02 AC and tests are implemented and passing on commit `b97f30d` (server tests on the separate `cpms_test` database).
+- Sprint 1 features F-03, F-04 and E2E #6 will add their AC and tests in their respective branches.
 - Sprint 2–3 requirements have a feature and sprint but no AC or tests yet; this is expected at Deliverable 1.
 - NFR-05 is partly verified (404 and F-01 validation/auth error shapes). 5xx cases come with later features.
 - F-13 / FR-07 depends on D-06; if the TA confirms that no team-management UI is required, FR-07 will be revised as an approved change below.

@@ -7,6 +7,7 @@
 | Version | Date | Author(s) | Change |
 |---|---|---|---|
 | 0.1 | 2026-11-05 | ILoveSiesta | Initial contract for F-02 (issue #3) |
+| 0.2 | 2026-11-05 | ILoveSiesta | Definition of Done filled with executed results; no behaviour change |
 
 ## 1. Linked requirements
 
@@ -131,8 +132,8 @@ Index `(teamId, deadline)`. Back-relations: `Team.milestones`, `User.milestonesC
 
 ## 8. Definition of Done and evidence
 
-- [ ] All AC-02-01..AC-02-12 implemented
-- [ ] All STS tests executed and passing on a fresh database (command, counts, commit recorded in the PR)
-- [ ] TDD red → green: failing-test commit and implementation commit identified by SHA
-- [ ] `docs/traceability.md`, `docs/features.md`, sprint-1 README updated
+- [x] All AC-02-01..AC-02-12 implemented
+- [x] All STS tests executed and passing on a fresh database — `npm run build && npm test` on `b97f30d`: server 32 passed (F-02: 10 API + 6 unit), client 9 passed (F-02: 4), 0 failed, 0 skipped; E2E smoke 1/1
+- [x] TDD red → green: failing tests `9de3700` (server 10 failed + unit file failed to load, client 4 failed) → implementation `b97f30d` (all pass)
+- [x] `docs/traceability.md`, `docs/features.md`, sprint-1 README updated
 - [ ] PR reviewed by phet526 and merged into `sprint-1`
