@@ -156,8 +156,8 @@ Constraints:
 
 ## 8. Definition of Done and evidence
 
-- [ ] All AC-03-01..AC-03-13 implemented
-- [ ] All STS tests executed and passing on a fresh test database (counts recorded)
-- [ ] TDD red → green: failing commit SHA → passing commit SHA
-- [ ] `docs/traceability.md`, `docs/features.md`, sprint-1 README updated
+- [x] All AC-03-01..AC-03-13 implemented
+- [x] All STS tests executed and passing on a fresh test database — `npm run build && npm test` on `65aaf05`: server 59 passed (F-03: 13 API + 14 unit), client 12 passed (F-03: 3 UI), 0 failed, 0 skipped; E2E smoke 1/1
+- [x] TDD red → green: failing tests `cace581` (server 13 failed + unit file failed to load, client 3 failed) → implementation `65aaf05` (all pass)
+- [x] `docs/traceability.md`, `docs/features.md`, sprint-1 README updated
 - [ ] PR reviewed by ILoveSiesta and merged into `sprint-1`

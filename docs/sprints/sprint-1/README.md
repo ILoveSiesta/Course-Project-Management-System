@@ -7,7 +7,7 @@ Copy [`_contract-template.md`](_contract-template.md) to start a feature.
 |---|---|---|---|
 | F-01 Authentication and team data | [`F-01-auth.md`](F-01-auth.md) | #2 | Implemented |
 | F-02 Team view and milestone creation | [`F-02-milestone.md`](F-02-milestone.md) | #3 | Implemented |
-| F-03 Submission and versions | [`F-03-submission.md`](F-03-submission.md) | #4 | In progress |
+| F-03 Submission and versions | [`F-03-submission.md`](F-03-submission.md) | #4 | Implemented |
 | F-04 Feedback | `F-04-feedback.md` | #5 | Planned |
 
 ## Product Definition of Done

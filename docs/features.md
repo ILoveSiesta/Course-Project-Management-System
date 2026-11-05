@@ -6,6 +6,7 @@
 | 0.2 | 2026-11-04 | ILoveSiesta | Full inventory for Sprints 1–3 based on SRS v0.3 and SDS v0.2 |
 | 0.3 | 2026-11-04 | phet526 | F-01 status updated to Implemented |
 | 0.4 | 2026-11-05 | ILoveSiesta | F-02 status updated to Implemented |
+| 0.5 | 2026-11-06 | phet526 | F-03 status updated to Implemented |
 
 Requirement IDs refer to `docs/srs.md`. Sprint 1 features have GitHub issues and engineering contracts in
 `docs/sprints/sprint-1/`. Sprint 2–3 features are allocated now and specified in their sprint.
@@ -18,7 +19,7 @@ Status values: **Planned** · **In progress** · **Implemented** · **Tested** �
 |---|---|---|---|---|---|---|---|
 | F-01 | Authentication and team data | Login, logout, current user, role guard; models User, Team, TeamMembership, SupervisorAssignment, RevokedToken; seed data | FR-01–FR-04, BR-10 (seed), NFR-01, NFR-04 | — | 1 | #2 | Implemented |
 | F-02 | Team view and milestone creation | Student sees own team; supervisor lists assigned teams; supervisor creates milestones for assigned teams; milestone lists | FR-05, FR-06, FR-08, FR-09, BR-01–BR-04 | F-01 | 1 | #3 | Implemented |
-| F-03 | Submission and versions | Student submits title/description/link; resubmission creates versions (max 3); late flag and days late; view submissions | FR-12–FR-14, BR-01, BR-02, BR-05–BR-08, NFR-06 | F-02 | 1 | #4 | Planned |
+| F-03 | Submission and versions | Student submits title/description/link; resubmission creates versions (max 3); late flag and days late; view submissions | FR-12–FR-14, BR-01, BR-02, BR-05–BR-08, NFR-06 | F-02 | 1 | #4 | Implemented |
 | F-04 | Feedback | Supervisor records append-only feedback on a submission version; team sees feedback | FR-16, FR-17, BR-01–BR-03, BR-09 | F-03 | 1 | #5 | Planned |
 | F-05 | Milestone editing and deadline extension | Edit title/description; extend deadline only | FR-10, BR-13 | F-02 | 2 | — | Planned |
 | F-06 | Milestone for several teams | Create the same milestone for several assigned teams in one action | FR-11, BR-04 | F-02 | 2 | — | Planned |
