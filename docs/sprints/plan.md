@@ -4,6 +4,7 @@
 |---|---|---|---|
 | 0.1 | 2026-11-03 | | Document skeleton |
 | 0.2 | 2026-11-04 | ILoveSiesta | Sprint goals, feature allocation, dependencies and outcomes based on `docs/features.md` v0.2 |
+| 0.3 | 2026-11-05 | ILoveSiesta | Shared UI styling added to Sprint 1 inside #3 F-02 (CHG-01); no change to sprint goals or feature allocation |
 
 Feature IDs refer to `docs/features.md`; requirement IDs to `docs/srs.md`.
 
@@ -39,7 +40,7 @@ Work alternates between the two students in issue order; the other student revie
 |---|---|---|---|---|---|
 | 1 | #1 DOCS baseline | `docs/sprint-1-baseline` | ILoveSiesta | phet526 | — |
 | 2 | #2 F-01 Authentication and team data | `feature/F-01-auth` | phet526 | ILoveSiesta | #1 merged |
-| 3 | #3 F-02 Team view and milestone creation | `feature/F-02-milestone` | ILoveSiesta | phet526 | #2 merged |
+| 3 | #3 F-02 Team view and milestone creation, plus shared UI styling (CHG-01) | `feature/F-02-milestone` | ILoveSiesta | phet526 | #2 merged |
 | 4 | #4 F-03 Submission and versions | `feature/F-03-submission` | phet526 | ILoveSiesta | #3 merged |
 | 5 | #5 F-04 Feedback | `feature/F-04-feedback` | ILoveSiesta | phet526 | #4 merged |
 | 6 | #6 E2E journeys + release checklist | `test/sprint-1-e2e` | phet526 | ILoveSiesta | #5 merged |

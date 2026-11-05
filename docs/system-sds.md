@@ -6,6 +6,7 @@ Course Project Management System — CPE334 Theme 6
 |---|---|---|---|
 | 0.1 | 2026-11-03 | | Document skeleton |
 | 0.2 | 2026-11-04 | ILoveSiesta | First full draft (Sprint 1 in detail, Sprint 2–3 direction only), based on SRS v0.3. Owner of this document per issue #1: ILoveSiesta; reviewer: phet526 |
+| 0.3 | 2026-11-05 | ILoveSiesta | §3.2: shared visual style (`client/src/theme.css`) brought into Sprint 1 — change CHG-01 in `docs/traceability.md` §5 |
 
 Requirement IDs (FR/BR/NFR/D) refer to `docs/srs.md`. Feature contracts in `docs/sprints/sprint-N/` give the
 exact endpoint request/response shapes; this document defines the shared structure and conventions they follow.
@@ -160,6 +161,7 @@ other role redirects to the user's own home.
 | 401 from any call | Clear the token and go to `/login` with "Your session has ended" |
 | 403 / 404 | A "Not found or not allowed" page; never shows partial data |
 | Times | Displayed in Asia/Bangkok with the zone shown (A-04) |
+| Visual style | One shared stylesheet, `client/src/theme.css`, defines colour tokens, typography and reusable classes (app header/main/footer, `card`, `badge`, `form-field` with `has-error`, `field-error`, `btn`/`btn-secondary`, `alert`, `empty-state`, `milestone-list`). Components use these classes, not inline styles, so every feature looks consistent. Responsive verification at 375 px / 1280 px remains Sprint 3 (SR-06, NFR-11). |
 
 ## 4. API conventions
 

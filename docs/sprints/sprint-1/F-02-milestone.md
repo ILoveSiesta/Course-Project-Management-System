@@ -8,6 +8,7 @@
 |---|---|---|---|
 | 0.1 | 2026-11-05 | ILoveSiesta | Initial contract for F-02 (issue #3) |
 | 0.2 | 2026-11-05 | ILoveSiesta | Definition of Done filled with executed results; no behaviour change |
+| 0.3 | 2026-11-05 | ILoveSiesta | §3: screens use the shared stylesheet (CHG-01); no behaviour, text or test change |
 
 ## 1. Linked requirements
 
@@ -47,6 +48,7 @@
 - Field error texts: `REQUIRED` → "Required"; `TOO_LONG` → "Too long (max N characters)"; `INVALID_DATE` → "Invalid date"; `MUST_BE_FUTURE` → "Deadline must be in the future".
 - A `401` from any F-02 call logs the user out (token cleared) and returns to `/login` (SDS §3.2).
 - Students have no create form, and there is no student route to a supervisor screen. This is only for usability; the API enforces BR-03.
+- Styling (CHG-01): all screens use the shared classes in `client/src/theme.css` (SDS §3.2): app header with brand, user name, role badge and Log out; content in cards; field errors shown in red under the input with a red border. The F-01 login and header move to the same style.
 
 ## 4. API specification
 
