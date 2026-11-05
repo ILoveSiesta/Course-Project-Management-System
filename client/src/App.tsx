@@ -20,13 +20,13 @@ export function AppRoutes() {
   }, []);
 
   return (
-    <main>
-      <Header />
-      <div style={{ padding: "10px 20px" }}>
-        <h1>Course Project Management System</h1>
-        <p data-testid="api-status">API: {status}</p>
-      </div>
+    <>
+      <header className="app-header">
+        <h1 className="app-brand">Course Project Management System</h1>
+        <Header />
+      </header>
 
+      <main className="app-main">
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route
@@ -63,7 +63,12 @@ export function AppRoutes() {
           }
         />
       </Routes>
-    </main>
+      </main>
+
+      <footer className="app-footer">
+        <span data-testid="api-status">API: {status}</span>
+      </footer>
+    </>
   );
 }
 

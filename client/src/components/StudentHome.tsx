@@ -35,16 +35,16 @@ export const StudentHome: React.FC = () => {
   }, [token]); // logout is recreated each render; it is only called on 401
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>Student Dashboard</h2>
-      <p>Welcome, {user?.name}!</p>
-      {isLoading && <p>Loading…</p>}
-      {error && <p role="alert">{error}</p>}
-      {!isLoading && !error && !team && <p>You are not assigned to a team yet.</p>}
+    <div>
+      <h2 className="page-title">Student Dashboard</h2>
+      <p className="page-subtitle">Welcome, {user?.name}!</p>
+      {isLoading && <p className="loading">Loading…</p>}
+      {error && <p role="alert" className="alert">{error}</p>}
+      {!isLoading && !error && !team && <p className="empty-state">You are not assigned to a team yet.</p>}
       {team && (
         <>
           <TeamSummary team={team} />
-          <section style={{ marginTop: "20px" }}>
+          <section className="card">
             <h3>Milestones</h3>
             <MilestoneList milestones={milestones} />
           </section>

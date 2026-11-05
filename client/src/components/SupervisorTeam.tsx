@@ -91,45 +91,46 @@ export const SupervisorTeam: React.FC = () => {
   };
 
   const errorFor = (field: string) =>
-    fieldErrors[field] && (
-      <div style={{ color: "#b00020", fontSize: "0.9em" }}>{fieldMessage(field, fieldErrors[field])}</div>
-    );
+    fieldErrors[field] && <div className="field-error">{fieldMessage(field, fieldErrors[field])}</div>;
+
+  const fieldClass = (field: string) => `form-field${fieldErrors[field] ? " has-error" : ""}`;
 
   return (
-    <div style={{ padding: "20px" }}>
-      <Link to="/supervisor">← My teams</Link>
-      {isLoading && <p>Loading…</p>}
-      {loadError && <p role="alert">{loadError}</p>}
+    <div>
+      <p>
+        <Link to="/supervisor">← My teams</Link>
+      </p>
+      {isLoading && <p className="loading">Loading…</p>}
+      {loadError && <p role="alert" className="alert">{loadError}</p>}
       {team && (
         <>
           <TeamSummary team={team} />
 
-          <section style={{ marginTop: "20px" }}>
+          <section className="card">
             <h3>Milestones</h3>
             <MilestoneList milestones={milestones} />
           </section>
 
-          <section style={{ marginTop: "20px", maxWidth: "480px" }}>
+          <section className="card">
             <h3>New milestone</h3>
-            {formError && <p role="alert">{formError}</p>}
+            {formError && <p role="alert" className="alert">{formError}</p>}
             <form onSubmit={handleSubmit} noValidate>
-              <div style={{ marginBottom: "10px" }}>
-                <label htmlFor="milestone-title" style={{ display: "block" }}>Title</label>
-                <input id="milestone-title" value={title} onChange={(e) => setTitle(e.target.value)} style={{ width: "100%" }} />
+              <div className={fieldClass("title")}>
+                <label htmlFor="milestone-title">Title</label>
+                <input id="milestone-title" value={title} onChange={(e) => setTitle(e.target.value)} />
                 {errorFor("title")}
               </div>
-              <div style={{ marginBottom: "10px" }}>
-                <label htmlFor="milestone-description" style={{ display: "block" }}>Description</label>
+              <div className={fieldClass("description")}>
+                <label htmlFor="milestone-description">Description</label>
                 <textarea
                   id="milestone-description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  style={{ width: "100%" }}
                 />
                 {errorFor("description")}
               </div>
-              <div style={{ marginBottom: "10px" }}>
-                <label htmlFor="milestone-deadline" style={{ display: "block" }}>Deadline</label>
+              <div className={fieldClass("deadline")}>
+                <label htmlFor="milestone-deadline">Deadline</label>
                 <input
                   id="milestone-deadline"
                   type="datetime-local"
@@ -138,7 +139,7 @@ export const SupervisorTeam: React.FC = () => {
                 />
                 {errorFor("deadline")}
               </div>
-              <button type="submit" disabled={isSaving}>
+              <button type="submit" className="btn" disabled={isSaving}>
                 {isSaving ? "Saving…" : "Create milestone"}
               </button>
             </form>

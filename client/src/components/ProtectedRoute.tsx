@@ -11,7 +11,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div data-testid="auth-loading" style={{ padding: "20px" }}>Loading session...</div>;
+    return <p data-testid="auth-loading" className="loading">Loading session...</p>;
   }
 
   if (!user) {

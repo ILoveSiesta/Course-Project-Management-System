@@ -27,20 +27,26 @@ export const SupervisorHome: React.FC = () => {
   }, [token]); // logout is recreated each render; it is only called on 401
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>Supervisor Dashboard</h2>
-      <p>Welcome, {user?.name}!</p>
+    <div>
+      <h2 className="page-title">Supervisor Dashboard</h2>
+      <p className="page-subtitle">Welcome, {user?.name}!</p>
       <h3>My teams</h3>
-      {isLoading && <p>Loading…</p>}
-      {error && <p role="alert">{error}</p>}
-      {!isLoading && !error && teams.length === 0 && <p>You are not assigned to any team yet.</p>}
-      {teams.map((team) => (
-        <section key={team.id} style={{ marginTop: "15px", padding: "15px", border: "1px solid #e0e0e0", borderRadius: "6px" }}>
-          <h4 style={{ marginTop: 0 }}>{team.name}</h4>
-          <p>Members: {team.members.map((m) => m.name).join(", ") || "None"}</p>
-          <Link to={`/supervisor/teams/${team.id}`}>Open team</Link>
-        </section>
-      ))}
+      {isLoading && <p className="loading">Loading…</p>}
+      {error && <p role="alert" className="alert">{error}</p>}
+      {!isLoading && !error && teams.length === 0 && (
+        <p className="empty-state">You are not assigned to any team yet.</p>
+      )}
+      <div className="card-grid">
+        {teams.map((team) => (
+          <section key={team.id} className="card">
+            <h4>{team.name}</h4>
+            <p className="muted">Members: {team.members.map((m) => m.name).join(", ") || "None"}</p>
+            <Link className="btn" to={`/supervisor/teams/${team.id}`}>
+              Open team
+            </Link>
+          </section>
+        ))}
+      </div>
     </div>
   );
 };
