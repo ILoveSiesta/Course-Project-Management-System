@@ -41,6 +41,85 @@ export async function getMeApi(token: string): Promise<{ user: UserProfile }> {
   return data;
 }
 
+// --- F-02: teams and milestones ---
+
+export interface Person {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export interface Team {
+  id: number;
+  name: string;
+  members: Person[];
+  supervisors: Person[];
+}
+
+export interface Milestone {
+  id: number;
+  teamId: number;
+  title: string;
+  description: string | null;
+  deadline: string;
+  createdAt: string;
+  createdBy: { id: number; name: string };
+}
+
+export interface MilestoneDraft {
+  title: string;
+  description: string;
+  deadline: string;
+}
+
+// Error from the API with its status, code and per-field details (SDS §4).
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public code: string,
+    message: string,
+    public details: Record<string, string> = {}
+  ) {
+    super(message);
+  }
+}
+
+async function apiRequest<T>(token: string, path: string, init: RequestInit = {}): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    ...init,
+    headers: { Authorization: `Bearer ${token}`, ...(init.body ? { "Content-Type": "application/json" } : {}) },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = data?.error ?? {};
+    throw new ApiError(res.status, err.code ?? "UNKNOWN", err.message ?? "Request failed", err.details);
+  }
+  return data as T;
+}
+
+export async function getTeamsApi(token: string): Promise<Team[]> {
+  const data = await apiRequest<{ teams?: Team[] }>(token, "/teams");
+  return data.teams ?? [];
+}
+
+export async function getTeamApi(token: string, teamId: number): Promise<Team> {
+  const data = await apiRequest<{ team: Team }>(token, `/teams/${teamId}`);
+  return data.team;
+}
+
+export async function getTeamMilestonesApi(token: string, teamId: number): Promise<Milestone[]> {
+  const data = await apiRequest<{ milestones?: Milestone[] }>(token, `/teams/${teamId}/milestones`);
+  return data.milestones ?? [];
+}
+
+export async function createMilestoneApi(token: string, teamId: number, draft: MilestoneDraft): Promise<Milestone> {
+  const data = await apiRequest<{ milestone: Milestone }>(token, `/teams/${teamId}/milestones`, {
+    method: "POST",
+    body: JSON.stringify(draft),
+  });
+  return data.milestone;
+}
+
 export async function logoutApi(token: string): Promise<void> {
   await fetch(`${API_URL}/auth/logout`, {
     method: "POST",

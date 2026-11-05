@@ -6,6 +6,7 @@ import { Login } from "./components/Login.js";
 import { Header } from "./components/Header.js";
 import { StudentHome } from "./components/StudentHome.js";
 import { SupervisorHome } from "./components/SupervisorHome.js";
+import { SupervisorTeam } from "./components/SupervisorTeam.js";
 import { ProtectedRoute } from "./components/ProtectedRoute.js";
 
 export function AppRoutes() {
@@ -19,13 +20,13 @@ export function AppRoutes() {
   }, []);
 
   return (
-    <main>
-      <Header />
-      <div style={{ padding: "10px 20px" }}>
-        <h1>Course Project Management System</h1>
-        <p data-testid="api-status">API: {status}</p>
-      </div>
+    <>
+      <header className="app-header">
+        <h1 className="app-brand">Course Project Management System</h1>
+        <Header />
+      </header>
 
+      <main className="app-main">
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route
@@ -45,6 +46,14 @@ export function AppRoutes() {
           }
         />
         <Route
+          path="/supervisor/teams/:teamId"
+          element={
+            <ProtectedRoute allowedRole="SUPERVISOR">
+              <SupervisorTeam />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="*"
           element={
             <Navigate
@@ -54,7 +63,12 @@ export function AppRoutes() {
           }
         />
       </Routes>
-    </main>
+      </main>
+
+      <footer className="app-footer">
+        <span data-testid="api-status">API: {status}</span>
+      </footer>
+    </>
   );
 }
 

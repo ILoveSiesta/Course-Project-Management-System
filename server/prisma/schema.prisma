@@ -21,6 +21,7 @@ model User {
   createdAt             DateTime               @default(now())
   memberships           TeamMembership[]
   supervisorAssignments SupervisorAssignment[]
+  milestonesCreated     Milestone[]            @relation("MilestoneCreatedBy")
 }
 
 model RevokedToken {
@@ -34,6 +35,7 @@ model Team {
   createdAt             DateTime               @default(now())
   memberships           TeamMembership[]
   supervisorAssignments SupervisorAssignment[]
+  milestones            Milestone[]
 }
 
 model TeamMembership {
@@ -54,4 +56,18 @@ model SupervisorAssignment {
   createdAt    DateTime @default(now())
 
   @@unique([teamId, supervisorId])
+}
+
+model Milestone {
+  id          Int      @id @default(autoincrement())
+  teamId      Int
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  title       String   @db.VarChar(120)
+  description String?  @db.VarChar(2000)
+  deadline    DateTime @db.Timestamptz(3)
+  createdById Int
+  createdBy   User     @relation("MilestoneCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([teamId, deadline])
 }
