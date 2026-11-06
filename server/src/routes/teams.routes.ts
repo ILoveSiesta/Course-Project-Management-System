@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { parseId } from "../utils/httpError.js";
 import { createMilestone, getMilestone, getTeam, listMilestones, listTeams } from "../services/teams.service.js";
+import { createSubmission, getSubmission, listSubmissions } from "../services/submissions.service.js";
 
 type Handler = (req: Request, res: Response) => Promise<void>;
 
@@ -33,4 +34,20 @@ milestonesRouter.use(authenticate);
 
 milestonesRouter.get("/:milestoneId", handle(async (req, res) => {
   res.json({ milestone: await getMilestone(req.user!, parseId(req.params.milestoneId)) });
+}));
+
+milestonesRouter.get("/:milestoneId/submissions", handle(async (req, res) => {
+  res.json({ submissions: await listSubmissions(req.user!, parseId(req.params.milestoneId)) });
+}));
+
+milestonesRouter.post("/:milestoneId/submissions", requireRole("STUDENT"), handle(async (req, res) => {
+  const submission = await createSubmission(req.user!, parseId(req.params.milestoneId), req.body);
+  res.status(201).json({ submission });
+}));
+
+export const submissionsRouter = Router();
+submissionsRouter.use(authenticate);
+
+submissionsRouter.get("/:submissionId", handle(async (req, res) => {
+  res.json({ submission: await getSubmission(req.user!, parseId(req.params.submissionId)) });
 }));

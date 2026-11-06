@@ -72,6 +72,26 @@ export interface MilestoneDraft {
   deadline: string;
 }
 
+// --- F-03: submissions and versions ---
+
+export interface Submission {
+  id: number;
+  milestoneId: number;
+  version: number;
+  title: string;
+  description: string | null;
+  link: string;
+  submittedAt: string;
+  daysLate: number;
+  submittedBy: { id: number; name: string };
+}
+
+export interface SubmissionDraft {
+  title: string;
+  description?: string | null;
+  link: string;
+}
+
 // Error from the API with its status, code and per-field details (SDS §4).
 export class ApiError extends Error {
   constructor(
@@ -118,6 +138,28 @@ export async function createMilestoneApi(token: string, teamId: number, draft: M
     body: JSON.stringify(draft),
   });
   return data.milestone;
+}
+
+export async function getMilestoneApi(token: string, milestoneId: number): Promise<Milestone> {
+  const data = await apiRequest<{ milestone: Milestone }>(token, `/milestones/${milestoneId}`);
+  return data.milestone;
+}
+
+export async function getMilestoneSubmissionsApi(token: string, milestoneId: number): Promise<Submission[]> {
+  const data = await apiRequest<{ submissions?: Submission[] }>(token, `/milestones/${milestoneId}/submissions`);
+  return data.submissions ?? [];
+}
+
+export async function createSubmissionApi(
+  token: string,
+  milestoneId: number,
+  draft: SubmissionDraft
+): Promise<Submission> {
+  const data = await apiRequest<{ submission: Submission }>(token, `/milestones/${milestoneId}/submissions`, {
+    method: "POST",
+    body: JSON.stringify(draft),
+  });
+  return data.submission;
 }
 
 export async function logoutApi(token: string): Promise<void> {

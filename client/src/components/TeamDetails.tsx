@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { Milestone, Team } from "../api.js";
 import { formatDeadline } from "../format.js";
 
@@ -15,14 +16,19 @@ export const TeamSummary: React.FC<{ team: Team }> = ({ team }) => (
   </section>
 );
 
-export const MilestoneList: React.FC<{ milestones: Milestone[] }> = ({ milestones }) => {
+export const MilestoneList: React.FC<{ milestones: Milestone[]; linkPrefix?: string }> = ({
+  milestones,
+  linkPrefix,
+}) => {
   if (milestones.length === 0) return <p className="empty-state">No milestones yet.</p>;
 
   return (
     <ul aria-label="Milestones" className="plain-list milestone-list">
       {milestones.map((m) => (
         <li key={m.id}>
-          <div className="milestone-title">{m.title}</div>
+          <div className="milestone-title">
+            {linkPrefix ? <Link to={`${linkPrefix}/${m.id}`}>{m.title}</Link> : m.title}
+          </div>
           <div className="milestone-meta">
             Due: <span>{formatDeadline(m.deadline)}</span>
           </div>
