@@ -10,6 +10,7 @@
 | 0.6 | 2026-11-05 | ILoveSiesta | Shared UI styling noted (no requirement change) |
 | 0.7 | 2026-11-06 | phet526 | F-03 AC/tests and verification results (commit 65aaf05) |
 | 0.8 | 2026-11-06 | ILoveSiesta | F-04 AC/tests and results (commit 35b29a7) |
+| 0.8 | 2026-11-06 | ILoveSiesta | Coverage gaps: FR-07 no longer depends on TA confirmation (D-06 Agreed) |
 
 Feature and responsibility IDs refer to `docs/features.md`.
 
@@ -94,7 +95,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 - E2E #6 will add the Sprint 1 journeys and the rejection journey.
 - Sprint 2–3 requirements have a feature and sprint but no AC or tests yet; this is expected at Deliverable 1.
 - NFR-05 is partly verified (404 and F-01 validation/auth error shapes). 5xx cases come with later features.
-- F-13 / FR-07 depends on D-06; if the TA confirms that no team-management UI is required, FR-07 will be revised as an approved change below.
+- F-13 / FR-07 (team management) is planned for Sprint 3 as decided in D-06.
 
 ## 5. Approved changes
 

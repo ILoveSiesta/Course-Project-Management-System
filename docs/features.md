@@ -8,6 +8,7 @@
 | 0.4 | 2026-11-05 | ILoveSiesta | F-02 status updated to Implemented |
 | 0.5 | 2026-11-06 | phet526 | F-03 status updated to Implemented |
 | 0.6 | 2026-11-06 | ILoveSiesta | F-04 status updated to Implemented |
+| 0.6 | 2026-11-06 | ILoveSiesta | F-13 no longer waits for TA confirmation (D-06 Agreed) |
 
 Requirement IDs refer to `docs/srs.md`. Sprint 1 features have GitHub issues and engineering contracts in
 `docs/sprints/sprint-1/`. Sprint 2–3 features are allocated now and specified in their sprint.
@@ -30,7 +31,7 @@ Status values: **Planned** · **In progress** · **Implemented** · **Tested** �
 | F-10 | Progress board | Student: own team's milestones by status; supervisor: teams × milestones board | FR-21 | F-09 | 3 | — | Planned |
 | F-11 | Supervisor summary report | Per-team counts by status, late submissions, average released grade | FR-22, NFR-10 | F-08, F-09 | 3 | — | Planned |
 | F-12 | Submission filtering | Filter supervisor submission list by team, milestone and status | FR-23 | F-09 | 3 | — | Planned |
-| F-13 | Team management | Supervisor creates teams they supervise and manages members (scope to confirm with TA, D-06) | FR-07, BR-10, BR-14 | F-01 | 3 | — | Planned |
+| F-13 | Team management | Supervisor creates teams they supervise and manages members (D-06) | FR-07, BR-10, BR-14 | F-01 | 3 | — | Planned |
 
 ## 2. System responsibilities (cross-cutting)
 
