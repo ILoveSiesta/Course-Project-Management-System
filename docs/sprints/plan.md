@@ -4,7 +4,8 @@
 |---|---|---|---|
 | 0.1 | 2026-11-03 | | Document skeleton |
 | 0.2 | 2026-11-04 | ILoveSiesta | Sprint goals, feature allocation, dependencies and outcomes based on `docs/features.md` v0.2 |
-| 0.3 | 2026-11-05 | ILoveSiesta | Shared UI styling added to Sprint 1 inside #3 F-02 (CHG-01); no change to sprint goals or feature allocation |
+| 0.3 | 2026-11-05 | ILoveSiesta | Shared UI styling added to Sprint 1 inside #3 F-02 (PR #9); no change to sprint goals or feature allocation |
+| 0.4 | 2026-11-06 | ILoveSiesta | D-06 agreed without TA confirmation: removed the TA dependency of F-13 and the related risk |
 
 Feature IDs refer to `docs/features.md`; requirement IDs to `docs/srs.md`.
 
@@ -14,7 +15,7 @@ Feature IDs refer to `docs/features.md`; requirement IDs to `docs/srs.md`.
 |---|---|---|---|---|---|---|
 | 1 | 3 – 8 Nov 2026 | Small working domain slice: a supervisor sets a milestone, a student team submits work, the supervisor gives feedback — with real authentication, backend permissions and persistence | F-01, F-02, F-03, F-04; SR-01, SR-02, SR-04 | Engineering baseline (#1) first; then F-01 → F-02 → F-03 → F-04 → E2E (#6) | Release `v0.1.0` on `main`; all Sprint 1 AC verified by automated tests; documented local setup | Deliverable 1 — 8 Nov |
 | 2 | 9 – 25 Nov 2026 | Core expansion: milestone maintenance, revision history, grades with release, team–milestone status; ship through the delivery pipeline | F-05, F-06, F-07, F-08, F-09; SR-03 | Sprint 1 release; Lab 5 pipeline (SR-03) before the Sprint 2 release | All Sprint 2 features complete, reviewed and verified; deployed on GCP from `main` | Deliverable 2 — 29 Nov (must be complete) |
-| 3 | 26 Nov – 13 Dec 2026 | Completion and hardening: progress board, reports, filtering, team management; regression, UAT fixes, performance and responsive checks | F-10, F-11, F-12, F-13; SR-05, SR-06 | F-09 (status) for F-10–F-12; F-08 for F-11; D-06 answer from TA for F-13 | All baseline features complete; final regression and UAT re-tests pass; final release deployed | Progress at 29 Nov; final 13 Dec |
+| 3 | 26 Nov – 13 Dec 2026 | Completion and hardening: progress board, reports, filtering, team management; regression, UAT fixes, performance and responsive checks | F-10, F-11, F-12, F-13; SR-05, SR-06 | F-09 (status) for F-10–F-12; F-08 for F-11; F-01 data for F-13 | All baseline features complete; final regression and UAT re-tests pass; final release deployed | Progress at 29 Nov; final 13 Dec |
 
 ## 2. Sprint 1 scope
 
@@ -40,7 +41,7 @@ Work alternates between the two students in issue order; the other student revie
 |---|---|---|---|---|---|
 | 1 | #1 DOCS baseline | `docs/sprint-1-baseline` | ILoveSiesta | phet526 | — |
 | 2 | #2 F-01 Authentication and team data | `feature/F-01-auth` | phet526 | ILoveSiesta | #1 merged |
-| 3 | #3 F-02 Team view and milestone creation, plus shared UI styling (CHG-01) | `feature/F-02-milestone` | ILoveSiesta | phet526 | #2 merged |
+| 3 | #3 F-02 Team view and milestone creation, plus shared UI styling | `feature/F-02-milestone` | ILoveSiesta | phet526 | #2 merged |
 | 4 | #4 F-03 Submission and versions | `feature/F-03-submission` | phet526 | ILoveSiesta | #3 merged |
 | 5 | #5 F-04 Feedback | `feature/F-04-feedback` | ILoveSiesta | phet526 | #4 merged |
 | 6 | #6 E2E journeys + release checklist | `test/sprint-1-e2e` | phet526 | ILoveSiesta | #5 merged |
@@ -74,5 +75,4 @@ their next issue, so each feature can start as soon as the previous one is merge
 | Sprint 1 has only 5 days; each feature waits for the previous merge | Write the next contract and failing tests during review; keep PRs small; review within a few hours |
 | F-01 (auth + four models + seed) blocks every later feature | Start F-01 immediately after #1 is merged; agree the `User` model and role enum during #1 review |
 | Decisions D-01..D-09 change after review | Settle them in the #1 PR review before any contract is written |
-| D-06 answer from the TA removes or changes F-13 | Recorded as an approved change in `docs/traceability.md`; Sprint 3 scope adjusted |
 | Final exams 1–11 Dec | Main Sprint 3 workflows done by 29 Nov; the final period is for fixes, verification and the video |

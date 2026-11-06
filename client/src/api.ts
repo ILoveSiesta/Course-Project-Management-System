@@ -84,6 +84,17 @@ export interface Submission {
   submittedAt: string;
   daysLate: number;
   submittedBy: { id: number; name: string };
+  feedback?: Feedback[];
+}
+
+// --- F-04: feedback on a submission version ---
+
+export interface Feedback {
+  id: number;
+  submissionId: number;
+  comment: string;
+  createdAt: string;
+  author: { id: number; name: string };
 }
 
 export interface SubmissionDraft {
@@ -160,6 +171,14 @@ export async function createSubmissionApi(
     body: JSON.stringify(draft),
   });
   return data.submission;
+}
+
+export async function createFeedbackApi(token: string, submissionId: number, comment: string): Promise<Feedback> {
+  const data = await apiRequest<{ feedback: Feedback }>(token, `/submissions/${submissionId}/feedback`, {
+    method: "POST",
+    body: JSON.stringify({ comment }),
+  });
+  return data.feedback;
 }
 
 export async function logoutApi(token: string): Promise<void> {

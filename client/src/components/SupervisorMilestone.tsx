@@ -1,7 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
-import { ApiError, Milestone, Submission, getMilestoneApi, getMilestoneSubmissionsApi } from "../api.js";
+import {
+  ApiError,
+  Milestone,
+  Submission,
+  createFeedbackApi,
+  getMilestoneApi,
+  getMilestoneSubmissionsApi,
+} from "../api.js";
 import { formatDeadline } from "../format.js";
 import { SubmissionList } from "./SubmissionList.js";
 
@@ -45,6 +52,20 @@ export const SupervisorMilestone: React.FC = () => {
     };
   }, [token, milestoneId]);
 
+  // Saves feedback and shows it under its version; validation errors are rethrown for the form.
+  const addFeedback = async (submissionId: number, comment: string) => {
+    if (!token) return;
+    try {
+      const created = await createFeedbackApi(token, submissionId, comment);
+      setSubmissions((list) =>
+        list.map((s) => (s.id === submissionId ? { ...s, feedback: [...(s.feedback ?? []), created] } : s))
+      );
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return logout();
+      throw err;
+    }
+  };
+
   return (
     <div>
       <p>
@@ -63,7 +84,7 @@ export const SupervisorMilestone: React.FC = () => {
             {milestone.description && <p className="milestone-description">{milestone.description}</p>}
           </section>
 
-          <SubmissionList submissions={submissions} />
+          <SubmissionList submissions={submissions} onAddFeedback={addFeedback} />
         </>
       )}
     </div>

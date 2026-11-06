@@ -8,6 +8,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.2 | 2026-11-04 | ILoveSiesta | First full draft: context, actors, scope, FR/BR/NFR, assumptions, proposed decisions (pending review by phet526) |
 | 0.3 | 2026-11-04 | ILoveSiesta | D-01 changed: late submissions accepted with days late (BR-05); team management moved to Sprint 3 (D-06, FR-07); Sprint 2–3 rules reduced to one-line statements to be detailed in their sprint |
 | 0.4 | 2026-11-04 | phet526 | Decisions D-01..D-09 status updated to Agreed (D-06 confirm with TA) per PR #7 review agreement |
+| 0.5 | 2026-11-06 | ILoveSiesta | D-06 status: Agreed (no TA confirmation needed: the brief asks the team to clarify membership and supervision scope, and supervisor-managed teams in Sprint 3 cover "manage teams") |
 
 ## 1. Stakeholder problem and context
 
@@ -169,7 +170,7 @@ Status: **Proposed** = drafted, awaiting review; **Agreed** = accepted by both s
 | D-03 | When may students see feedback and grades? | Feedback is visible to the team as soon as it is recorded. Grades are hidden until the supervisor releases them for the milestone (BR-11). | Agreed | 2026-11-04 |
 | D-04 | Can a team have more than one supervisor? | Yes. A team has one or more assigned supervisors; any of them may act on the team (BR-02). | Agreed | 2026-11-04 |
 | D-05 | Can a student be in more than one team? | No. A student belongs to at most one team (BR-10). | Agreed | 2026-11-04 |
-| D-06 | Who manages teams? (Theme 6 defines only Student and Supervisor roles; the brief says the product "manages teams" but does not name who.) | Sprint 1: teams, membership and supervisor assignments come from seed data only. Sprint 3 (planned): supervisors manage teams they supervise (FR-07). | Agreed; confirm with TA | 2026-11-04 |
+| D-06 | Who manages teams? (Theme 6 defines only Student and Supervisor roles; the brief says the product "manages teams" but does not name who.) | Sprint 1: teams, membership and supervisor assignments come from seed data only. Sprint 3 (planned): supervisors manage teams they supervise (FR-07). | Agreed | 2026-11-04 |
 | D-07 | What does a submission contain? | Title, optional description and one link; no file upload (A-03). | Agreed | 2026-11-04 |
 | D-08 | Can feedback be edited? | No. Feedback is append-only; a supervisor adds a new feedback entry to correct or extend earlier feedback (BR-09). | Agreed | 2026-11-04 |
 | D-09 | How does logout work with tokens? | Logout revokes the current token on the server so it is rejected even before it expires (FR-03, NFR-04). Details in the System SDS. | Agreed | 2026-11-04 |

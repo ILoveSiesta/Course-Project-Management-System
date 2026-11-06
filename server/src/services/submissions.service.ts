@@ -4,9 +4,12 @@ import { AuthenticatedUser } from "../middleware/auth.js";
 import { HttpError, notFound } from "../utils/httpError.js";
 import { calculateDaysLate, validateSubmissionInput } from "../utils/submissionValidation.js";
 import { scopeFilter } from "./teams.service.js";
+import { feedbackInclude, toFeedbackDto } from "./feedback.service.js";
 
+// Each version carries its feedback, oldest first (F-04, FR-17).
 const submissionInclude = {
   submittedBy: { select: { id: true, name: true } },
+  feedback: { include: feedbackInclude, orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
 } satisfies Prisma.SubmissionInclude;
 
 type SubmissionWithSubmitter = Prisma.SubmissionGetPayload<{ include: typeof submissionInclude }>;
@@ -22,6 +25,7 @@ function toSubmissionDto(s: SubmissionWithSubmitter) {
     submittedAt: s.submittedAt.toISOString(),
     daysLate: s.daysLate,
     submittedBy: s.submittedBy,
+    feedback: s.feedback.map(toFeedbackDto),
   };
 }
 

@@ -3,6 +3,7 @@ import { authenticate, requireRole } from "../middleware/auth.js";
 import { parseId } from "../utils/httpError.js";
 import { createMilestone, getMilestone, getTeam, listMilestones, listTeams } from "../services/teams.service.js";
 import { createSubmission, getSubmission, listSubmissions } from "../services/submissions.service.js";
+import { createFeedback } from "../services/feedback.service.js";
 
 type Handler = (req: Request, res: Response) => Promise<void>;
 
@@ -50,4 +51,10 @@ submissionsRouter.use(authenticate);
 
 submissionsRouter.get("/:submissionId", handle(async (req, res) => {
   res.json({ submission: await getSubmission(req.user!, parseId(req.params.submissionId)) });
+}));
+
+// Feedback is append-only (BR-09, D-08): there are no edit or delete routes.
+submissionsRouter.post("/:submissionId/feedback", requireRole("SUPERVISOR"), handle(async (req, res) => {
+  const feedback = await createFeedback(req.user!, parseId(req.params.submissionId), req.body);
+  res.status(201).json({ feedback });
 }));

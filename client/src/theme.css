@@ -298,7 +298,7 @@ a:hover {
 }
 
 
-/* --- Submissions (F-03 / CHG-01) --- */
+/* --- Submissions (F-03) --- */
 
 .submission-item {
   margin-bottom: 1rem;
@@ -308,4 +308,35 @@ a:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+/* --- Feedback (F-04) --- */
+
+.feedback-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.feedback-item {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-left: 3px solid var(--color-primary);
+  background: var(--color-primary-soft);
+  border-radius: 6px;
+}
+
+.feedback-comment {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.feedback-meta {
+  margin: 4px 0 0;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+
+.feedback-form {
+  margin-top: 10px;
 }
