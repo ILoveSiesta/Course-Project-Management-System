@@ -8,8 +8,9 @@
 | 0.4 | 2026-11-05 | ILoveSiesta | F-02 status updated to Implemented |
 | 0.5 | 2026-11-06 | phet526 | F-03 status updated to Implemented |
 | 0.6 | 2026-11-06 | ILoveSiesta | F-04 status updated to Implemented |
-| 0.6 | 2026-11-06 | ILoveSiesta | F-13 no longer waits for TA confirmation (D-06 Agreed) |
-| 0.7 | 2026-11-06 | phet526 | Sprint 1 E2E journeys (#6) implemented and verified |
+| 0.7 | 2026-11-06 | ILoveSiesta | F-13 no longer waits for TA confirmation (D-06 Agreed) |
+| 0.8 | 2026-11-06 | phet526 | Sprint 1 E2E journeys (#6) implemented and verified |
+| 0.9 | 2026-11-06 | ILoveSiesta | Revision numbers 0.7–0.8 renumbered (0.6 was used twice) |
 
 Requirement IDs refer to `docs/srs.md`. Sprint 1 features have GitHub issues and engineering contracts in
 `docs/sprints/sprint-1/`. Sprint 2–3 features are allocated now and specified in their sprint.

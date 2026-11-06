@@ -10,9 +10,9 @@
 | 0.6 | 2026-11-05 | ILoveSiesta | Approved change CHG-01 (shared UI styling in Sprint 1) |
 | 0.7 | 2026-11-06 | phet526 | F-03 AC/tests and verification results (commit 65aaf05) |
 | 0.8 | 2026-11-06 | ILoveSiesta | F-04 AC/tests and results (commit 35b29a7) |
-| 0.8 | 2026-11-06 | ILoveSiesta | Coverage gaps: FR-07 no longer depends on TA confirmation (D-06 Agreed) |
-| 0.9 | 2026-11-06 | phet526 | Sprint 1 E2E journeys (#6) verification results (PASS on 049bbfe) |
-| 1.0 | 2026-11-06 | ILoveSiesta | CHG-01: states that all UI from this change on uses the shared classes, with no inline styles |
+| 0.9 | 2026-11-06 | ILoveSiesta | Coverage gaps: FR-07 no longer depends on TA confirmation (D-06 Agreed) |
+| 1.0 | 2026-11-06 | phet526 | Sprint 1 E2E journeys (#6) verification results (PASS on 049bbfe) |
+| 1.1 | 2026-11-06 | ILoveSiesta | CHG-01: states that all UI from this change on uses the shared classes, with no inline styles; revision numbers 0.9–1.0 renumbered (0.8 was used twice) |
 
 Feature and responsibility IDs refer to `docs/features.md`.
 
