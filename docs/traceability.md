@@ -13,6 +13,7 @@
 | 0.9 | 2026-11-06 | ILoveSiesta | Coverage gaps: FR-07 no longer depends on TA confirmation (D-06 Agreed) |
 | 1.0 | 2026-11-06 | phet526 | Sprint 1 E2E journeys (#6) verification results (PASS on 049bbfe) |
 | 1.1 | 2026-11-06 | ILoveSiesta | CHG-01: states that all UI from this change on uses the shared classes, with no inline styles; revision numbers 0.9–1.0 renumbered (0.8 was used twice) |
+| 1.2 | 2026-11-06 | ILoveSiesta | E2E rows verified on `5936f32`, the reviewed head of PR #12 (#15) |
 
 Feature and responsibility IDs refer to `docs/features.md`.
 
@@ -34,16 +35,16 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | FR-05 Student views own team | F-02 | 1 | AC-02-01, AC-02-11 | TEST-02-01, TEST-02-12 | `server/tests/api/teams-milestones.api.test.ts`; `client/tests/Milestones.test.tsx` | PASS | `b97f30d` |
 | FR-06 Supervisor lists assigned teams | F-02 | 1 | AC-02-02 | TEST-02-02 | `server/tests/api/teams-milestones.api.test.ts` | PASS | `b97f30d` |
 | FR-07 Team management | F-13 | 3 | Sprint 3 contract | — | — | PLANNED | — |
-| FR-08 Create milestone | F-02 | 1 | AC-02-05, AC-02-12 | TEST-02-05, TEST-02-14; TEST-E2E-01 (#6) | `server/tests/api/teams-milestones.api.test.ts`; `client/tests/Milestones.test.tsx`; `e2e/sprint1-normal-journey.spec.ts` | PASS | `049bbfe` |
+| FR-08 Create milestone | F-02 | 1 | AC-02-05, AC-02-12 | TEST-02-05, TEST-02-14; TEST-E2E-01 (#6) | `server/tests/api/teams-milestones.api.test.ts`; `client/tests/Milestones.test.tsx`; `e2e/sprint1-normal-journey.spec.ts` | PASS | `5936f32` |
 | FR-09 List milestones | F-02 | 1 | AC-02-09, AC-02-10, AC-02-11 | TEST-02-09, TEST-02-10, TEST-02-12, TEST-02-13 | `server/tests/api/teams-milestones.api.test.ts`; `client/tests/Milestones.test.tsx` | PASS | `b97f30d` |
 | FR-10 Edit / extend milestone | F-05 | 2 | Sprint 2 contract | — | — | PLANNED | — |
 | FR-11 Milestone for several teams | F-06 | 2 | Sprint 2 contract | — | — | PLANNED | — |
-| FR-12 Submit work | F-03 | 1 | AC-03-01, AC-03-12 | TEST-03-01, TEST-03-15; TEST-E2E-01 (#6) | `server/tests/api/submissions.api.test.ts`; `client/tests/Submissions.test.tsx`; `e2e/sprint1-normal-journey.spec.ts` | PASS | `049bbfe` |
-| FR-13 View submissions, late flag | F-03 | 1 | AC-03-04..06, AC-03-12, AC-03-13 | TEST-03-04..07, TEST-03-15..17; TEST-E2E-01 (#6) | `server/tests/api/submissions.api.test.ts`; `server/tests/unit/submission-rules.test.ts`; `client/tests/Submissions.test.tsx`; `e2e/sprint1-normal-journey.spec.ts` | PASS | `049bbfe` |
+| FR-12 Submit work | F-03 | 1 | AC-03-01, AC-03-12 | TEST-03-01, TEST-03-15; TEST-E2E-01 (#6) | `server/tests/api/submissions.api.test.ts`; `client/tests/Submissions.test.tsx`; `e2e/sprint1-normal-journey.spec.ts` | PASS | `5936f32` |
+| FR-13 View submissions, late flag | F-03 | 1 | AC-03-04..06, AC-03-12, AC-03-13 | TEST-03-04..07, TEST-03-15..17; TEST-E2E-01 (#6) | `server/tests/api/submissions.api.test.ts`; `server/tests/unit/submission-rules.test.ts`; `client/tests/Submissions.test.tsx`; `e2e/sprint1-normal-journey.spec.ts` | PASS | `5936f32` |
 | FR-14 Resubmit as new version | F-03 | 1 | AC-03-02, AC-03-03 | TEST-03-02, TEST-03-03, TEST-03-15 | `server/tests/api/submissions.api.test.ts`; `client/tests/Submissions.test.tsx` | PASS | `65aaf05` |
 | FR-15 Revision history | F-07 | 2 | Sprint 2 contract | — | — | PLANNED | — |
-| FR-16 Record feedback | F-04 | 1 | AC-04-01, AC-04-02, AC-04-06, AC-04-10 | TEST-04-01, TEST-04-02, TEST-04-06, TEST-04-11; TEST-E2E-01 (#6) | `server/tests/api/feedback.api.test.ts`; `client/tests/Feedback.test.tsx`; `e2e/sprint1-normal-journey.spec.ts` | PASS | `049bbfe` |
-| FR-17 Students view feedback | F-04 | 1 | AC-04-07, AC-04-11 | TEST-04-07, TEST-04-13; TEST-E2E-01 (#6) | `server/tests/api/feedback.api.test.ts`; `client/tests/Feedback.test.tsx`; `e2e/sprint1-normal-journey.spec.ts` | PASS | `049bbfe` |
+| FR-16 Record feedback | F-04 | 1 | AC-04-01, AC-04-02, AC-04-06, AC-04-10 | TEST-04-01, TEST-04-02, TEST-04-06, TEST-04-11; TEST-E2E-01 (#6) | `server/tests/api/feedback.api.test.ts`; `client/tests/Feedback.test.tsx`; `e2e/sprint1-normal-journey.spec.ts` | PASS | `5936f32` |
+| FR-17 Students view feedback | F-04 | 1 | AC-04-07, AC-04-11 | TEST-04-07, TEST-04-13; TEST-E2E-01 (#6) | `server/tests/api/feedback.api.test.ts`; `client/tests/Feedback.test.tsx`; `e2e/sprint1-normal-journey.spec.ts` | PASS | `5936f32` |
 | FR-18 Record grade | F-08 | 2 | Sprint 2 contract | — | — | PLANNED | — |
 | FR-19 Release grades | F-08 | 2 | Sprint 2 contract | — | — | PLANNED | — |
 | FR-20 Team–milestone status | F-09 | 2 | Sprint 2 contract | — | — | PLANNED | — |
@@ -61,7 +62,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | BR-04 Milestone validation, future deadline | F-02 (F-06 later) | 1 | AC-02-08 | TEST-02-08, TEST-02-11, TEST-02-15 | `server/tests/api/teams-milestones.api.test.ts`; `server/tests/unit/milestone-validation.test.ts`; `client/tests/Milestones.test.tsx` | PASS | `b97f30d` |
 | BR-05 Late flag and days late | F-03 | 1 | AC-03-04 | TEST-03-04, TEST-03-05 | `server/tests/api/submissions.api.test.ts`; `server/tests/unit/submission-rules.test.ts` | PASS | `65aaf05` |
 | BR-06 Sequential, unique versions | F-03 | 1 | AC-03-01, AC-03-02, AC-03-11 | TEST-03-01, TEST-03-02, TEST-03-14 | `server/tests/api/submissions.api.test.ts` | PASS | `65aaf05` |
-| BR-07 Max 3 versions | F-03 | 1 | AC-03-03 | TEST-03-03, TEST-03-16; TEST-E2E-02 (#6) | `server/tests/api/submissions.api.test.ts`; `client/tests/Submissions.test.tsx`; `e2e/sprint1-rejection-journey.spec.ts` | PASS | `049bbfe` |
+| BR-07 Max 3 versions | F-03 | 1 | AC-03-03 | TEST-03-03, TEST-03-16; TEST-E2E-02 (#6) | `server/tests/api/submissions.api.test.ts`; `client/tests/Submissions.test.tsx`; `e2e/sprint1-rejection-journey.spec.ts` | PASS | `5936f32` |
 | BR-08 Submission validation | F-03 | 1 | AC-03-09 | TEST-03-11, TEST-03-12 | `server/tests/api/submissions.api.test.ts`; `server/tests/unit/submission-rules.test.ts` | PASS | `65aaf05` |
 | BR-09 Feedback per version, append-only | F-04 (F-07 displays history) | 1 | AC-04-05, AC-04-06, AC-04-09 | TEST-04-05, TEST-04-06, TEST-04-09, TEST-04-10 | `server/tests/api/feedback.api.test.ts`; `server/tests/unit/feedback-validation.test.ts` | PASS | `35b29a7` |
 | BR-10 One team per student | F-01 (seed + DB constraint); F-13 (UI) | 1, 3 | AC-01-09 | TEST-01-12 | `server/tests/api/auth.api.test.ts` | PASS | `d24f2c0` |
@@ -85,7 +86,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | NFR-09 CI quality gate | SR-03 | 2 | Failing check blocks merge | CI run evidence (Lab 5) | — | PLANNED | — |
 | NFR-10 Response time | SR-05 (with F-11) | 3 | p95 ≤ 500 ms on seeded dataset | Sprint 3 smoke test | — | PLANNED | — |
 | NFR-11 Responsive UI | SR-06 | 3 | 375 px and 1280 px | Sprint 3 Playwright viewports | — | PLANNED | — |
-| NFR-12 Understandable rejections | SR-02 | 1 (extended each sprint) | Reason shown for every rejection | TEST-02-15 (milestone validation); TEST-03-16 (version limit); TEST-04-12 (feedback validation); TEST-E2E-02 (#6) | `client/tests/Milestones.test.tsx`; `client/tests/Submissions.test.tsx`; `client/tests/Feedback.test.tsx`; `e2e/sprint1-rejection-journey.spec.ts` | PASS | `049bbfe` |
+| NFR-12 Understandable rejections | SR-02 | 1 (extended each sprint) | Reason shown for every rejection | TEST-02-15 (milestone validation); TEST-03-16 (version limit); TEST-04-12 (feedback validation); TEST-E2E-02 (#6) | `client/tests/Milestones.test.tsx`; `client/tests/Submissions.test.tsx`; `client/tests/Feedback.test.tsx`; `e2e/sprint1-rejection-journey.spec.ts` | PASS | `5936f32` |
 
 ## 4. Coverage gaps
 
@@ -94,7 +95,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 - F-02 AC and tests are implemented and passing on commit `b97f30d` (server tests on the separate `cpms_test` database).
 - F-03 AC and tests are implemented and passing on commit `65aaf05`.
 - F-04 AC and tests are implemented and passing on commit `35b29a7`.
-- E2E #6 verified Sprint 1 normal domain journey (TEST-E2E-01) and rejection journey (TEST-E2E-02) on commit 049bbfe.
+- E2E #6 verified Sprint 1 normal domain journey (TEST-E2E-01) and rejection journey (TEST-E2E-02) on commit `5936f32` (the reviewed head of PR #12; specs first passed on `049bbfe`).
 - Sprint 2–3 requirements have a feature and sprint but no AC or tests yet; this is expected at Deliverable 1.
 - NFR-05 is partly verified (404 and F-01 validation/auth error shapes). 5xx cases come with later features.
 - F-13 / FR-07 (team management) is planned for Sprint 3 as decided in D-06.
