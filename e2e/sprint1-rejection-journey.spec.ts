@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginAs, logout } from "./helpers.js";
+import { loginAs, logout, toLocalDatetimeInputValue } from "./helpers.js";
 
 test.describe("Sprint 1 Rejection and Access Journey (TEST-E2E-02)", () => {
   test("business-rule rejections: milestone validation, submission validation, 3-version limit, and access control", async ({
@@ -12,6 +12,8 @@ test.describe("Sprint 1 Rejection and Access Journey (TEST-E2E-02)", () => {
     // ==========================================
     await loginAs(page, "supervisor1@cpms.test");
     await page.locator(".card").filter({ hasText: "Team Alpha" }).getByRole("link", { name: "Open team" }).click();
+    await expect(page).toHaveURL(/\/supervisor\/teams\/\d+/);
+    const alphaTeamUrl = page.url();
 
     // Submit with blank title and past deadline
     await page.getByLabel("Title").fill("");
@@ -25,7 +27,7 @@ test.describe("Sprint 1 Rejection and Access Journey (TEST-E2E-02)", () => {
     const validTitle = `E2E Rejection Testing - ${timestamp}`;
     const futureDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
     await page.getByLabel("Title").fill(validTitle);
-    await page.getByLabel("Deadline").fill(futureDate.toISOString().slice(0, 16));
+    await page.getByLabel("Deadline").fill(toLocalDatetimeInputValue(futureDate));
     await page.getByRole("button", { name: "Create milestone" }).click();
 
     // Wait until created and get its milestone URL
@@ -96,8 +98,8 @@ test.describe("Sprint 1 Rejection and Access Journey (TEST-E2E-02)", () => {
     await expect(page.getByText("Milestone not found or not allowed")).toBeVisible();
     await expect(page.getByText(validTitle)).not.toBeVisible();
 
-    // 4c. Unassigned supervisor attempts to view Team Alpha team page
-    await page.goto("/supervisor/teams/1");
+    // 4c. Unassigned supervisor attempts to view Team Alpha team page (using the positive-control URL from Step 1)
+    await page.goto(alphaTeamUrl);
     await expect(page.getByText("Team not found or not allowed")).toBeVisible();
     await logout(page);
   });

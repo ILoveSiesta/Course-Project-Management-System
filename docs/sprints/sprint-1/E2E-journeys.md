@@ -7,6 +7,7 @@
 |---|---|---|---|
 | 0.1 | 2026-11-06 | phet526 | Initial specification for Sprint 1 E2E journeys and release checklist (issue #6) |
 | 0.2 | 2026-11-06 | phet526 | E2E journeys executed and passing on running stack; updated verification evidence and DoD (commit 049bbfe) |
+| 0.3 | 2026-11-06 | phet526 | Updated per PR #12 review: accurate red/green locator description, positive control for team access, refined release checklist and unit/API scope annotations |
 
 ## 1. Linked requirements
 
@@ -15,12 +16,16 @@
 - **NFR:** NFR-01 (password hashing), NFR-02 (401 on protected endpoints), NFR-03 (403/404 without data disclosure), NFR-04 (token lifecycle), NFR-05 (safe error shape), NFR-06 (concurrency safety), NFR-07 (reproducible setup), NFR-12 (understandable rejections)
 - **Decisions:** D-01 (late submissions marked), D-02 (max 3 versions), D-03 (feedback visible immediately), D-06 (team management scope), D-07 (submission contents: title, description, link), D-08 (feedback append-only), D-09 (token revocation on logout)
 
+*(Note: BR-05 late calculation, NFR-01 bcrypt hashing, NFR-04 token lifecycle / D-09 logout revocation, and NFR-06 concurrency are exercised and verified at unit/API level in F-01..F-04 as documented in `docs/traceability.md`; E2E focuses on full-stack user journeys across the running system).*
+
 ## 2. E2E Journeys Design
 
 The E2E tests run in a real browser using Playwright against the full application stack (React client on port 5173, Express API on port 3000, PostgreSQL database).
 
+*Data persistence note: Each E2E test run persists its created milestone and submissions into the development database. Timestamped titles (e.g. `Sprint 1 Architecture - ${timestamp}`) isolate test data and ensure repeated runs remain idempotent.*
+
 ### 2.1 Journey 1: Normal Domain Journey (`e2e/sprint1-normal-journey.spec.ts`)
-1. **Supervisor creates milestone:** Supervisor 1 logs in, navigates to assigned Team Alpha (`/supervisor/teams/1`), fills the milestone form with a future deadline and submits. The milestone appears in the team's milestone list formatted in ICT.
+1. **Supervisor creates milestone:** Supervisor 1 logs in, navigates to assigned Team Alpha (`/supervisor/teams/:id`), fills the milestone form with a future deadline and submits. The milestone appears in the team's milestone list formatted in ICT.
 2. **Student submits work:** Student 1 logs in, sees the newly created milestone under Team Alpha on `/student`, navigates to `/student/milestones/:id`, and submits Version 1 (title, description, link). The submission is persisted and listed with version 1, "On time" badge, author name, and link.
 3. **Supervisor reviews and gives feedback:** Supervisor 1 logs in, navigates to the milestone detail page (`/supervisor/milestones/:id`), views Version 1, and submits feedback on Version 1. The feedback is persisted and displayed immediately under Version 1 with author name and ICT timestamp.
 4. **Student views feedback:** Student 1 logs in, opens the milestone page, and sees the supervisor's feedback under Version 1. Student has no feedback submission form (read-only).
@@ -30,8 +35,9 @@ The E2E tests run in a real browser using Playwright against the full applicatio
 2. **Submission validation rejection (BR-08, NFR-12):** Student attempts to submit with an invalid URL scheme (e.g. `ftp://...`) and empty title $\rightarrow$ validation messages "Required" and "Link must be an http or https URL" are displayed; submission is not created.
 3. **Version limit rejection (BR-07, NFR-12):** Student submits 3 versions for a milestone. Upon reaching 3 versions, the submit form is removed and replaced by "Maximum of 3 versions reached for this milestone."
 4. **Access control enforcement (BR-01, BR-02, BR-03, NFR-03):**
-   - Unassigned supervisor (`supervisor2@cpms.test`) navigating directly to Team Alpha's milestone URL receives "Milestone not found or not allowed" (404 without data disclosure).
    - Cross-team student (`student3@cpms.test`, Team Beta) navigating directly to Team Alpha's milestone URL receives "Milestone not found or not allowed" (404 without data disclosure).
+   - Unassigned supervisor (`supervisor2@cpms.test`) navigating directly to Team Alpha's milestone URL receives "Milestone not found or not allowed" (404 without data disclosure).
+   - Unassigned supervisor (`supervisor2@cpms.test`) navigating directly to Team Alpha's team URL captured in Step 1 (positive control) receives "Team not found or not allowed" (404 without data disclosure).
 
 ## 3. Acceptance Criteria
 
@@ -40,7 +46,7 @@ The E2E tests run in a real browser using Playwright against the full applicatio
 | AC-E2E-01 | Normal domain workflow | Given seeded test accounts, When supervisor creates milestone, student submits work, supervisor adds feedback, and student views feedback, Then each state transition persists and renders accurately in the UI. |
 | AC-E2E-02 | Business-rule rejections | Given invalid milestone input (blank title, past deadline) or invalid submission input (invalid URL), When submitted, Then the UI explains the rejection under the corresponding field. |
 | AC-E2E-03 | Version limit enforcement | Given a milestone with 3 existing versions, When student views the milestone, Then the submit form is replaced by the version limit notice. |
-| AC-E2E-04 | Authorization & scope | Given an out-of-scope student or unassigned supervisor, When accessing another team's milestone URL directly, Then access is rejected with 404 without leaking team data. |
+| AC-E2E-04 | Authorization & scope | Given an out-of-scope student or unassigned supervisor, When accessing another team's milestone or team URL directly, Then access is rejected with 404 without leaking team data. |
 
 ## 4. Software Test Specification (STS)
 
@@ -51,19 +57,27 @@ The E2E tests run in a real browser using Playwright against the full applicatio
 
 ## 5. Release Readiness Checklist for `v0.1.0`
 
-- [x] All Sprint 1 features implemented (F-01, F-02, F-03, F-04)
-- [x] Automated tests passing on fresh database (`npm run build && npm test && npm run test:e2e`)
-- [x] Reproducible setup verified against README instructions
+### Sprint 1 Implementation & Test Verification (Complete in #6)
+- [x] All Sprint 1 features implemented and passing (F-01, F-02, F-03, F-04)
+- [x] Automated tests passing on dev database (`npm run build && npm test && npm run test:e2e`)
 - [x] Clean Git history with reviewed PRs (#8, #9, #10, #11) merged into `sprint-1`
-- [x] Documentation updated (`docs/srs.md`, `docs/system-sds.md`, `docs/features.md`, `docs/traceability.md`, `docs/sprints/plan.md`)
-- [ ] Release PR `sprint-1` → `main` prepared and reviewed
-- [ ] Release tag `v0.1.0` ready to tag
+- [x] Engineering specifications and traceability matrix updated for Sprint 1 features and E2E journeys (`docs/traceability.md`, `docs/features.md`, `docs/sprints/sprint-1/`)
+- [x] README instructions updated and verified for dependencies, database migrations/seed, and test commands (D1 §4.4)
+
+### Release Execution on Main (To be completed during release prep)
+- [ ] Run full build + `npm test` + `npm run test:e2e` on the release commit on `main`; record command, counts, and tested commit SHA (D1 §3.6)
+- [ ] `docs/contributions.md` filled with Sprint 1 contribution table (D1 §3.6)
+- [ ] Known limitations and incomplete work documented (D1 §4.2)
+- [ ] Final sprint board status recorded
+- [ ] Release PR `sprint-1` → `main` reviewed and merged
+- [ ] Release tag `v0.1.0` created on GitHub with Deliverable 1 PDF attached
 
 ## 6. Definition of Done and Verification Evidence
 
 - **Contract commit:** `99b8c59 docs(e2e): specification and contract for Sprint 1 E2E journeys and release checklist`
-- **Failing tests commit (TDD red):** `0a5b626 test(e2e): failing Playwright tests for normal and rejection journeys (TDD red)`
-- **Green tests commit (TDD green):** `049bbfe feat(e2e): verify and finalize Playwright journeys on running stack (TDD green)`
+- **Initial E2E test suite commit:** `0a5b626 test(e2e): failing Playwright tests for normal and rejection journeys (TDD red)`  
+  *(Note: The test suite at `0a5b626` initially failed on the first step due to test selector mismatches with the existing UI labels — expecting `"Sign in"` instead of `"Log in"`, and a link named `"Team Alpha"` instead of the card's `"Open team"` link. E2E covers features already implemented on `sprint-1`, so a true application-behavior red was not applicable).*
+- **Selector correction & positive control:** `049bbfe` (and follow-up review commit) corrected test locators and added positive control URL capture for supervisor team access; no production/application code was changed.
 - **Test execution summary:**
   - Playwright E2E: 3 passed (`e2e/smoke.spec.ts`, `e2e/sprint1-normal-journey.spec.ts`, `e2e/sprint1-rejection-journey.spec.ts`)
   - Server unit & API tests: 73 passed (8 test files)

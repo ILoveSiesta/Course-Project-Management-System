@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginAs, logout } from "./helpers.js";
+import { loginAs, logout, toLocalDatetimeInputValue } from "./helpers.js";
 
 test.describe("Sprint 1 Normal Domain Journey (TEST-E2E-01)", () => {
   test("complete domain journey: supervisor creates milestone -> student submits -> supervisor gives feedback -> student views feedback", async ({
@@ -10,7 +10,7 @@ test.describe("Sprint 1 Normal Domain Journey (TEST-E2E-01)", () => {
     const milestoneDesc = "Please submit your system architecture document and link to repository.";
     const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     // Format YYYY-MM-DDTHH:mm for datetime-local
-    const deadlineValue = futureDate.toISOString().slice(0, 16);
+    const deadlineValue = toLocalDatetimeInputValue(futureDate);
 
     // ==========================================
     // Step 1: Supervisor creates milestone
