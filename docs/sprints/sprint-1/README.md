@@ -9,6 +9,7 @@ Copy [`_contract-template.md`](_contract-template.md) to start a feature.
 | F-02 Team view and milestone creation | [`F-02-milestone.md`](F-02-milestone.md) | #3 | Implemented |
 | F-03 Submission and versions | [`F-03-submission.md`](F-03-submission.md) | #4 | Implemented |
 | F-04 Feedback | [`F-04-feedback.md`](F-04-feedback.md) | #5 | Implemented |
+| E2E Journeys & Release | [`E2E-journeys.md`](E2E-journeys.md) | #6 | In progress |
 
 ## Product Definition of Done
 
