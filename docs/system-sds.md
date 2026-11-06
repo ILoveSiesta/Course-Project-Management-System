@@ -6,7 +6,7 @@ Course Project Management System — CPE334 Theme 6
 |---|---|---|---|
 | 0.1 | 2026-11-03 | | Document skeleton |
 | 0.2 | 2026-11-04 | ILoveSiesta | First full draft (Sprint 1 in detail, Sprint 2–3 direction only), based on SRS v0.3. Owner of this document per issue #1: ILoveSiesta; reviewer: phet526 |
-| 0.3 | 2026-11-05 | ILoveSiesta | §3.2: shared visual style (`client/src/theme.css`) brought into Sprint 1 — change CHG-01 in `docs/traceability.md` §5 |
+| 0.3 | 2026-11-05 | ILoveSiesta | §3.2: shared visual style (`client/src/theme.css`) brought into Sprint 1 (PR #9) |
 
 Requirement IDs (FR/BR/NFR/D) refer to `docs/srs.md`. Feature contracts in `docs/sprints/sprint-N/` give the
 exact endpoint request/response shapes; this document defines the shared structure and conventions they follow.

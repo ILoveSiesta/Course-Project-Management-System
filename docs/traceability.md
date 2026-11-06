@@ -7,7 +7,7 @@
 | 0.3 | 2026-11-04 | phet526 | Updated F-01 test executions and verification results (PASS on feature/F-01-auth) |
 | 0.4 | 2026-11-04 | phet526 | Updated test references and exact commit SHA (d24f2c0) per PR #8 review |
 | 0.5 | 2026-11-05 | ILoveSiesta | F-02 AC/tests and results (commit b97f30d) |
-| 0.6 | 2026-11-05 | ILoveSiesta | Approved change CHG-01 (shared UI styling in Sprint 1) |
+| 0.6 | 2026-11-05 | ILoveSiesta | Shared UI styling noted (no requirement change) |
 | 0.7 | 2026-11-06 | phet526 | F-03 AC/tests and verification results (commit 65aaf05) |
 | 0.8 | 2026-11-06 | ILoveSiesta | F-04 AC/tests and results (commit 35b29a7) |
 
@@ -100,4 +100,4 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 
 | Change ID | Date | Affected requirement/feature | Change | Rationale | Approved by |
 |---|---|---|---|---|---|
-| CHG-01 | 2026-11-05 | SDS §3.2; UI of F-01 and F-02 (login, header, student and supervisor pages); SR-06 / NFR-11 (partly earlier) | Add a shared stylesheet (`client/src/theme.css`) and replace inline styles in Sprint 1, inside #3 F-02 (PR #9). Responsive verification at 375 px / 1280 px stays in Sprint 3. No requirement, AC or test changes; all UI texts, labels and roles are unchanged. | When the team looked at the first working F-02 screens, they were too plain to use as Deliverable 1 evidence and for the cross-team UAT in Lab 6. Doing it now, before F-03 and F-04, means those features reuse the same classes instead of every screen being restyled at the end of Sprint 3. It was done in #3 rather than a new issue because F-02 created most of the screens and the change is small and UI-only. | ILoveSiesta (proposed); phet526 confirmed in the PR #9 review |
+| — | — | — | None yet: no requirement, business rule or acceptance criterion has changed since the baseline | — | — |
