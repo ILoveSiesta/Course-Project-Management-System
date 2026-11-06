@@ -7,6 +7,7 @@
 | Version | Date | Author(s) | Change |
 |---|---|---|---|
 | 0.1 | 2026-11-06 | ILoveSiesta | Initial contract for F-04 (issue #5) |
+| 0.2 | 2026-11-06 | ILoveSiesta | Definition of Done filled with executed results; no behaviour change |
 
 ## 1. Linked requirements
 
@@ -117,8 +118,8 @@ Negative API tests include a positive control (an action that must succeed) in t
 
 ## 8. Definition of Done and evidence
 
-- [ ] All AC-04-01..AC-04-11 implemented
-- [ ] All STS tests executed and passing on a fresh database (command, counts, commit recorded in the PR)
-- [ ] TDD red → green: failing-test commit and implementation commit identified by SHA, with the red result checked test by test
-- [ ] `docs/traceability.md`, `docs/features.md`, sprint-1 README, AI-use updated
+- [x] All AC-04-01..AC-04-11 implemented
+- [x] All STS tests executed and passing on a fresh database — `npm run build && npm test` on `35b29a7`: server 73 passed (F-04: 9 API + 5 unit), client 15 passed (F-04: 3 UI), 0 failed, 0 skipped; E2E smoke 1/1
+- [x] TDD red → green: failing tests `e26be7a` (all 9 F-04 API tests failed — each negative test has a positive control, so none passed only because the route was missing; unit file failed to load; client 3 failed; existing 59 server + 12 client passed) → implementation `35b29a7` (all pass)
+- [x] `docs/traceability.md`, `docs/features.md`, sprint-1 README, AI-use updated
 - [ ] PR reviewed by phet526 and merged into `sprint-1`
