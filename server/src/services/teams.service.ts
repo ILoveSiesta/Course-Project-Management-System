@@ -42,7 +42,7 @@ function toMilestoneDto(m: MilestoneWithCreator) {
 }
 
 // Record scope (BR-01, BR-02): the team filter a user is allowed to see.
-function scopeFilter(user: AuthenticatedUser): Prisma.TeamWhereInput {
+export function scopeFilter(user: AuthenticatedUser): Prisma.TeamWhereInput {
   return user.role === "STUDENT"
     ? { memberships: { some: { studentId: user.id } } }
     : { supervisorAssignments: { some: { supervisorId: user.id } } };

@@ -23,6 +23,7 @@ function inDays(days: number): string {
 describe("F-03 Student Submits Milestone Work and Views Submissions API", () => {
   let alphaMilestoneId: number;
   let pastMilestoneId: number;
+  const createdMilestoneIds: number[] = [];
 
   beforeAll(async () => {
     await seed();
@@ -39,6 +40,7 @@ describe("F-03 Student Submits Milestone Work and Views Submissions API", () => 
       .set("Authorization", `Bearer ${tokens.supervisor1}`)
       .send({ title: "M1 Architecture", deadline: inDays(7) });
     alphaMilestoneId = mAlpha.body.milestone.id;
+    createdMilestoneIds.push(alphaMilestoneId);
 
     // Create a milestone with past deadline directly in DB to test late submissions
     const mPast = await getPrisma().milestone.create({
@@ -50,14 +52,19 @@ describe("F-03 Student Submits Milestone Work and Views Submissions API", () => 
       },
     });
     pastMilestoneId = mPast.id;
+    createdMilestoneIds.push(pastMilestoneId);
   });
 
   afterAll(async () => {
     try {
-      if ((getPrisma() as any).submission) {
-        await (getPrisma() as any).submission.deleteMany();
+      if (createdMilestoneIds.length > 0) {
+        await getPrisma().submission.deleteMany({
+          where: { milestoneId: { in: createdMilestoneIds } },
+        });
+        await getPrisma().milestone.deleteMany({
+          where: { id: { in: createdMilestoneIds } },
+        });
       }
-      await getPrisma().milestone.deleteMany();
     } catch {
       // Ignore if table not created yet in red phase
     }
@@ -86,15 +93,15 @@ describe("F-03 Student Submits Milestone Work and Views Submissions API", () => 
       expect(res.body.submission.submittedBy.name).toBe("Student One");
 
       // Verify in DB
-      const dbSub = await (getPrisma() as any).submission.findUnique({
+      const dbSub = await getPrisma().submission.findUnique({
         where: { milestoneId_version: { milestoneId: alphaMilestoneId, version: 1 } },
       });
       expect(dbSub).toBeTruthy();
-      expect(dbSub.daysLate).toBe(0);
+      expect(dbSub!.daysLate).toBe(0);
     });
 
     it("TEST-03-02: student resubmits for same milestone (version 2, version 1 untouched)", async () => {
-      const v1Before = await (getPrisma() as any).submission.findUnique({
+      const v1Before = await getPrisma().submission.findUnique({
         where: { milestoneId_version: { milestoneId: alphaMilestoneId, version: 1 } },
       });
 
@@ -111,11 +118,11 @@ describe("F-03 Student Submits Milestone Work and Views Submissions API", () => 
       expect(res.body.submission.version).toBe(2);
       expect(res.body.submission.title).toBe("Architecture Document v2");
 
-      const v1After = await (getPrisma() as any).submission.findUnique({
+      const v1After = await getPrisma().submission.findUnique({
         where: { milestoneId_version: { milestoneId: alphaMilestoneId, version: 1 } },
       });
-      expect(v1After.title).toBe(v1Before.title);
-      expect(v1After.link).toBe(v1Before.link);
+      expect(v1After!.title).toBe(v1Before!.title);
+      expect(v1After!.link).toBe(v1Before!.link);
     });
 
     it("TEST-03-03: max 3 versions per milestone; 4th submission rejected with 409", async () => {
@@ -142,7 +149,7 @@ describe("F-03 Student Submits Milestone Work and Views Submissions API", () => 
       expect(res4.status).toBe(409);
       expect(res4.body.error.code).toBe("VERSION_LIMIT_REACHED");
 
-      const count = await (getPrisma() as any).submission.count({
+      const count = await getPrisma().submission.count({
         where: { milestoneId: alphaMilestoneId },
       });
       expect(count).toBe(3);
@@ -162,6 +169,10 @@ describe("F-03 Student Submits Milestone Work and Views Submissions API", () => 
     });
 
     it("TEST-03-09: student of another team gets 404 NOT_FOUND", async () => {
+      const countBefore = await getPrisma().submission.count({
+        where: { milestoneId: alphaMilestoneId },
+      });
+
       const res = await request(app)
         .post(`/api/milestones/${alphaMilestoneId}/submissions`)
         .set("Authorization", `Bearer ${tokens.student3}`) // Team Beta student
@@ -172,9 +183,18 @@ describe("F-03 Student Submits Milestone Work and Views Submissions API", () => 
 
       expect(res.status).toBe(404);
       expect(res.body.error.code).toBe("NOT_FOUND");
+
+      const countAfter = await getPrisma().submission.count({
+        where: { milestoneId: alphaMilestoneId },
+      });
+      expect(countAfter).toBe(countBefore);
     });
 
     it("TEST-03-10: supervisor gets 403 FORBIDDEN (student-only operation, BR-03)", async () => {
+      const countBefore = await getPrisma().submission.count({
+        where: { milestoneId: alphaMilestoneId },
+      });
+
       const res = await request(app)
         .post(`/api/milestones/${alphaMilestoneId}/submissions`)
         .set("Authorization", `Bearer ${tokens.supervisor1}`)
@@ -185,6 +205,11 @@ describe("F-03 Student Submits Milestone Work and Views Submissions API", () => 
 
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe("FORBIDDEN");
+
+      const countAfter = await getPrisma().submission.count({
+        where: { milestoneId: alphaMilestoneId },
+      });
+      expect(countAfter).toBe(countBefore);
     });
 
     it("TEST-03-11: invalid fields return 400 VALIDATION_ERROR with details (BR-08)", async () => {
@@ -194,6 +219,7 @@ describe("F-03 Student Submits Milestone Work and Views Submissions API", () => 
         .set("Authorization", `Bearer ${tokens.supervisor1}`)
         .send({ title: "Validation Test Milestone", deadline: inDays(10) });
       const mValId = mVal.body.milestone.id;
+      createdMilestoneIds.push(mValId);
 
       // 1. Missing title and link
       const res1 = await request(app)
@@ -317,6 +343,7 @@ describe("F-03 Student Submits Milestone Work and Views Submissions API", () => 
         .set("Authorization", `Bearer ${tokens.supervisor1}`)
         .send({ title: "Concurrent Submission Milestone", deadline: inDays(5) });
       const mBetaId = mBeta.body.milestone.id;
+      createdMilestoneIds.push(mBetaId);
 
       // Fire 10 parallel submissions by student3
       const promises = Array.from({ length: 10 }, (_, i) =>
@@ -339,7 +366,7 @@ describe("F-03 Student Submits Milestone Work and Views Submissions API", () => 
       const versions = successes.map((r) => r.body.submission.version).sort((a, b) => a - b);
       expect(versions).toEqual([1, 2, 3]);
 
-      const count = await (getPrisma() as any).submission.count({
+      const count = await getPrisma().submission.count({
         where: { milestoneId: mBetaId },
       });
       expect(count).toBe(3);

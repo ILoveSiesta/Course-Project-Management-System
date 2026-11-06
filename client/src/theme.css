@@ -296,3 +296,16 @@ a:hover {
   max-width: 400px;
   margin: 48px auto;
 }
+
+
+/* --- Submissions (F-03 / CHG-01) --- */
+
+.submission-item {
+  margin-bottom: 1rem;
+}
+
+.submission-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}

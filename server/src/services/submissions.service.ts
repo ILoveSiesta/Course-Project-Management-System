@@ -3,6 +3,7 @@ import { getPrisma } from "../prisma.js";
 import { AuthenticatedUser } from "../middleware/auth.js";
 import { HttpError, notFound } from "../utils/httpError.js";
 import { calculateDaysLate, validateSubmissionInput } from "../utils/submissionValidation.js";
+import { scopeFilter } from "./teams.service.js";
 
 const submissionInclude = {
   submittedBy: { select: { id: true, name: true } },
@@ -24,15 +25,9 @@ function toSubmissionDto(s: SubmissionWithSubmitter) {
   };
 }
 
-function teamScopeFilter(user: AuthenticatedUser): Prisma.TeamWhereInput {
-  return user.role === "STUDENT"
-    ? { memberships: { some: { studentId: user.id } } }
-    : { supervisorAssignments: { some: { supervisorId: user.id } } };
-}
-
 async function findMilestoneInScope(user: AuthenticatedUser, milestoneId: number) {
   const milestone = await getPrisma().milestone.findFirst({
-    where: { id: milestoneId, team: teamScopeFilter(user) },
+    where: { id: milestoneId, team: scopeFilter(user) },
     include: { team: true },
   });
   if (!milestone) throw notFound();
@@ -107,7 +102,7 @@ export async function getSubmission(user: AuthenticatedUser, submissionId: numbe
   const submission = await getPrisma().submission.findFirst({
     where: {
       id: submissionId,
-      milestone: { team: teamScopeFilter(user) },
+      milestone: { team: scopeFilter(user) },
     },
     include: submissionInclude,
   });

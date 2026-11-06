@@ -158,6 +158,6 @@ Constraints:
 
 - [x] All AC-03-01..AC-03-13 implemented
 - [x] All STS tests executed and passing on a fresh test database — `npm run build && npm test` on `65aaf05`: server 59 passed (F-03: 13 API + 14 unit), client 12 passed (F-03: 3 UI), 0 failed, 0 skipped; E2E smoke 1/1
-- [x] TDD red → green: failing tests `cace581` (server 13 failed + unit file failed to load, client 3 failed) → implementation `65aaf05` (all pass)
+- [x] TDD red → green: failing tests `cace581` (server 11 failed [TEST-03-08 and TEST-03-09 passed vacuously at red due to unknown route 404; true scope checked at green] + unit file failed to load, client 3 failed) → implementation `65aaf05` (all pass)
 - [x] `docs/traceability.md`, `docs/features.md`, sprint-1 README updated
 - [ ] PR reviewed by ILoveSiesta and merged into `sprint-1`
