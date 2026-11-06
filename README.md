@@ -53,7 +53,7 @@ docker-compose.yml  Local PostgreSQL for development
    ```bash
    npm run db:up
    ```
-4. Migrate และ seed ข้อมูลตัวอย่าง (ใช้ได้เมื่อมี model ใน `schema.prisma` แล้ว — ตอนนี้ยังเป็น skeleton เปล่า)
+4. Migrate และ seed ข้อมูลตัวอย่าง (มี models User, Team, Milestone, Submission, Feedback ครบสำหรับ Sprint 1)
    ```bash
    npm run prisma:migrate --prefix server
    npm run prisma:seed --prefix server
@@ -69,14 +69,17 @@ docker-compose.yml  Local PostgreSQL for development
 ```bash
 npm run build      # type-check server, build client
 npm test           # server + client unit/API tests
-npm run test:e2e   # Playwright (starts server and client automatically)
+npm run test:e2e   # Playwright (รันกับฐานข้อมูล dev ที่ migrate และ seed แล้วในข้อ 4; starts server and client automatically)
 ```
 
 ## Git workflow
 
 1. สร้าง Issue ที่ผูกกับ feature/contract
 2. แตก branch `feature/F-XX-short-name` (หรือ `fix/...`) จาก sprint staging branch (`sprint-1`, `sprint-2`, ...)
-3. เขียน contract/test ก่อน → implement → รัน test → อัปเดต docs
+3. Commit ตามลำดับนี้ใน branch (เป็นหลักฐาน TDD):
+   1. `docs(F-XX): contract` — contract ใน `docs/sprints/sprint-N/` (ใช้ `_contract-template.md`)
+   2. `test(F-XX): ...` — test ของพฤติกรรมที่ต้องการ ซึ่งยัง fail (red)
+   3. `feat(F-XX): ...` — implement จน test ผ่าน (green) แล้วอัปเดต docs/traceability
 4. เปิด PR เข้า sprint staging — เพื่อนในทีมรีวิว (ห้าม approve PR ตัวเอง)
 5. รวม feature แล้วรัน integration/acceptance checks บน staging
 6. เปิด release PR จาก staging → `main` แล้ว tag (`v0.1.0`, ...)
@@ -84,3 +87,4 @@ npm run test:e2e   # Playwright (starts server and client automatically)
 ## Demo accounts
 
 สร้างจาก seed script ในเครื่อง (ข้อมูลสังเคราะห์เท่านั้น) — ดู `server/prisma/seed.ts`
+รายชื่อทีมและบัญชีอยู่ใน `docs/system-sds.md` หัวข้อ 2.4 ส่วนรหัสผ่านกำหนดผ่าน `SEED_DEMO_PASSWORD` ใน `server/.env` (ไม่ commit)
