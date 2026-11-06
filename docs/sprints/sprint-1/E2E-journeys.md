@@ -8,6 +8,8 @@
 | 0.1 | 2026-11-06 | phet526 | Initial specification for Sprint 1 E2E journeys and release checklist (issue #6) |
 | 0.2 | 2026-11-06 | phet526 | E2E journeys executed and passing on running stack; updated verification evidence and DoD (commit 049bbfe) |
 | 0.3 | 2026-11-06 | phet526 | Updated per PR #12 review: accurate red/green locator description, positive control for team access, refined release checklist and unit/API scope annotations |
+| 0.4 | 2026-11-06 | ILoveSiesta | Release prep (#15): verification commit `5936f32` in §6; contribution table and known limitations done in §5 |
+| 0.5 | 2026-11-06 | ILoveSiesta | §5: NFR-07 manual fresh setup by phet526 recorded (PASS on `559bc29`) |
 
 ## 1. Linked requirements
 
@@ -66,8 +68,9 @@ The E2E tests run in a real browser using Playwright against the full applicatio
 
 ### Release Execution on Main (To be completed during release prep)
 - [ ] Run full build + `npm test` + `npm run test:e2e` on the release commit on `main`; record command, counts, and tested commit SHA (D1 §3.6)
-- [ ] `docs/contributions.md` filled with Sprint 1 contribution table (D1 §3.6)
-- [ ] Known limitations and incomplete work documented (D1 §4.2)
+- [x] `docs/contributions.md` filled with Sprint 1 contribution table (D1 §3.6) — #15
+- [x] Known limitations and incomplete work documented (D1 §4.2) — `docs/sprints/sprint-1/README.md` (#15)
+- [x] NFR-07 manual fresh setup from the README by the teammate, recorded in `docs/traceability.md` — phet526, PASS on `559bc29` (PR #16 review)
 - [ ] Final sprint board status recorded
 - [ ] Release PR `sprint-1` → `main` reviewed and merged
 - [ ] Release tag `v0.1.0` created on GitHub with Deliverable 1 PDF attached
@@ -77,7 +80,8 @@ The E2E tests run in a real browser using Playwright against the full applicatio
 - **Contract commit:** `99b8c59 docs(e2e): specification and contract for Sprint 1 E2E journeys and release checklist`
 - **Initial E2E test suite commit:** `0a5b626 test(e2e): failing Playwright tests for normal and rejection journeys (TDD red)`  
   *(Note: The test suite at `0a5b626` initially failed on the first step due to test selector mismatches with the existing UI labels — expecting `"Sign in"` instead of `"Log in"`, and a link named `"Team Alpha"` instead of the card's `"Open team"` link. E2E covers features already implemented on `sprint-1`, so a true application-behavior red was not applicable).*
-- **Selector correction & positive control:** `049bbfe` (and follow-up review commit) corrected test locators and added positive control URL capture for supervisor team access; no production/application code was changed.
+- **Selector correction & positive control:** `049bbfe` corrected test locators; `5936f32` (PR #12 review) added positive control URL capture for supervisor team access; no production/application code was changed.
+- **Verified commit:** `5936f32`, the reviewed head of PR #12 (results below). Rerun on `sprint-1` at `23026c6` after a fresh `prisma migrate reset`: same counts.
 - **Test execution summary:**
   - Playwright E2E: 3 passed (`e2e/smoke.spec.ts`, `e2e/sprint1-normal-journey.spec.ts`, `e2e/sprint1-rejection-journey.spec.ts`)
   - Server unit & API tests: 73 passed (8 test files)
