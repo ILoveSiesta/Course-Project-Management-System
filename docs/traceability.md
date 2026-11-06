@@ -14,6 +14,7 @@
 | 1.0 | 2026-11-06 | phet526 | Sprint 1 E2E journeys (#6) verification results (PASS on 049bbfe) |
 | 1.1 | 2026-11-06 | ILoveSiesta | CHG-01: states that all UI from this change on uses the shared classes, with no inline styles; revision numbers 0.9–1.0 renumbered (0.8 was used twice) |
 | 1.2 | 2026-11-06 | ILoveSiesta | E2E rows verified on `5936f32`, the reviewed head of PR #12 (#15) |
+| 1.3 | 2026-11-06 | ILoveSiesta | NFR-07 manual fresh setup by phet526: PASS on `559bc29` (PR #16 review) |
 
 Feature and responsibility IDs refer to `docs/features.md`.
 
@@ -81,7 +82,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | NFR-04 Token expiry and logout | F-01 | 1 | ≤ 2 h; revoked after logout | TEST-01-09, TEST-01-08b | `server/tests/api/auth.api.test.ts` | PASS | `d24f2c0` |
 | NFR-05 Safe error shape | SR-02 | 1 | JSON shape, no internals | Skeleton test `server/tests/health.api.test.ts` (404 case); F-01–F-04 STS | `health.api.test.ts` › unknown API route | PASS (404 case only) | `49d3c70` |
 | NFR-06 Concurrent submissions | F-03 | 1 | 10 parallel → unique versions, limit kept | TEST-03-14 | `server/tests/api/submissions.api.test.ts` | PASS | `65aaf05` |
-| NFR-07 Reproducible setup | SR-04 | 1 | README-only fresh setup | Teammate run before release (manual check, #6) | — | PLANNED | — |
+| NFR-07 Reproducible setup | SR-04 | 1 | README-only fresh setup | Teammate run before release (manual check, #6) | Manual: phet526 followed the README on their own machine (install, env setup, `npm run build`, `npm test`, `npm run test:e2e`), recorded in the PR #16 review | PASS (manual) | `559bc29` |
 | NFR-08 Durable data on GCP | SR-03 | 2 | Data survives restart/redeploy | Post-deployment check (Lab 5) | — | PLANNED | — |
 | NFR-09 CI quality gate | SR-03 | 2 | Failing check blocks merge | CI run evidence (Lab 5) | — | PLANNED | — |
 | NFR-10 Response time | SR-05 (with F-11) | 3 | p95 ≤ 500 ms on seeded dataset | Sprint 3 smoke test | — | PLANNED | — |

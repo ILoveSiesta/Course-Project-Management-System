@@ -16,7 +16,7 @@ Copy [`_contract-template.md`](_contract-template.md) to start a feature.
 Checked on `sprint-1` at `23026c6` (2026-11-06), before the release PR to `main`.
 
 - [x] Required behavior implemented: F-01..F-04 and the E2E journeys (#2–#6)
-- [ ] Planned verification executed; meaningful tests passing: all automated tests pass (below); the NFR-07 manual fresh-setup check by the teammate is still open
+- [x] Planned verification executed; meaningful tests passing: all automated tests pass (below); NFR-07 manual fresh setup by phet526 passed on `559bc29` (PR #16 review)
 - [x] Teammate-reviewed PR merged into sprint staging: PRs #7–#12 and #14, each reviewed by the other student
 - [x] Integration/acceptance checks run on staging: dev database reset with `npx prisma migrate reset --force`, then `npm run build` passed, `npm test` server 73/73 and client 15/15, `npm run test:e2e` 3/3; 0 failed, 0 skipped
 - [x] Setup and documents current: README, contracts, traceability and contribution table (#15)
@@ -28,7 +28,6 @@ The same checks are run again on the release commit on `main` after the release 
 
 | Item | Impact | Planned |
 |---|---|---|
-| NFR-07 reproducible setup: the manual fresh setup from the README by the teammate has not been recorded yet | Setup is used daily by both students, but not yet verified as a separate check | Before tag `v0.1.0` |
 | Responsive layout at 375 px / 1280 px not verified (SR-06, NFR-11) | Screens are built for desktop width | Sprint 3 |
 | No Docker image, CI pipeline, branch protection or GCP deployment | Tests run locally only; `main` has no required check yet | Lab 5 (15 Nov) |
 | Teams and memberships come from the seed only; no team management UI (FR-07, D-06) | Changing teams needs a database change | Sprint 3 (F-13) |

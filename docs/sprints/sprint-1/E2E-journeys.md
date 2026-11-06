@@ -9,6 +9,7 @@
 | 0.2 | 2026-11-06 | phet526 | E2E journeys executed and passing on running stack; updated verification evidence and DoD (commit 049bbfe) |
 | 0.3 | 2026-11-06 | phet526 | Updated per PR #12 review: accurate red/green locator description, positive control for team access, refined release checklist and unit/API scope annotations |
 | 0.4 | 2026-11-06 | ILoveSiesta | Release prep (#15): verification commit `5936f32` in §6; contribution table and known limitations done in §5 |
+| 0.5 | 2026-11-06 | ILoveSiesta | §5: NFR-07 manual fresh setup by phet526 recorded (PASS on `559bc29`) |
 
 ## 1. Linked requirements
 
@@ -69,7 +70,7 @@ The E2E tests run in a real browser using Playwright against the full applicatio
 - [ ] Run full build + `npm test` + `npm run test:e2e` on the release commit on `main`; record command, counts, and tested commit SHA (D1 §3.6)
 - [x] `docs/contributions.md` filled with Sprint 1 contribution table (D1 §3.6) — #15
 - [x] Known limitations and incomplete work documented (D1 §4.2) — `docs/sprints/sprint-1/README.md` (#15)
-- [ ] NFR-07 manual fresh setup from the README by the teammate, recorded in `docs/traceability.md`
+- [x] NFR-07 manual fresh setup from the README by the teammate, recorded in `docs/traceability.md` — phet526, PASS on `559bc29` (PR #16 review)
 - [ ] Final sprint board status recorded
 - [ ] Release PR `sprint-1` → `main` reviewed and merged
 - [ ] Release tag `v0.1.0` created on GitHub with Deliverable 1 PDF attached
