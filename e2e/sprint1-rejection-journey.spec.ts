@@ -11,7 +11,7 @@ test.describe("Sprint 1 Rejection and Access Journey (TEST-E2E-02)", () => {
     // 1. Milestone validation rejection (BR-04, NFR-12)
     // ==========================================
     await loginAs(page, "supervisor1@cpms.test");
-    await page.getByRole("link", { name: "Team Alpha" }).click();
+    await page.locator(".card").filter({ hasText: "Team Alpha" }).getByRole("link", { name: "Open team" }).click();
 
     // Submit with blank title and past deadline
     await page.getByLabel("Title").fill("");

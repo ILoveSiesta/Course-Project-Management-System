@@ -19,7 +19,7 @@ test.describe("Sprint 1 Normal Domain Journey (TEST-E2E-01)", () => {
     await expect(page.getByRole("heading", { name: "Supervisor Dashboard" })).toBeVisible();
 
     // Click Team Alpha
-    await page.getByRole("link", { name: "Team Alpha" }).click();
+    await page.locator(".card").filter({ hasText: "Team Alpha" }).getByRole("link", { name: "Open team" }).click();
     await expect(page).toHaveURL(/\/supervisor\/teams\/\d+/);
     await expect(page.getByRole("heading", { name: "Team Alpha" })).toBeVisible();
 
@@ -78,7 +78,7 @@ test.describe("Sprint 1 Normal Domain Journey (TEST-E2E-01)", () => {
     // Step 3: Supervisor reviews and adds feedback
     // ==========================================
     await loginAs(page, "supervisor1@cpms.test");
-    await page.getByRole("link", { name: "Team Alpha" }).click();
+    await page.locator(".card").filter({ hasText: "Team Alpha" }).getByRole("link", { name: "Open team" }).click();
     await page.getByRole("link", { name: milestoneTitle }).click();
     await expect(page).toHaveURL(/\/supervisor\/milestones\/\d+/);
 
