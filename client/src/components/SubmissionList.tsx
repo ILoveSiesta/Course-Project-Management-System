@@ -1,12 +1,15 @@
 import React from "react";
 import { Submission } from "../api.js";
 import { formatDeadline } from "../format.js";
+import { FeedbackSection } from "./FeedbackSection.js";
 
 interface SubmissionListProps {
   submissions: Submission[];
+  // Supervisors pass this to get an "Add feedback" form under each version (F-04).
+  onAddFeedback?: (submissionId: number, comment: string) => Promise<void>;
 }
 
-export const SubmissionList: React.FC<SubmissionListProps> = ({ submissions }) => {
+export const SubmissionList: React.FC<SubmissionListProps> = ({ submissions, onAddFeedback }) => {
   return (
     <section className="card">
       <h3>Submissions</h3>
@@ -36,6 +39,11 @@ export const SubmissionList: React.FC<SubmissionListProps> = ({ submissions }) =
                   {s.link}
                 </a>
               </p>
+              <FeedbackSection
+                version={s.version}
+                feedback={s.feedback ?? []}
+                onAdd={onAddFeedback ? (comment) => onAddFeedback(s.id, comment) : undefined}
+              />
             </li>
           ))}
         </ul>

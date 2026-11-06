@@ -23,6 +23,7 @@ model User {
   supervisorAssignments SupervisorAssignment[]
   milestonesCreated     Milestone[]            @relation("MilestoneCreatedBy")
   submissions           Submission[]
+  feedbackGiven         Feedback[]
 }
 
 model RevokedToken {
@@ -86,7 +87,20 @@ model Submission {
   link          String    @db.VarChar(2048)
   submittedAt   DateTime  @default(now()) @db.Timestamptz(3)
   daysLate      Int
+  feedback      Feedback[]
 
   @@unique([milestoneId, version])
   @@index([milestoneId, submittedAt])
+}
+
+model Feedback {
+  id           Int        @id @default(autoincrement())
+  submissionId Int
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Restrict)
+  authorId     Int
+  author       User       @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  comment      String     @db.VarChar(5000)
+  createdAt    DateTime   @default(now()) @db.Timestamptz(3)
+
+  @@index([submissionId, createdAt])
 }
