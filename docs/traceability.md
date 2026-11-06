@@ -12,6 +12,7 @@
 | 0.8 | 2026-11-06 | ILoveSiesta | F-04 AC/tests and results (commit 35b29a7) |
 | 0.8 | 2026-11-06 | ILoveSiesta | Coverage gaps: FR-07 no longer depends on TA confirmation (D-06 Agreed) |
 | 0.9 | 2026-11-06 | phet526 | Sprint 1 E2E journeys (#6) verification results (PASS on 049bbfe) |
+| 1.0 | 2026-11-06 | ILoveSiesta | CHG-01: states that all UI from this change on uses the shared classes, with no inline styles |
 
 Feature and responsibility IDs refer to `docs/features.md`.
 
@@ -102,4 +103,4 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 
 | Change ID | Date | Affected requirement/feature | Change | Rationale | Approved by |
 |---|---|---|---|---|---|
-| CHG-01 | 2026-11-05 | SDS §3.2; UI of F-01 and F-02 (login, header, student and supervisor pages); SR-06 / NFR-11 (partly earlier) | Add a shared stylesheet (`client/src/theme.css`) and replace inline styles in Sprint 1, inside #3 F-02 (PR #9). Responsive verification at 375 px / 1280 px stays in Sprint 3. No requirement, AC or test changes; all UI texts, labels and roles are unchanged. | When the team looked at the first working F-02 screens, they were too plain to use as Deliverable 1 evidence and for the cross-team UAT in Lab 6. Doing it now, before F-03 and F-04, means those features reuse the same classes instead of every screen being restyled at the end of Sprint 3. It was done in #3 rather than a new issue because F-02 created most of the screens and the change is small and UI-only. | ILoveSiesta (proposed); phet526 confirmed in the PR #9 review |
+| CHG-01 | 2026-11-05 | SDS §3.2; UI of F-01 and F-02 (login, header, student and supervisor pages); SR-06 / NFR-11 (partly earlier) | Add a shared stylesheet (`client/src/theme.css`) and replace inline styles in Sprint 1, inside #3 F-02 (PR #9). From this change on, all UI uses the classes in `client/src/theme.css`; no inline styles. Responsive verification at 375 px / 1280 px stays in Sprint 3. No requirement, AC or test changes; all UI texts, labels and roles are unchanged. | When the team looked at the first working F-02 screens, they were too plain to use as Deliverable 1 evidence and for the cross-team UAT in Lab 6. Doing it now, before F-03 and F-04, means those features reuse the same classes instead of every screen being restyled at the end of Sprint 3. It was done in #3 rather than a new issue because F-02 created most of the screens and the change is small and UI-only. | ILoveSiesta (proposed); phet526 confirmed in the PR #9 review |
