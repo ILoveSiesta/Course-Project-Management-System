@@ -6,6 +6,7 @@
 | Version | Date | Author(s) | Change |
 |---|---|---|---|
 | 0.1 | 2026-11-06 | phet526 | Initial specification for Sprint 1 E2E journeys and release checklist (issue #6) |
+| 0.2 | 2026-11-06 | phet526 | E2E journeys executed and passing on running stack; updated verification evidence and DoD (commit 049bbfe) |
 
 ## 1. Linked requirements
 
@@ -50,10 +51,21 @@ The E2E tests run in a real browser using Playwright against the full applicatio
 
 ## 5. Release Readiness Checklist for `v0.1.0`
 
-- [ ] All Sprint 1 features implemented (F-01, F-02, F-03, F-04)
-- [ ] Automated tests passing on fresh database (`npm run build && npm test && npm run test:e2e`)
-- [ ] Reproducible setup verified against README instructions
-- [ ] Clean Git history with reviewed PRs (#8, #9, #10, #11) merged into `sprint-1`
-- [ ] Documentation updated (`docs/srs.md`, `docs/system-sds.md`, `docs/features.md`, `docs/traceability.md`, `docs/sprints/plan.md`)
+- [x] All Sprint 1 features implemented (F-01, F-02, F-03, F-04)
+- [x] Automated tests passing on fresh database (`npm run build && npm test && npm run test:e2e`)
+- [x] Reproducible setup verified against README instructions
+- [x] Clean Git history with reviewed PRs (#8, #9, #10, #11) merged into `sprint-1`
+- [x] Documentation updated (`docs/srs.md`, `docs/system-sds.md`, `docs/features.md`, `docs/traceability.md`, `docs/sprints/plan.md`)
 - [ ] Release PR `sprint-1` → `main` prepared and reviewed
 - [ ] Release tag `v0.1.0` ready to tag
+
+## 6. Definition of Done and Verification Evidence
+
+- **Contract commit:** `99b8c59 docs(e2e): specification and contract for Sprint 1 E2E journeys and release checklist`
+- **Failing tests commit (TDD red):** `0a5b626 test(e2e): failing Playwright tests for normal and rejection journeys (TDD red)`
+- **Green tests commit (TDD green):** `049bbfe feat(e2e): verify and finalize Playwright journeys on running stack (TDD green)`
+- **Test execution summary:**
+  - Playwright E2E: 3 passed (`e2e/smoke.spec.ts`, `e2e/sprint1-normal-journey.spec.ts`, `e2e/sprint1-rejection-journey.spec.ts`)
+  - Server unit & API tests: 73 passed (8 test files)
+  - Client component tests: 15 passed (5 test files)
+  - Total automated suite: 88 unit/integration tests + 3 Playwright browser E2E journeys passing with 0 failures
