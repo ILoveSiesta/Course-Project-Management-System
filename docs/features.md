@@ -9,6 +9,7 @@
 | 0.5 | 2026-11-06 | phet526 | F-03 status updated to Implemented |
 | 0.6 | 2026-11-06 | ILoveSiesta | F-04 status updated to Implemented |
 | 0.6 | 2026-11-06 | ILoveSiesta | F-13 no longer waits for TA confirmation (D-06 Agreed) |
+| 0.7 | 2026-11-06 | phet526 | Sprint 1 E2E journeys (#6) implemented and verified |
 
 Requirement IDs refer to `docs/srs.md`. Sprint 1 features have GitHub issues and engineering contracts in
 `docs/sprints/sprint-1/`. Sprint 2–3 features are allocated now and specified in their sprint.
@@ -48,6 +49,6 @@ These are not user features; they are established in one sprint and re-verified 
 
 ## 3. Sprint 1 verification work
 
-| Item | Purpose | Issue |
-|---|---|---|
-| E2E journeys | Normal journey (supervisor creates milestone → student submits → supervisor gives feedback → student sees it) and one rejection journey; release checklist for `v0.1.0` | #6 |
+| Item | Purpose | Issue | Status |
+|---|---|---|---|
+| E2E journeys | Normal journey (supervisor creates milestone → student submits → supervisor gives feedback → student sees it) and one rejection journey; release checklist for `v0.1.0` | #6 | Implemented |

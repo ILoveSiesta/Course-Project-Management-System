@@ -53,7 +53,7 @@ docker-compose.yml  Local PostgreSQL for development
    ```bash
    npm run db:up
    ```
-4. Migrate และ seed ข้อมูลตัวอย่าง (ใช้ได้เมื่อมี model ใน `schema.prisma` แล้ว — ตอนนี้ยังเป็น skeleton เปล่า)
+4. Migrate และ seed ข้อมูลตัวอย่าง (มี models User, Team, Milestone, Submission, Feedback ครบสำหรับ Sprint 1)
    ```bash
    npm run prisma:migrate --prefix server
    npm run prisma:seed --prefix server
@@ -69,7 +69,7 @@ docker-compose.yml  Local PostgreSQL for development
 ```bash
 npm run build      # type-check server, build client
 npm test           # server + client unit/API tests
-npm run test:e2e   # Playwright (starts server and client automatically)
+npm run test:e2e   # Playwright (รันกับฐานข้อมูล dev ที่ migrate และ seed แล้วในข้อ 4; starts server and client automatically)
 ```
 
 ## Git workflow
