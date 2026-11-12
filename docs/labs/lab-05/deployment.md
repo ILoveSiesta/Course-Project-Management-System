@@ -5,6 +5,7 @@ Course Project Management System (CPMS) — CPE334 Theme 6
 | Version | Date | Author(s) | Change |
 |---|---|---|---|
 | 0.1 | 2026-11-12 | ILoveSiesta | First version (#18): stack and changes from the starter kit, environment variables, Docker and local commands. CI (#19), GCP resources (#20), release procedure (#21) and persistence/rollback (#22) are added by their issues |
+| 0.2 | 2026-11-12 | phet526 | CI specification and deploy scripts design (#19): `ci-docker.yml`, `deploy/` scripts (`deploy.sh`, `release.sh`, `smoke_test.py`, `teardown.sh`), offline tests |
 
 Release being deployed: Sprint 1 `v0.1.0` (`25211ac`) plus the Lab 5 changes. Lab 5 Issues: #18–#22 (label `lab5`,
 milestone "Lab 5"). Staging branch for Lab 5: `lab5-staging`.
@@ -127,6 +128,24 @@ Project `cpe334-cpms`, region `asia-southeast1`.
 | Service accounts | `cpms-runner` (runtime), `cpms-deployer` (GitHub Actions) |
 | GitHub environment / required check | `demo` / `test-and-docker` |
 
-## 5. CI (#19), release procedure (#21), persistence and rollback (#22)
+## 5. CI on pull requests (#19)
+
+- **Workflow:** `.github/workflows/ci-docker.yml` (`CI & Docker Build`), job `test-and-docker`.
+- **Triggers:** `pull_request` into `[main, lab5-staging]`, `workflow_call` (reused by `deploy.yml` in #21), and `workflow_dispatch`.
+- **Permissions:** `contents: read` (read-only; never signs in to GCP). Actions are pinned to full commit SHAs and maintained with `.github/dependabot.yml`.
+- **Pipeline stages:**
+  1. **PostgreSQL 16 service container** (`postgres:16-alpine`, database `cpms`).
+  2. **Deploy-script checks (offline):** `bash deploy/tests/test_deploy_stub.sh`, `bash deploy/tests/test_release_stub.sh`, and `python3 -m unittest discover -s deploy/tests`.
+  3. **Backend (`server/`):** `npm ci`, `prisma generate`, `prisma migrate deploy`, `prisma:seed`, `npm run build`, and `npm test` (against `cpms_test`).
+  4. **Frontend (`client/`):** `npm ci`, `npm test`, and `npm run build`.
+  5. **E2E (`e2e/`):** `npm ci`, `npx playwright install --with-deps chromium`, and `npm run test:e2e`.
+  6. **Docker verification:** `docker build -t cpms-app:ci .` (build only; never pushed in CI).
+- **Deploy scripts (`deploy/`):** adapted to CPMS resource names (`cpe334-cpms`, `asia-southeast1`, `cpms`, `cpms-migrate`, `cpms-pg`, `cpms-runner`, `cpms-database-url`, `cpms-jwt-secret`, `cpms-demo-password`):
+  - `deploy/deploy.sh`: idempotent first-time GCP setup + migration job + Cloud Run deploy; supports `DRY_RUN=1` and generates secrets directly into Secret Manager without printing them.
+  - `deploy/release.sh`: resolves image digest by `IMAGE_TAG`, executes `cpms-migrate`, and updates `cpms` Cloud Run service by digest; supports `DRY_RUN=1`.
+  - `deploy/smoke_test.py`: read-only HTTP checks (`GET /api/health` 200, `GET /api/ready` 200, `GET /` 200 HTML, unauthenticated `GET /api/teams` 401); optional login check when both `SMOKE_EMAIL` and `SMOKE_PASSWORD` are configured.
+  - `deploy/teardown.sh`: end-of-term resource cleanup with `DRY_RUN=1` preview and exact `PROJECT_ID` confirmation.
+
+## 6. Release procedure (#21), persistence and rollback (#22)
 
 To be completed by those issues.
