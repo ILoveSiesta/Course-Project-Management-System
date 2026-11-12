@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """Read-only post-deploy smoke test for CPMS (Lab 5 Episodes 5 & 7)."""
 
+import http.client
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.request
 from typing import Optional, Tuple
 
 
-def _request(
+def _request_once(
     url: str,
     method: str = "GET",
     headers: Optional[dict] = None,
@@ -37,6 +39,27 @@ def _request(
         return code, content_type, body
 
 
+def _request(
+    url: str,
+    method: str = "GET",
+    headers: Optional[dict] = None,
+    json_body: Optional[dict] = None,
+    timeout: int = 15,
+    retries: int = 0,
+    delay: float = 2.0,
+) -> Tuple[int, str, str]:
+    last_err: Optional[Exception] = None
+    for attempt in range(retries + 1):
+        try:
+            return _request_once(url, method=method, headers=headers, json_body=json_body, timeout=timeout)
+        except (urllib.error.URLError, http.client.HTTPException, ConnectionError, OSError) as exc:
+            last_err = exc
+            if attempt < retries:
+                time.sleep(delay)
+    assert last_err is not None
+    raise last_err
+
+
 def run_smoke_tests(
     base_url: str,
     email: Optional[str] = None,
@@ -45,8 +68,8 @@ def run_smoke_tests(
     base = base_url.rstrip("/")
 
     try:
-        # 1. GET /api/health -> 200
-        status, _, body = _request(f"{base}/api/health")
+        # 1. GET /api/health -> 200 (retry briefly for cold-start containers / Cloud Run revisions)
+        status, _, body = _request(f"{base}/api/health", retries=5, delay=2.0)
         if status != 200:
             print(f"FAIL /api/health: expected 200, got {status}", file=sys.stderr)
             return 1
