@@ -5,6 +5,8 @@ Course Project Management System (CPMS) — CPE334 Theme 6
 | Version | Date | Author(s) | Change |
 |---|---|---|---|
 | 0.1 | 2026-11-12 | ILoveSiesta | First version (#18): stack and changes from the starter kit, environment variables, Docker and local commands. CI (#19), GCP resources (#20), release procedure (#21) and persistence/rollback (#22) are added by their issues |
+| 0.2 | 2026-11-12 | phet526 | CI specification and deploy scripts design (#19): `ci-docker.yml`, `deploy/` scripts (`deploy.sh`, `release.sh`, `smoke_test.py`, `teardown.sh`), offline tests |
+| 0.3 | 2026-11-12 | phet526 | PR #24 review fixes: idempotent secret/DB-user creation in `deploy.sh`, 40-char SHA + `ROLLBACK=true` in `release.sh`, strict retry/credential handling in `smoke_test.py`, `teardown.sh` resource summary, pinned v7 Actions + Python `3.14`, and live C-01 CI run evidence |
 
 Release being deployed: Sprint 1 `v0.1.0` (`25211ac`) plus the Lab 5 changes. Lab 5 Issues: #18–#22 (label `lab5`,
 milestone "Lab 5"). Staging branch for Lab 5: `lab5-staging`.
@@ -127,6 +129,30 @@ Project `cpe334-cpms`, region `asia-southeast1`.
 | Service accounts | `cpms-runner` (runtime), `cpms-deployer` (GitHub Actions) |
 | GitHub environment / required check | `demo` / `test-and-docker` |
 
-## 5. CI (#19), release procedure (#21), persistence and rollback (#22)
+## 5. CI on pull requests (#19)
+
+- **Workflow:** `.github/workflows/ci-docker.yml` (`CI & Docker Build`), job `test-and-docker`.
+- **Triggers:** `pull_request` into `[main, lab5-staging]`, `workflow_call` (reused by `deploy.yml` in #21), and `workflow_dispatch`.
+- **Permissions:** `contents: read` (read-only; never signs in to GCP), with `persist-credentials: false` on checkout. Actions are pinned to full commit SHAs (v7 tags) and maintained with `.github/dependabot.yml`.
+- **Pipeline stages:**
+  1. **PostgreSQL 16 service container** (`postgres:16-alpine`, database `cpms`).
+  2. **Deploy-script checks (offline):** `bash -n deploy/deploy.sh deploy/release.sh deploy/teardown.sh`, `bash deploy/tests/test_deploy_stub.sh`, `bash deploy/tests/test_release_stub.sh`, and `python3 -m unittest discover -s deploy/tests` (Python `3.14`).
+  3. **Backend (`server/`):** `npm ci`, `prisma generate`, `prisma migrate deploy`, `prisma:seed`, `npm run build`, and `npm test` (against `cpms_test`).
+  4. **Frontend (`client/`):** `npm ci`, `npm test`, and `npm run build`.
+  5. **E2E (`e2e/`):** `npm ci`, `npx playwright install --with-deps chromium`, and `npm run test:e2e`.
+  6. **Docker verification:** `docker build -t cpms-app:ci .` (build only; never pushed in CI).
+- **Deploy scripts (`deploy/`):** adapted to CPMS resource names (`cpe334-cpms`, `asia-southeast1`, `cpms`, `cpms-migrate`, `cpms-pg`, `cpms-runner`, `cpms-database-url`, `cpms-jwt-secret`, `cpms-demo-password`):
+  - `deploy/deploy.sh`: idempotent first-time GCP setup + migration job + Cloud Run deploy; supports `DRY_RUN=1`, generates DB user/secrets only when missing in Secret Manager (`&schema=public&connection_limit=3`), prints redacted `+ ...` commands, prints `gcloud logging read` diagnostics on migration failure, and accepts `--demo` with no effect (always seeds/updates secrets idempotently). If an initial `secrets create` succeeds and `versions add` fails mid-run, delete the empty secret before re-running.
+  - `deploy/release.sh`: validates 40-char hex commit SHA `IMAGE_TAG` and `ROLLBACK` (`true`/`false`), resolves image digest, skips migration when `ROLLBACK=true`, updates `cpms-migrate` / `cpms` via `gcloud run jobs update` + `services update` + `services update-traffic --to-latest` (without requiring `setIamPolicy`), and writes `SERVICE_URL` and `DEPLOYED_IMAGE` to `$GITHUB_ENV`; supports `DRY_RUN=1`.
+  - `deploy/smoke_test.py`: read-only HTTP checks (`GET /api/health` 200, `GET /api/ready` 200, `GET /` 200 HTML, unauthenticated `GET /api/teams` 401) each with 5 × 3s retries including unexpected HTTP statuses; fails loudly if only one of `SMOKE_EMAIL`/`SMOKE_PASSWORD` is set; runs `POST /api/auth/logout` inside `finally:` and logs `WARN` (without failing the run, as JWTs expire in 2h) if logout fails.
+  - `deploy/teardown.sh`: prints a list of all resources to be deleted before prompting for exact `PROJECT_ID` confirmation, with `DRY_RUN=1` preview and redacted `+ ...` logging.
+- **Verified on branch `ci/lab5-pr-checks` (2026-11-12):**
+  - Live PR CI runs (`C-01` evidence on PR #24, `CI & Docker Build / test-and-docker`):
+    - Initial PR head (`d1327b3`): <https://github.com/ILoveSiesta/Course-Project-Management-System/actions/runs/43229756075> (passed in 1m56s: server 84/84, client 15/15, Playwright E2E 3/3, `docker build` passed).
+    - Post-review head (`774cde0`): <https://github.com/ILoveSiesta/Course-Project-Management-System/actions/runs/43234818752> (passed in 1m52s, including `bash -n`, `test_deploy_stub.sh`, `test_release_stub.sh`, 8/8 `test_smoke.py`, server 84/84, client 15/15, Playwright E2E 3/3, and `docker build`).
+  - Offline script checks after PR #24 review fixes: `bash -n`, `test_deploy_stub.sh` (including fake-`gcloud` re-run idempotency test), `test_release_stub.sh` (including `ROLLBACK=true` and invalid tag/rollback checks), and `test_smoke.py` (8/8 unittest cases).
+  - `python deploy/smoke_test.py http://localhost:3000` against `docker compose up -d` → `PASS /api/health`, `PASS /api/ready`, `PASS /`, `PASS /api/teams (401 unauthenticated)`, `SKIP login`.
+
+## 6. Release procedure (#21), persistence and rollback (#22)
 
 To be completed by those issues.
