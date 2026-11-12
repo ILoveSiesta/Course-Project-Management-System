@@ -28,6 +28,7 @@ run_cmd() {
   if [ "$DRY_RUN" = "1" ]; then
     echo "[DRY_RUN] $*"
   else
+    echo "+ $*"
     "$@" || true
   fi
 }
@@ -37,6 +38,14 @@ echo "CPMS GCP Resource Teardown"
 echo "Project : $PROJECT_ID"
 echo "Region  : $REGION"
 echo "Dry Run : $DRY_RUN"
+echo "----------------------------------------"
+echo "Resources to delete:"
+echo "  - Cloud Run service : ${SERVICE_NAME} (${REGION})"
+echo "  - Cloud Run job     : ${MIGRATE_JOB_NAME} (${REGION})"
+echo "  - Cloud SQL instance: ${SQL_INSTANCE} (all databases and data)"
+echo "  - Artifact Registry : ${REPO_NAME} (${REGION})"
+echo "  - Secrets           : ${SECRET_DB_URL}, ${SECRET_JWT_SECRET}, ${SECRET_DEMO_PASS}"
+echo "  - Service Account   : ${SA_EMAIL}"
 echo "========================================"
 
 if [ "$DRY_RUN" != "1" ]; then

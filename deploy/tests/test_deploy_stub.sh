@@ -48,4 +48,46 @@ if PROJECT_ID="" bash "$DEPLOY_SCRIPT" >/dev/null 2>&1; then
   exit 1
 fi
 
+# Re-run idempotency test: fake gcloud reporting every resource and secret already exists
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+GCLOUD_LOG="$TMP_DIR/gcloud.log"
+
+cat > "$TMP_DIR/gcloud" << 'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$GCLOUD_LOG"
+case "$*" in
+  *"sql users list"*)
+    echo "cpms"
+    ;;
+  *"run services describe"*)
+    echo "https://cpms-mock.a.run.app"
+    ;;
+esac
+exit 0
+EOF
+chmod +x "$TMP_DIR/gcloud"
+
+GCLOUD_LOG="$GCLOUD_LOG" PATH="$TMP_DIR:$PATH" \
+  PROJECT_ID=cpe334-cpms REGION=asia-southeast1 \
+  bash "$DEPLOY_SCRIPT" >/dev/null
+
+if grep -qE "sql users (create|set-password)" "$GCLOUD_LOG"; then
+  echo "FAIL: re-running deploy.sh must not recreate or reset DB user password when secret exists"
+  cat "$GCLOUD_LOG"
+  exit 1
+fi
+
+if grep -qE "secrets (create|versions add)" "$GCLOUD_LOG"; then
+  echo "FAIL: re-running deploy.sh must not recreate or overwrite existing secret versions"
+  cat "$GCLOUD_LOG"
+  exit 1
+fi
+
+if ! grep -q "secrets add-iam-policy-binding cpms-database-url" "$GCLOUD_LOG"; then
+  echo "FAIL: re-running deploy.sh should still verify secret IAM bindings"
+  cat "$GCLOUD_LOG"
+  exit 1
+fi
+
 echo "PASS: test_deploy_stub"

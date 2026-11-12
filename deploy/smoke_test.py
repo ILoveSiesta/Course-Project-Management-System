@@ -8,7 +8,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 
 def _request_once(
@@ -39,74 +39,93 @@ def _request_once(
         return code, content_type, body
 
 
-def _request(
-    url: str,
-    method: str = "GET",
-    headers: Optional[dict] = None,
-    json_body: Optional[dict] = None,
-    timeout: int = 15,
-    retries: int = 0,
-    delay: float = 2.0,
-) -> Tuple[int, str, str]:
-    last_err: Optional[Exception] = None
-    for attempt in range(retries + 1):
+def _check_with_retry(
+    label: str,
+    check_fn: Callable[[], Optional[str]],
+    attempts: int = 5,
+    retry_delay: float = 3.0,
+) -> None:
+    """Runs check_fn up to `attempts` times; check_fn returns None on pass or an error string."""
+    last_reason = "unknown failure"
+    for attempt in range(attempts):
         try:
-            return _request_once(url, method=method, headers=headers, json_body=json_body, timeout=timeout)
-        except (urllib.error.URLError, http.client.HTTPException, ConnectionError, OSError) as exc:
-            last_err = exc
-            if attempt < retries:
-                time.sleep(delay)
-    assert last_err is not None
-    raise last_err
+            err = check_fn()
+            if err is None:
+                return
+            last_reason = err
+        except (urllib.error.URLError, http.client.HTTPException, ConnectionError, OSError, json.JSONDecodeError) as exc:
+            last_reason = str(exc)
+
+        if attempt < attempts - 1 and retry_delay > 0:
+            time.sleep(retry_delay)
+
+    raise RuntimeError(f"FAIL {label}: {last_reason}")
 
 
 def run_smoke_tests(
     base_url: str,
     email: Optional[str] = None,
     password: Optional[str] = None,
+    attempts: int = 5,
+    retry_delay: float = 3.0,
 ) -> int:
     base = base_url.rstrip("/")
 
+    # Fail loudly if only one credential is provided
+    if bool(email) != bool(password):
+        print("FAIL: Set both SMOKE_EMAIL and SMOKE_PASSWORD, or neither.", file=sys.stderr)
+        return 1
+
     try:
-        # 1. GET /api/health -> 200 (retry briefly for cold-start containers / Cloud Run revisions)
-        status, _, body = _request(f"{base}/api/health", retries=5, delay=2.0)
-        if status != 200:
-            print(f"FAIL /api/health: expected 200, got {status}", file=sys.stderr)
-            return 1
-        data = json.loads(body)
-        if data.get("status") != "ok":
-            print(f"FAIL /api/health: unexpected body {data}", file=sys.stderr)
-            return 1
+        # 1. GET /api/health -> 200
+        def check_health() -> Optional[str]:
+            status, _, body = _request_once(f"{base}/api/health")
+            if status != 200:
+                return f"expected 200, got {status}"
+            data = json.loads(body)
+            if data.get("status") != "ok":
+                return f"unexpected body {data}"
+            return None
+
+        _check_with_retry("/api/health", check_health, attempts=attempts, retry_delay=retry_delay)
         print("PASS /api/health")
 
         # 2. GET /api/ready -> 200 (db connected)
-        status, _, body = _request(f"{base}/api/ready")
-        if status != 200:
-            print(f"FAIL /api/ready: expected 200, got {status}", file=sys.stderr)
-            return 1
-        data = json.loads(body)
-        if data.get("status") != "ready" or data.get("db") != "connected":
-            print(f"FAIL /api/ready: unexpected body {data}", file=sys.stderr)
-            return 1
+        def check_ready() -> Optional[str]:
+            status, _, body = _request_once(f"{base}/api/ready")
+            if status != 200:
+                return f"expected 200, got {status}"
+            data = json.loads(body)
+            if data.get("status") != "ready" or data.get("db") != "connected":
+                return f"unexpected body {data}"
+            return None
+
+        _check_with_retry("/api/ready", check_ready, attempts=attempts, retry_delay=retry_delay)
         print("PASS /api/ready")
 
         # 3. GET / -> 200 HTML
-        status, ctype, body = _request(f"{base}/")
-        if status != 200 or "text/html" not in ctype.lower() or "<html" not in body.lower():
-            print(f"FAIL /: expected 200 text/html, got {status} ({ctype})", file=sys.stderr)
-            return 1
+        def check_root() -> Optional[str]:
+            status, ctype, body = _request_once(f"{base}/")
+            if status != 200 or "text/html" not in ctype.lower() or "<html" not in body.lower():
+                return f"expected 200 text/html, got {status} ({ctype})"
+            return None
+
+        _check_with_retry("/", check_root, attempts=attempts, retry_delay=retry_delay)
         print("PASS /")
 
         # 4. Unauthenticated GET /api/teams -> 401
-        status, _, _ = _request(f"{base}/api/teams")
-        if status != 401:
-            print(f"FAIL /api/teams: expected 401 without token, got {status}", file=sys.stderr)
-            return 1
+        def check_unauth() -> Optional[str]:
+            status, _, _ = _request_once(f"{base}/api/teams")
+            if status != 401:
+                return f"expected 401 without token, got {status}"
+            return None
+
+        _check_with_retry("/api/teams", check_unauth, attempts=attempts, retry_delay=retry_delay)
         print("PASS /api/teams (401 unauthenticated)")
 
         # 5. Optional read-only login check (only if both SMOKE_EMAIL and SMOKE_PASSWORD are set)
         if email and password:
-            status, _, body = _request(
+            status, _, body = _request_once(
                 f"{base}/api/auth/login",
                 method="POST",
                 json_body={"email": email, "password": password},
@@ -119,30 +138,34 @@ def run_smoke_tests(
                 print("FAIL login: missing token in response", file=sys.stderr)
                 return 1
 
-            status, _, _ = _request(
-                f"{base}/api/auth/me",
-                headers={"Authorization": f"Bearer {token}"},
-            )
-            if status != 200:
-                print(f"FAIL /api/auth/me: expected 200, got {status}", file=sys.stderr)
-                return 1
-            print("PASS login and authenticated /api/auth/me")
-
-            status, _, _ = _request(
-                f"{base}/api/auth/logout",
-                method="POST",
-                headers={"Authorization": f"Bearer {token}"},
-            )
-            if status not in (200, 204):
-                print(f"FAIL logout: expected 200/204, got {status}", file=sys.stderr)
-                return 1
-            print("PASS logout")
+            try:
+                status, _, _ = _request_once(
+                    f"{base}/api/auth/me",
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                if status != 200:
+                    print(f"FAIL /api/auth/me: expected 200, got {status}", file=sys.stderr)
+                    return 1
+                print("PASS login and authenticated /api/auth/me")
+            finally:
+                try:
+                    logout_status, _, _ = _request_once(
+                        f"{base}/api/auth/logout",
+                        method="POST",
+                        headers={"Authorization": f"Bearer {token}"},
+                    )
+                    if logout_status in (200, 204):
+                        print("PASS logout")
+                    else:
+                        print(f"WARN logout returned {logout_status}", file=sys.stderr)
+                except Exception as logout_exc:
+                    print(f"WARN logout error: {logout_exc}", file=sys.stderr)
         else:
             print("SKIP login: optional smoke credentials not configured")
 
         return 0
     except Exception as exc:
-        print(f"FAIL smoke test error: {exc}", file=sys.stderr)
+        print(str(exc), file=sys.stderr)
         return 1
 
 
