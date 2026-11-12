@@ -8,6 +8,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.2 | 2026-11-04 | ILoveSiesta | First full draft (Sprint 1 in detail, Sprint 2–3 direction only), based on SRS v0.3. Owner of this document per issue #1: ILoveSiesta; reviewer: phet526 |
 | 0.3 | 2026-11-05 | ILoveSiesta | §3.2: shared visual style (`client/src/theme.css`) brought into Sprint 1 — change CHG-01 in `docs/traceability.md` §5 |
 | 0.4 | 2026-11-06 | ILoveSiesta | §5: team management row no longer waits for TA confirmation (D-06 Agreed) |
+| 0.5 | 2026-11-12 | ILoveSiesta | §7 variables for the container (`NODE_ENV`, `CLIENT_DIST_DIR`, `TEST_DATABASE_URL`; seed requires `SEED_DEMO_PASSWORD`); §8 Lab 5 design: migrations in a separate job, deploy on merge to `main` without a manual step, `/api/ready` — change CHG-02 in `docs/traceability.md` §5 (#18) |
 
 Requirement IDs (FR/BR/NFR/D) refer to `docs/srs.md`. Feature contracts in `docs/sprints/sprint-N/` give the
 exact endpoint request/response shapes; this document defines the shared structure and conventions they follow.
@@ -255,32 +256,41 @@ deployment's secret store; the repository contains `.env.example` files with saf
 | `PORT` | server | API port | `3000` |
 | `JWT_SECRET` | server | Token signing key; long random value; **secret** | (never committed) |
 | `JWT_EXPIRES_IN` | server | Token lifetime | `2h` |
-| `SEED_DEMO_PASSWORD` | server (seed only) | Password for synthetic demo accounts | (local value; shared privately) |
+| `SEED_DEMO_PASSWORD` | server (seed only) | Password for synthetic demo accounts; **secret** on GCP | (local value; shared privately) |
+| `NODE_ENV` | server | Runtime mode; `production` in the Docker image | `development` |
+| `CLIENT_DIST_DIR` | server | Folder of the built client; when set, the API also serves the UI | `/app/client/dist` (image) |
+| `TEST_DATABASE_URL` | server tests | Optional test database; name must end in `_test` | derived: `.../cpms_test` |
 | `VITE_API_URL` | client (build time) | API base URL | `/api` |
 
-The server refuses to start if `JWT_SECRET` or `DATABASE_URL` is missing. Tests use a separate database
-(`DATABASE_URL` pointing to `cpms_test`).
+The server refuses to start if `JWT_SECRET` or `DATABASE_URL` is missing, and the seed refuses to run without
+`SEED_DEMO_PASSWORD` (no password in code). Tests use a separate database (`DATABASE_URL` pointing to `cpms_test`).
+The full per-environment table (local, compose, CI, Cloud Run) is in `docs/labs/lab-05/deployment.md`.
 
 ## 8. Deployment plan (GCP)
 
-Implemented in Lab 5; this is the target design.
+Implemented in Lab 5 (issues #18–#22), following the course starter kit; operational details and the release
+procedure are in `docs/labs/lab-05/deployment.md`. Changed from v0.4 by CHG-02 (start-up and approval rows).
 
 ```mermaid
 flowchart LR
-  GH["GitHub<br/>PR → CI build + tests"] -->|"merge to main<br/>(manual approval)"| AR["Artifact Registry<br/>Docker image"]
-  AR --> CR["Cloud Run<br/>API + built SPA"]
+  GH["GitHub<br/>PR → CI build + tests<br/>(required check)"] -->|"reviewed merge to main"| AR["Artifact Registry<br/>image tagged with commit SHA"]
+  AR --> JOB["Cloud Run job<br/>migrate deploy + seed"]
+  JOB --> CR["Cloud Run service<br/>API + built SPA"]
   CR -->|"Cloud SQL connector"| SQL[("Cloud SQL<br/>PostgreSQL")]
-  SM["Secret Manager<br/>JWT_SECRET, DB password"] --> CR
+  JOB --> SQL
+  SM["Secret Manager<br/>DATABASE_URL, JWT_SECRET,<br/>SEED_DEMO_PASSWORD"] --> CR
+  SM --> JOB
 ```
 
-| Item | Plan |
+| Item | Design |
 |---|---|
-| Image | One multi-stage Dockerfile: build client (`vite build`) and server; runtime image runs the API and serves the client's static files from the same origin |
-| Start-up | Container runs `prisma migrate deploy`, then starts the API |
-| Database | Cloud SQL for PostgreSQL — durable across restarts and redeployments (NFR-08) |
+| Image | One multi-stage `Dockerfile`: build client (`vite build`); runtime runs the API with `tsx` and serves the built client from the same origin (`CLIENT_DIST_DIR`); non-root user; listens on `PORT` |
+| Start-up | The container only starts the API. Migrations and the re-runnable seed run in a separate Cloud Run job (`cpms-migrate`) from the same image before the service is updated; a failed migration stops the release |
+| Health | `GET /api/health` (process up) and `GET /api/ready` (database reachable, 503 otherwise) for the post-deploy smoke test |
+| Database | Cloud SQL for PostgreSQL — durable across restarts and redeployments (NFR-08); migrations stay additive so an older image still runs after a rollback |
 | Secrets | Secret Manager injected as environment variables; never in the image or Git |
-| CI/CD | GitHub Actions: build + all automated tests on every PR (required check, NFR-09); on merge to `main`, build image and deploy after a manual approval step |
-| Local parity | `docker-compose.yml` already provides PostgreSQL; Lab 5 adds the app service |
+| CI/CD | GitHub Actions: build + all automated tests on every PR into staging and `main` (required check `test-and-docker`, NFR-09); a merge into `main` (reviewed PR, passing check) builds the image, runs the migration job, deploys and smoke-tests. Rollback = re-run with an earlier commit SHA |
+| Local parity | `docker-compose.yml`: `db`, `migrate` (runs once), `app` from the same image |
 
 ## 9. Test strategy
 

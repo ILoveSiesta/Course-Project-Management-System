@@ -26,7 +26,8 @@ server/          Express API (src/, prisma/, tests/)
 e2e/             Playwright end-to-end tests
 docs/            SRS, features, traceability, SDS, sprint contracts, labs
 .github/         Issue and PR templates
-docker-compose.yml  Local PostgreSQL for development
+Dockerfile          Production image (API + built client, one container)
+docker-compose.yml  PostgreSQL for development; full app stack (db, migrate, app)
 ```
 
 ## Prerequisites
@@ -44,7 +45,7 @@ docker-compose.yml  Local PostgreSQL for development
    npm install --prefix client
    npx playwright install chromium
    ```
-2. สร้างไฟล์ environment (ห้าม commit `.env`)
+2. สร้างไฟล์ environment (ห้าม commit `.env`) แล้วตั้งค่าของตัวเอง — ต้องมี `SEED_DEMO_PASSWORD` (seed ไม่ยอมรันถ้าไม่มี)
    ```bash
    cp server/.env.example server/.env
    cp client/.env.example client/.env
@@ -71,6 +72,17 @@ npm run build      # type-check server, build client
 npm test           # server + client unit/API tests
 npm run test:e2e   # Playwright (รันกับฐานข้อมูล dev ที่ migrate และ seed แล้วในข้อ 4; starts server and client automatically)
 ```
+
+## Run with Docker
+
+ใช้ image เดียวกับที่ deploy บน Cloud Run (ปิด `npm run dev --prefix server` ก่อน เพราะใช้ port 3000)
+
+```bash
+docker compose up --build -d   # db + migrate (รันครั้งเดียว) + app ที่ http://localhost:3000
+docker compose down            # ข้อมูลยังอยู่ใน volume cpms-db-data
+```
+
+รายละเอียด environment variables, คำสั่ง และการ deploy บน GCP: [docs/labs/lab-05/deployment.md](docs/labs/lab-05/deployment.md)
 
 ## Git workflow
 
