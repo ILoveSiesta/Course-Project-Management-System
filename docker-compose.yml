@@ -1,5 +1,8 @@
-# Local development database only.
-# The full application Dockerfiles and CI/CD are added in Lab 5.
+# Local Docker setup (Lab 5).
+#   npm run db:up          -> PostgreSQL only, for `npm run dev` (unchanged from Sprint 1)
+#   docker compose up --build -d -> db + migrate (runs once) + app on http://localhost:3000
+# app and migrate read server/.env (copy it from server/.env.example first); only
+# DATABASE_URL is overridden to reach the db container. Values here are local-only fallbacks.
 services:
   db:
     image: postgres:16-alpine
@@ -12,6 +15,47 @@ services:
       - "5432:5432"
     volumes:
       - cpms-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cpms -d cpms"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Applies committed migrations and the (re-runnable) seed, then exits.
+  migrate:
+    build: .
+    image: cpms-app:local
+    container_name: cpms-migrate
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - path: server/.env
+        required: true
+    environment:
+      DATABASE_URL: postgresql://cpms:cpms@db:5432/cpms?schema=public
+    command: ["sh", "-c", "npm run prisma:deploy && npm run prisma:seed"]
+
+  # API + built client from the same image Cloud Run uses.
+  app:
+    build: .
+    image: cpms-app:local
+    container_name: cpms-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    env_file:
+      - path: server/.env
+        required: true
+    environment:
+      DATABASE_URL: postgresql://cpms:cpms@db:5432/cpms?schema=public
+      PORT: 3000
+    ports:
+      - "3000:3000"
 
 volumes:
   cpms-db-data:
