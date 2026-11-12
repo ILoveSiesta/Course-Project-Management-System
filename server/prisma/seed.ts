@@ -4,9 +4,18 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+// Demo-account passwords come only from the environment (local .env, CI, or Secret Manager
+// on GCP); there is no fallback in code (Lab 5 #18).
+export function demoPasswordFrom(env: Record<string, string | undefined>): string {
+  const value = env.SEED_DEMO_PASSWORD;
+  if (!value || !value.trim()) {
+    throw new Error("SEED_DEMO_PASSWORD is not set: refusing to seed demo accounts without a password from the environment.");
+  }
+  return value;
+}
+
 export async function seed() {
-  const defaultPassword = process.env.SEED_DEMO_PASSWORD || "demo-password";
-  const passwordHash = await bcrypt.hash(defaultPassword, 10);
+  const passwordHash = await bcrypt.hash(demoPasswordFrom(process.env), 10);
 
   // 1. Create or upsert users
   const studentsData = [
