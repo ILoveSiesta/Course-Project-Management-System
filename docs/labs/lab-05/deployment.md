@@ -145,6 +145,12 @@ Project `cpe334-cpms`, region `asia-southeast1`.
   - `deploy/release.sh`: resolves image digest by `IMAGE_TAG`, executes `cpms-migrate`, and updates `cpms` Cloud Run service by digest; supports `DRY_RUN=1`.
   - `deploy/smoke_test.py`: read-only HTTP checks (`GET /api/health` 200, `GET /api/ready` 200, `GET /` 200 HTML, unauthenticated `GET /api/teams` 401); optional login check when both `SMOKE_EMAIL` and `SMOKE_PASSWORD` are configured.
   - `deploy/teardown.sh`: end-of-term resource cleanup with `DRY_RUN=1` preview and exact `PROJECT_ID` confirmation.
+- **Verified locally (2026-11-12, branch `ci/lab5-pr-checks`):**
+  - `bash deploy/tests/test_deploy_stub.sh` → `PASS: test_deploy_stub` (`DRY_RUN=1 PROJECT_ID=cpe334-cpms REGION=asia-southeast1` verified)
+  - `bash deploy/tests/test_release_stub.sh` → `PASS: test_release_stub`
+  - `python -m unittest discover -s deploy/tests -p "test_*.py" -v` → 5/5 passed
+  - `python deploy/smoke_test.py http://localhost:3000` against `docker compose up -d` → `PASS /api/health`, `PASS /api/ready`, `PASS /`, `PASS /api/teams (401 unauthenticated)`, `SKIP login`
+  - Live CI run link on GitHub Actions (`CI & Docker Build / test-and-docker`) will be recorded on the PR into `lab5-staging` (C-01).
 
 ## 6. Release procedure (#21), persistence and rollback (#22)
 
