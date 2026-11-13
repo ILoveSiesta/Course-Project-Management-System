@@ -100,12 +100,15 @@ jobs:
 
       # Skipped for rollbacks. The path must match the Artifact Registry repo
       # `cpms` and image `cpms` (same as deploy/release.sh).
+      # --provenance=false --sbom=false (not in the kit): push one image
+      # manifest instead of an image index with attestations, so the digest in
+      # the run summary equals the digest Cloud Run serves (Student Guide 7.6).
       - name: Build and push image
         if: env.ROLLBACK != 'true'
         run: |
           gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
           IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/cpms/cpms:$IMAGE_TAG"
-          docker build --tag "$IMAGE" .
+          docker build --provenance=false --sbom=false --tag "$IMAGE" .
           docker push "$IMAGE"
 
       # Resolves the digest, runs cpms-migrate (not for rollbacks), updates the
