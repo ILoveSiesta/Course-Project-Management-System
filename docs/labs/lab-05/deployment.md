@@ -277,7 +277,9 @@ To prove data persistence across container lifecycle changes and deployment oper
   - **Visible change:** Footer version `CPMS v0.1.1` disappeared (reverted to `API: ok` only, matching Release 1 behavior).
   - **Persistence check:** Milestone `Milestone C-05 Persistenc` persisted untouched in Cloud SQL.
 
-<img width="1706" height="827" alt="State 3: Data persisted during rollback to Release 1" src="https://github.com/user-attachments/assets/629c3479-bcbf-4811-a50f-8a26f2fc98b8" />
+<img width="1440" height="900" alt="State 3a: Deploy demo rollback run 43476893936" src="https://github.com/user-attachments/assets/54346a06-ced0-443b-be2a-37ce0835db1c" />
+
+<img width="1706" height="827" alt="State 3b: Data persisted during rollback to Release 1" src="https://github.com/user-attachments/assets/629c3479-bcbf-4811-a50f-8a26f2fc98b8" />
 
 #### 4. Roll-forward to Release 2 (State 4)
 - Triggered roll-forward via GitHub Actions: **Actions → Deploy demo → Run workflow** on `main` with `image_tag` set to Release 2 commit SHA `53003a5a5c066b36149c5736b17cb2dcddd3ae23` ([run 43477461502](https://github.com/ILoveSiesta/Course-Project-Management-System/actions/runs/43477461502)).
@@ -286,7 +288,9 @@ To prove data persistence across container lifecycle changes and deployment oper
   - **Visible change:** Footer version **`CPMS v0.1.1`** restored.
   - **Persistence check:** Milestone `Milestone C-05 Persistenc` persisted untouched.
 
-<img width="1706" height="827" alt="State 4: Data persisted after roll-forward to v0.1.1" src="https://github.com/user-attachments/assets/6cb1d00d-6682-4672-8014-17d027f16888" />
+<img width="1440" height="900" alt="State 4a: Deploy demo roll-forward run 43477461502" src="https://github.com/user-attachments/assets/2530cd76-d50b-45b0-a6f8-7b5bcb725da8" />
+
+<img width="1706" height="827" alt="State 4b: Data persisted after roll-forward to v0.1.1" src="https://github.com/user-attachments/assets/6cb1d00d-6682-4672-8014-17d027f16888" />
 
 #### Summary of persistence and rollback lifecycle (C-05)
 
