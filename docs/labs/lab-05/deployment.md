@@ -7,6 +7,8 @@ Course Project Management System (CPMS) — CPE334 Theme 6
 | 0.1 | 2026-11-12 | ILoveSiesta | First version (#18): stack and changes from the starter kit, environment variables, Docker and local commands. CI (#19), GCP resources (#20), release procedure (#21) and persistence/rollback (#22) are added by their issues |
 | 0.2 | 2026-11-12 | phet526 | CI specification and deploy scripts design (#19): `ci-docker.yml`, `deploy/` scripts (`deploy.sh`, `release.sh`, `smoke_test.py`, `teardown.sh`), offline tests |
 | 0.3 | 2026-11-12 | phet526 | PR #24 review fixes: idempotent secret/DB-user creation in `deploy.sh`, 40-char SHA + `ROLLBACK=true` in `release.sh`, strict retry/credential handling in `smoke_test.py`, `teardown.sh` resource summary, pinned v7 Actions + Python `3.14`, and live C-01 CI run evidence |
+| 0.4 | 2026-11-13 | phet526 | GCP resources specification, first Cloud Run deployment from commit `a9cc472` (`https://cpms-6pjdhtz32a-as.a.run.app`), verification evidence (C-04), and WIF keyless GitHub authentication setup (#20; PR #39 review fixes) |
+| 0.5 | 2026-11-13 | ILoveSiesta | Release procedure (#21): environment `demo`, ruleset `protect-main`, merge-gate proof (C-02), `deploy.yml` (Deploy demo), how to find the running commit; Dependabot limited to GitHub Actions |
 
 Release being deployed: Sprint 1 `v0.1.0` (`25211ac`) plus the Lab 5 changes. Lab 5 Issues: #18–#22 (label `lab5`,
 milestone "Lab 5"). Staging branch for Lab 5: `lab5-staging`.
@@ -115,19 +117,45 @@ Migrate and seed inside the container (what the Cloud Run job runs):
 | `docker compose down` → `up -d` | Same milestone, submission and feedback returned; another team's student → 404 |
 | Fresh clone of `91dcdba` with only `cp server/.env.example server/.env` (separate compose project and volume) | `migrate` exited 0, `/api/ready` 200, `/` 200, seeded student signs in with the example password (C-03) |
 
-## 4. GCP resources (filled in #20)
+## 4. GCP resources (#20)
 
-Project `cpe334-cpms`, region `asia-southeast1`.
+Project `cpe334-cpms`, region `asia-southeast1`. First deployed from Cloud Shell via `deploy/deploy.sh --demo` (Episode 5) built from `main` at commit `a9cc472` (PR #25 merge). From #21 on, deployed images are tagged with the full git commit SHA.
 
-| Resource | Name |
-|---|---|
-| Cloud Run service | `cpms` |
-| Cloud Run migration job | `cpms-migrate` |
-| Artifact Registry repository / image | `cpms` / `cpms` |
-| Cloud SQL instance / database / user | `cpms-pg` / `cpms` / `cpms` |
-| Secrets | `cpms-database-url`, `cpms-jwt-secret`, `cpms-demo-password` |
-| Service accounts | `cpms-runner` (runtime), `cpms-deployer` (GitHub Actions) |
-| GitHub environment / required check | `demo` / `test-and-docker` |
+- **Public Live URL:** <https://cpms-6pjdhtz32a-as.a.run.app>
+- **Health Check:** `GET https://cpms-6pjdhtz32a-as.a.run.app/api/health` → `200 {"status":"ok","service":"CPMS API"}`
+- **Readiness Check:** `GET https://cpms-6pjdhtz32a-as.a.run.app/api/ready` → `200 {"status":"ready","db":"connected"}`
+
+### 4.1 Resource Inventory
+
+| Resource | Name / Identifier | Configuration & Security Scope |
+|---|---|---|
+| Cloud Run service | `cpms` | Image `asia-southeast1-docker.pkg.dev/cpe334-cpms/cpms/cpms:latest`, port `3000`, `--min-instances=0`, `--max-instances=3`, memory `512Mi`, CPU `1`, `CLIENT_DIST_DIR=/app/client/dist`, `NODE_ENV=production`, `TZ=Asia/Bangkok`; Cloud SQL connection `cpe334-cpms:asia-southeast1:cpms-pg`; secrets `DATABASE_URL` (`cpms-database-url:latest`), `JWT_SECRET` (`cpms-jwt-secret:latest`); service account `cpms-runner`; public access (`allUsers` has `roles/run.invoker`) |
+| Cloud Run migration job | `cpms-migrate` | Container command `sh -c "npx prisma migrate deploy && npm run prisma:seed"`, `NODE_ENV=production`, `TZ=Asia/Bangkok`; secrets `DATABASE_URL`, `SEED_DEMO_PASSWORD` (`cpms-demo-password:latest`); Cloud SQL connection `cpe334-cpms:asia-southeast1:cpms-pg`; service account `cpms-runner` |
+| Artifact Registry repository | `cpms` | Docker format, Standard, location `asia-southeast1`; image path `asia-southeast1-docker.pkg.dev/cpe334-cpms/cpms/cpms` |
+| Cloud SQL instance | `cpms-pg` | PostgreSQL 16.15 Enterprise, tier `db-f1-micro` (1 vCPU, 628.74 MB RAM, 10 GB SSD), backup window `03:00` UTC (10:00 ICT), storage auto-increase disabled (`storageAutoResize: false`); database `cpms`; user `cpms` |
+| Secret Manager secrets | `cpms-database-url`<br>`cpms-jwt-secret`<br>`cpms-demo-password` | Injected into Cloud Run and the migration job; values generated randomly via OpenSSL on initial run and never committed or echoed in plain text; accessed only by `cpms-runner` |
+| Runtime service account | `cpms-runner@cpe334-cpms.iam.gserviceaccount.com` | Minimum privilege: `roles/cloudsql.client` at project level; `roles/secretmanager.secretAccessor` granted specifically on `cpms-database-url`, `cpms-jwt-secret`, and `cpms-demo-password` |
+| Deployer service account | `cpms-deployer@cpe334-cpms.iam.gserviceaccount.com` | Used by GitHub Actions keyless deployment: `roles/run.developer` at project level, `roles/artifactregistry.writer` on repository `cpms`, and `roles/iam.serviceAccountUser` on `cpms-runner`. **No service account keys** exist (`No rows to display`) |
+| Workload Identity Federation | Pool: `github-actions`<br>Provider: `github-main` | OIDC issuer `https://token.actions.githubusercontent.com/`; attribute mappings: `google.subject=assertion.sub`, `attribute.repository_id=assertion.repository_id`; impersonation granted to `cpms-deployer` filtered by `repository_id=1445477852`; CEL condition restricted to this repo (`1445477852`), owner (`186724745`), `refs/heads/main`, `deploy.yml`, and environment `demo` |
+| GitHub environment | `demo` | Restricted to branch `main` with deployment variables `GCP_PROJECT_ID`, `GCP_REGION`, `WIF_PROVIDER`, `WIF_SERVICE_ACCOUNT` (configured in #21) |
+
+### 4.2 Verified Live Deployment Evidence (Episode 5 & C-04)
+
+- **Cloud Shell first deployment (Episode 5.4–5.5):**
+  - Storage auto-increase patched off: `gcloud sql instances patch cpms-pg --no-storage-auto-increase` → `Updated` (`storageAutoResize: false`).
+  - Health & readiness check: `GET /api/health` answered 200, `GET /api/ready` answered 200 `{"status":"ready","db":"connected"}`.
+  - Automated smoke test: `python3 deploy/smoke_test.py https://cpms-6pjdhtz32a-as.a.run.app` returned `PASS /api/health`, `PASS /api/ready`, `PASS /`, `PASS /api/teams (401 unauthenticated)`, `SKIP login: optional smoke credentials not configured`.
+- **Public Domain Workflow (C-04 evidence):**
+  - Public Cloud Run URL opened in web browser without Google sign-in.
+  - Authenticated sign-in at `/login` with seeded supervisor account (`supervisor1@cpms.test`) loaded assigned teams (Team Alpha, Team Beta).
+  - Main business action: created new milestone `Lab 5 Cloud Test` for Team Alpha; milestone persisted in PostgreSQL 16 and displayed under team milestones.
+  - Business rule / validation rejection: blank milestone title submission rejected by client and server validation (`Required`).
+- **GCP Console audit (Episode 5.7 & 6.2–6.3):**
+  - `cpms-pg` configuration: PostgreSQL 16.15, `storageAutoResize: false`, database `cpms`.
+  - `cpms` Cloud Run service: `min-instances=0`, `max-instances=3`, port 3000, environment variables and secret bindings intact.
+  - `cpms-runner` IAM bindings restricted strictly to Cloud SQL Client and Secret Accessor.
+  - `cpms-deployer` service account has zero JSON keys (`No rows to display`).
+  - Workload Identity Federation provider `github-main` active under pool `github-actions` with repository and main branch CEL condition.
 
 ## 5. CI on pull requests (#19)
 
@@ -153,6 +181,59 @@ Project `cpe334-cpms`, region `asia-southeast1`.
   - Offline script checks after PR #24 review fixes: `bash -n`, `test_deploy_stub.sh` (including fake-`gcloud` re-run idempotency test), `test_release_stub.sh` (including `ROLLBACK=true` and invalid tag/rollback checks), and `test_smoke.py` (8/8 unittest cases).
   - `python deploy/smoke_test.py http://localhost:3000` against `docker compose up -d` → `PASS /api/health`, `PASS /api/ready`, `PASS /`, `PASS /api/teams (401 unauthenticated)`, `SKIP login`.
 
-## 6. Release procedure (#21), persistence and rollback (#22)
+## 6. Merge gate and release procedure (#21)
 
-To be completed by those issues.
+Student Guide Episodes 6.4–6.6 and 7; handout R-06, R-07, R-08; checks C-02, C-06.
+
+### 6.1 GitHub settings (Episode 6.4–6.5)
+
+| Setting | Value |
+|---|---|
+| Environment | `demo`; deployment branches: `main` only; no environment secrets |
+| Environment variables | `GCP_PROJECT_ID` = `cpe334-cpms`, `GCP_REGION` = `asia-southeast1`, `WIF_PROVIDER` = `projects/<project number>/locations/global/workloadIdentityPools/github-actions/providers/github-main`, `WIF_SERVICE_ACCOUNT` = `cpms-deployer@cpe334-cpms.iam.gserviceaccount.com` (variables, not secrets) |
+| Ruleset `protect-main` | Active; bypass list empty; target: default branch (`main`); restrict deletions; block force pushes; pull request with 1 approval; required status check `test-and-docker` with branches up to date |
+
+`demo`, the file name `deploy.yml` and the IDs of this repository are also part of the Workload Identity Federation condition (§4.1). Renaming one of them stops the sign-in.
+
+### 6.2 Merge gate proof (Episode 6.6, C-02)
+
+Throwaway branch `test/prove-gate` from `main` with one deliberately wrong assertion in `server/tests/health.api.test.ts`. PR #40 into `main`: `test-and-docker` failed ([run 43453823467](https://github.com/ILoveSiesta/Course-Project-Management-System/actions/runs/43453823467), server 1 failed | 83 passed), the check was marked Required and GitHub showed "Merging is blocked". The PR was closed without merging and the branch deleted. Screenshots are on #21.
+
+### 6.3 Release procedure (Episode 7)
+
+Only `main` deploys, so every merge into `main` is a release.
+
+1. Feature branch from `lab5-staging` → PR into `lab5-staging` → `test-and-docker` green → the other member reviews and merges (merge commit).
+2. Sync `lab5-staging` with `main` if `main` has a newer merge commit (the ruleset requires up-to-date branches): `git switch lab5-staging && git pull && git merge origin/main && git push`.
+3. Release PR: base `main`, compare `lab5-staging` → `test-and-docker` green → the other member approves and merges with a merge commit.
+4. The push to `main` starts **Deploy demo** (`.github/workflows/deploy.yml`). Nobody types a deploy command:
+   1. `test`: reuses `ci-docker.yml` (`test-and-docker`).
+   2. `deploy` (environment `demo`): checks the four variables and that the tag is a full 40-character SHA.
+   3. It signs in to Google Cloud with Workload Identity Federation (no key file).
+   4. It builds and pushes `asia-southeast1-docker.pkg.dev/cpe334-cpms/cpms/cpms:<full commit SHA>`.
+   5. It runs `deploy/release.sh`: resolve the digest, update and execute `cpms-migrate`, update `cpms` to the digest, send 100% traffic to the latest revision.
+   6. It runs `deploy/smoke_test.py` against the service URL: health, readiness, HTML, unauthenticated `/api/teams` → 401. Login is skipped because `SMOKE_EMAIL`/`SMOKE_PASSWORD` are not set.
+   7. It writes the run summary: commit image tag, digest, rollback flag, URL.
+5. Check (Episode 7.5–7.6):
+   - the run summary's image tag equals the merged commit;
+   - Cloud Run → `cpms` → Revision history: the newest revision has 100% traffic and the same digest;
+   - Cloud Run → Jobs → `cpms-migrate`: the latest execution succeeded;
+   - Artifact Registry `cpms/cpms` has the image tagged with that SHA.
+
+Rollback (used in #22): Actions → Deploy demo → Run workflow on `main` with `image_tag` = the full SHA of an earlier release. Tests, build and migration are skipped (`ROLLBACK=true` in `release.sh`).
+
+### 6.4 How to find the running commit
+
+- **Actions:** Deploy demo → the latest green run → Summary → "Commit image tag" (the full SHA) and "Digest".
+- **Cloud Run:** service `cpms` → Revision history → the revision with 100% traffic → its container image digest. This must equal the run summary digest.
+- **Artifact Registry:** `cpms/cpms` → the image whose tag is that SHA has the same digest.
+
+First pipeline releases and their evidence are recorded here after they run (C-06).
+
+### 6.5 Dependabot
+
+`.github/dependabot.yml` proposes weekly updates for the SHA-pinned GitHub Actions only, as in the starter kit. The earlier `npm` entries opened #26–#38 straight into `main`; those PRs were closed unmerged, and the config was reduced in #21.
+
+## 7. Persistence and rollback (#22)
+
+To be completed by #22.
