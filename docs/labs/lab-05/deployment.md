@@ -10,6 +10,7 @@ Course Project Management System (CPMS) — CPE334 Theme 6
 | 0.4 | 2026-11-13 | phet526 | GCP resources specification, first Cloud Run deployment from commit `a9cc472` (`https://cpms-6pjdhtz32a-as.a.run.app`), verification evidence (C-04), and WIF keyless GitHub authentication setup (#20; PR #39 review fixes) |
 | 0.5 | 2026-11-13 | ILoveSiesta | Release procedure (#21): environment `demo`, ruleset `protect-main`, merge-gate proof (C-02), `deploy.yml` (Deploy demo), how to find the running commit; Dependabot limited to GitHub Actions |
 | 0.6 | 2026-11-13 | ILoveSiesta | First pipeline release recorded (§6.4); `deploy.yml` builds one image manifest (`--provenance=false --sbom=false`) so the run summary and revision digests match; footer shows the release version |
+| 0.7 | 2026-11-14 | ILoveSiesta | Release 2 recorded (§6.4): #44 → `53003a5`, run 43470205241, revision `cpms-00003-xkm`, one digest everywhere; tag `v0.1.1` |
 
 Release being deployed: Sprint 1 `v0.1.0` (`25211ac`) plus the Lab 5 changes. Lab 5 Issues: #18–#22 (label `lab5`,
 milestone "Lab 5"). Staging branch for Lab 5: `lab5-staging`.
@@ -234,7 +235,7 @@ Rollback (used in #22): Actions → Deploy demo → Run workflow on `main` with 
 | Release | Release PR → merge commit | Deploy demo run | Revision (100% traffic) | Migration execution | Notes |
 |---|---|---|---|---|---|
 | 1 | #42 → `1da4813` | [43462038722](https://github.com/ILoveSiesta/Course-Project-Management-System/actions/runs/43462038722), green | `cpms-00002-g9l` | `cpms-migrate-zfjp9`, succeeded | Image tag = `1da481356373ce118a6714e836f60cae7050e7cf`; smoke PASS ×4 + SKIP login. The run summary digest `sha256:7c285e56…` is an **image index** (the build added a provenance attestation); Cloud Run serves the platform manifest inside it, `sha256:35c03f99…`. Fixed for the next release (below) |
-| 2 | recorded after the release (Student Guide 7.7, visible change: footer "CPMS v0.1.1") | | | | |
+| 2 (tag `v0.1.1`) | #44 → `53003a5` | [43470205241](https://github.com/ILoveSiesta/Course-Project-Management-System/actions/runs/43470205241), green | `cpms-00003-xkm` | `cpms-migrate-wgzn9`, succeeded | Image tag = `53003a5a5c066b36149c5736b17cb2dcddd3ae23`; digest `sha256:a1389661d7b38486aae2f3c185ebb32e25e7f206fd8c13359a91e4b7122d8fba` is the same in the run summary, the revision and the Artifact Registry tag (one manifest, 139.1 MB); smoke PASS ×4 + SKIP login; the public URL footer shows "CPMS v0.1.1" after the merge alone (Student Guide 7.7) |
 
 **Why `deploy.yml` differs from the kit:** `docker build --provenance=false --sbom=false` pushes a single image manifest, not an index plus attestations. The digest that `release.sh` writes to the run summary is then the same digest Cloud Run shows for the revision and Artifact Registry shows for the tag. Student Guide 7.6 needs these to be equal.
 
