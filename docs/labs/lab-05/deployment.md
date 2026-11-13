@@ -7,7 +7,7 @@ Course Project Management System (CPMS) — CPE334 Theme 6
 | 0.1 | 2026-11-12 | ILoveSiesta | First version (#18): stack and changes from the starter kit, environment variables, Docker and local commands. CI (#19), GCP resources (#20), release procedure (#21) and persistence/rollback (#22) are added by their issues |
 | 0.2 | 2026-11-12 | phet526 | CI specification and deploy scripts design (#19): `ci-docker.yml`, `deploy/` scripts (`deploy.sh`, `release.sh`, `smoke_test.py`, `teardown.sh`), offline tests |
 | 0.3 | 2026-11-12 | phet526 | PR #24 review fixes: idempotent secret/DB-user creation in `deploy.sh`, 40-char SHA + `ROLLBACK=true` in `release.sh`, strict retry/credential handling in `smoke_test.py`, `teardown.sh` resource summary, pinned v7 Actions + Python `3.14`, and live C-01 CI run evidence |
-| 0.4 | 2026-11-13 | phet526 | GCP resources specification, first Cloud Run deployment (`https://cpms-6pjdhtz32a-as.a.run.app`), verification evidence (C-04), and WIF keyless GitHub authentication setup (#20) |
+| 0.4 | 2026-11-13 | phet526 | GCP resources specification, first Cloud Run deployment from commit `a9cc472` (`https://cpms-6pjdhtz32a-as.a.run.app`), verification evidence (C-04), and WIF keyless GitHub authentication setup (#20; PR #39 review fixes) |
 
 Release being deployed: Sprint 1 `v0.1.0` (`25211ac`) plus the Lab 5 changes. Lab 5 Issues: #18–#22 (label `lab5`,
 milestone "Lab 5"). Staging branch for Lab 5: `lab5-staging`.
@@ -118,7 +118,7 @@ Migrate and seed inside the container (what the Cloud Run job runs):
 
 ## 4. GCP resources (#20)
 
-Project `cpe334-cpms`, region `asia-southeast1`. First deployed from Cloud Shell via `deploy/deploy.sh --demo` (Episode 5).
+Project `cpe334-cpms`, region `asia-southeast1`. First deployed from Cloud Shell via `deploy/deploy.sh --demo` (Episode 5) built from `main` at commit `a9cc472` (PR #25 merge). From #21 on, deployed images are tagged with the full git commit SHA.
 
 - **Public Live URL:** <https://cpms-6pjdhtz32a-as.a.run.app>
 - **Health Check:** `GET https://cpms-6pjdhtz32a-as.a.run.app/api/health` → `200 {"status":"ok","service":"CPMS API"}`
@@ -131,7 +131,7 @@ Project `cpe334-cpms`, region `asia-southeast1`. First deployed from Cloud Shell
 | Cloud Run service | `cpms` | Image `asia-southeast1-docker.pkg.dev/cpe334-cpms/cpms/cpms:latest`, port `3000`, `--min-instances=0`, `--max-instances=3`, memory `512Mi`, CPU `1`, `CLIENT_DIST_DIR=/app/client/dist`, `NODE_ENV=production`, `TZ=Asia/Bangkok`; Cloud SQL connection `cpe334-cpms:asia-southeast1:cpms-pg`; secrets `DATABASE_URL` (`cpms-database-url:latest`), `JWT_SECRET` (`cpms-jwt-secret:latest`); service account `cpms-runner`; public access (`allUsers` has `roles/run.invoker`) |
 | Cloud Run migration job | `cpms-migrate` | Container command `sh -c "npx prisma migrate deploy && npm run prisma:seed"`, `NODE_ENV=production`, `TZ=Asia/Bangkok`; secrets `DATABASE_URL`, `SEED_DEMO_PASSWORD` (`cpms-demo-password:latest`); Cloud SQL connection `cpe334-cpms:asia-southeast1:cpms-pg`; service account `cpms-runner` |
 | Artifact Registry repository | `cpms` | Docker format, Standard, location `asia-southeast1`; image path `asia-southeast1-docker.pkg.dev/cpe334-cpms/cpms/cpms` |
-| Cloud SQL instance | `cpms-pg` | PostgreSQL 16.15 Enterprise, tier `db-f1-micro` (1 vCPU, 628.74 MB RAM, 10 GB SSD), backup window `03:00` ICT, storage auto-increase disabled (`storageAutoResize: false`); database `cpms`; user `cpms` |
+| Cloud SQL instance | `cpms-pg` | PostgreSQL 16.15 Enterprise, tier `db-f1-micro` (1 vCPU, 628.74 MB RAM, 10 GB SSD), backup window `03:00` UTC (10:00 ICT), storage auto-increase disabled (`storageAutoResize: false`); database `cpms`; user `cpms` |
 | Secret Manager secrets | `cpms-database-url`<br>`cpms-jwt-secret`<br>`cpms-demo-password` | Injected into Cloud Run and the migration job; values generated randomly via OpenSSL on initial run and never committed or echoed in plain text; accessed only by `cpms-runner` |
 | Runtime service account | `cpms-runner@cpe334-cpms.iam.gserviceaccount.com` | Minimum privilege: `roles/cloudsql.client` at project level; `roles/secretmanager.secretAccessor` granted specifically on `cpms-database-url`, `cpms-jwt-secret`, and `cpms-demo-password` |
 | Deployer service account | `cpms-deployer@cpe334-cpms.iam.gserviceaccount.com` | Used by GitHub Actions keyless deployment: `roles/run.developer` at project level, `roles/artifactregistry.writer` on repository `cpms`, and `roles/iam.serviceAccountUser` on `cpms-runner`. **No service account keys** exist (`No rows to display`) |
