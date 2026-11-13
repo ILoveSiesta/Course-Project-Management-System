@@ -7,6 +7,7 @@ Course Project Management System (CPMS) — CPE334 Theme 6
 | 0.1 | 2026-11-12 | ILoveSiesta | First version (#18): stack and changes from the starter kit, environment variables, Docker and local commands. CI (#19), GCP resources (#20), release procedure (#21) and persistence/rollback (#22) are added by their issues |
 | 0.2 | 2026-11-12 | phet526 | CI specification and deploy scripts design (#19): `ci-docker.yml`, `deploy/` scripts (`deploy.sh`, `release.sh`, `smoke_test.py`, `teardown.sh`), offline tests |
 | 0.3 | 2026-11-12 | phet526 | PR #24 review fixes: idempotent secret/DB-user creation in `deploy.sh`, 40-char SHA + `ROLLBACK=true` in `release.sh`, strict retry/credential handling in `smoke_test.py`, `teardown.sh` resource summary, pinned v7 Actions + Python `3.14`, and live C-01 CI run evidence |
+| 0.4 | 2026-11-13 | phet526 | GCP resources specification, first Cloud Run deployment from commit `a9cc472` (`https://cpms-6pjdhtz32a-as.a.run.app`), verification evidence (C-04), and WIF keyless GitHub authentication setup (#20; PR #39 review fixes) |
 
 Release being deployed: Sprint 1 `v0.1.0` (`25211ac`) plus the Lab 5 changes. Lab 5 Issues: #18–#22 (label `lab5`,
 milestone "Lab 5"). Staging branch for Lab 5: `lab5-staging`.
@@ -115,19 +116,45 @@ Migrate and seed inside the container (what the Cloud Run job runs):
 | `docker compose down` → `up -d` | Same milestone, submission and feedback returned; another team's student → 404 |
 | Fresh clone of `91dcdba` with only `cp server/.env.example server/.env` (separate compose project and volume) | `migrate` exited 0, `/api/ready` 200, `/` 200, seeded student signs in with the example password (C-03) |
 
-## 4. GCP resources (filled in #20)
+## 4. GCP resources (#20)
 
-Project `cpe334-cpms`, region `asia-southeast1`.
+Project `cpe334-cpms`, region `asia-southeast1`. First deployed from Cloud Shell via `deploy/deploy.sh --demo` (Episode 5) built from `main` at commit `a9cc472` (PR #25 merge). From #21 on, deployed images are tagged with the full git commit SHA.
 
-| Resource | Name |
-|---|---|
-| Cloud Run service | `cpms` |
-| Cloud Run migration job | `cpms-migrate` |
-| Artifact Registry repository / image | `cpms` / `cpms` |
-| Cloud SQL instance / database / user | `cpms-pg` / `cpms` / `cpms` |
-| Secrets | `cpms-database-url`, `cpms-jwt-secret`, `cpms-demo-password` |
-| Service accounts | `cpms-runner` (runtime), `cpms-deployer` (GitHub Actions) |
-| GitHub environment / required check | `demo` / `test-and-docker` |
+- **Public Live URL:** <https://cpms-6pjdhtz32a-as.a.run.app>
+- **Health Check:** `GET https://cpms-6pjdhtz32a-as.a.run.app/api/health` → `200 {"status":"ok","service":"CPMS API"}`
+- **Readiness Check:** `GET https://cpms-6pjdhtz32a-as.a.run.app/api/ready` → `200 {"status":"ready","db":"connected"}`
+
+### 4.1 Resource Inventory
+
+| Resource | Name / Identifier | Configuration & Security Scope |
+|---|---|---|
+| Cloud Run service | `cpms` | Image `asia-southeast1-docker.pkg.dev/cpe334-cpms/cpms/cpms:latest`, port `3000`, `--min-instances=0`, `--max-instances=3`, memory `512Mi`, CPU `1`, `CLIENT_DIST_DIR=/app/client/dist`, `NODE_ENV=production`, `TZ=Asia/Bangkok`; Cloud SQL connection `cpe334-cpms:asia-southeast1:cpms-pg`; secrets `DATABASE_URL` (`cpms-database-url:latest`), `JWT_SECRET` (`cpms-jwt-secret:latest`); service account `cpms-runner`; public access (`allUsers` has `roles/run.invoker`) |
+| Cloud Run migration job | `cpms-migrate` | Container command `sh -c "npx prisma migrate deploy && npm run prisma:seed"`, `NODE_ENV=production`, `TZ=Asia/Bangkok`; secrets `DATABASE_URL`, `SEED_DEMO_PASSWORD` (`cpms-demo-password:latest`); Cloud SQL connection `cpe334-cpms:asia-southeast1:cpms-pg`; service account `cpms-runner` |
+| Artifact Registry repository | `cpms` | Docker format, Standard, location `asia-southeast1`; image path `asia-southeast1-docker.pkg.dev/cpe334-cpms/cpms/cpms` |
+| Cloud SQL instance | `cpms-pg` | PostgreSQL 16.15 Enterprise, tier `db-f1-micro` (1 vCPU, 628.74 MB RAM, 10 GB SSD), backup window `03:00` UTC (10:00 ICT), storage auto-increase disabled (`storageAutoResize: false`); database `cpms`; user `cpms` |
+| Secret Manager secrets | `cpms-database-url`<br>`cpms-jwt-secret`<br>`cpms-demo-password` | Injected into Cloud Run and the migration job; values generated randomly via OpenSSL on initial run and never committed or echoed in plain text; accessed only by `cpms-runner` |
+| Runtime service account | `cpms-runner@cpe334-cpms.iam.gserviceaccount.com` | Minimum privilege: `roles/cloudsql.client` at project level; `roles/secretmanager.secretAccessor` granted specifically on `cpms-database-url`, `cpms-jwt-secret`, and `cpms-demo-password` |
+| Deployer service account | `cpms-deployer@cpe334-cpms.iam.gserviceaccount.com` | Used by GitHub Actions keyless deployment: `roles/run.developer` at project level, `roles/artifactregistry.writer` on repository `cpms`, and `roles/iam.serviceAccountUser` on `cpms-runner`. **No service account keys** exist (`No rows to display`) |
+| Workload Identity Federation | Pool: `github-actions`<br>Provider: `github-main` | OIDC issuer `https://token.actions.githubusercontent.com/`; attribute mappings: `google.subject=assertion.sub`, `attribute.repository_id=assertion.repository_id`; impersonation granted to `cpms-deployer` filtered by `repository_id=1445477852`; CEL condition restricted to this repo (`1445477852`), owner (`186724745`), `refs/heads/main`, `deploy.yml`, and environment `demo` |
+| GitHub environment | `demo` | Restricted to branch `main` with deployment variables `GCP_PROJECT_ID`, `GCP_REGION`, `WIF_PROVIDER`, `WIF_SERVICE_ACCOUNT` (configured in #21) |
+
+### 4.2 Verified Live Deployment Evidence (Episode 5 & C-04)
+
+- **Cloud Shell first deployment (Episode 5.4–5.5):**
+  - Storage auto-increase patched off: `gcloud sql instances patch cpms-pg --no-storage-auto-increase` → `Updated` (`storageAutoResize: false`).
+  - Health & readiness check: `GET /api/health` answered 200, `GET /api/ready` answered 200 `{"status":"ready","db":"connected"}`.
+  - Automated smoke test: `python3 deploy/smoke_test.py https://cpms-6pjdhtz32a-as.a.run.app` returned `PASS /api/health`, `PASS /api/ready`, `PASS /`, `PASS /api/teams (401 unauthenticated)`, `SKIP login: optional smoke credentials not configured`.
+- **Public Domain Workflow (C-04 evidence):**
+  - Public Cloud Run URL opened in web browser without Google sign-in.
+  - Authenticated sign-in at `/login` with seeded supervisor account (`supervisor1@cpms.test`) loaded assigned teams (Team Alpha, Team Beta).
+  - Main business action: created new milestone `Lab 5 Cloud Test` for Team Alpha; milestone persisted in PostgreSQL 16 and displayed under team milestones.
+  - Business rule / validation rejection: blank milestone title submission rejected by client and server validation (`Required`).
+- **GCP Console audit (Episode 5.7 & 6.2–6.3):**
+  - `cpms-pg` configuration: PostgreSQL 16.15, `storageAutoResize: false`, database `cpms`.
+  - `cpms` Cloud Run service: `min-instances=0`, `max-instances=3`, port 3000, environment variables and secret bindings intact.
+  - `cpms-runner` IAM bindings restricted strictly to Cloud SQL Client and Secret Accessor.
+  - `cpms-deployer` service account has zero JSON keys (`No rows to display`).
+  - Workload Identity Federation provider `github-main` active under pool `github-actions` with repository and main branch CEL condition.
 
 ## 5. CI on pull requests (#19)
 
