@@ -53,6 +53,15 @@ class DeployWorkflowTest(unittest.TestCase):
         self.assertIn('-docker.pkg.dev/$PROJECT_ID/cpms/cpms:$IMAGE_TAG"', self.text)
         self.assertNotRegex(self.text.lower(), r"toktickit|categories")
 
+    def test_pushes_a_single_image_manifest(self):
+        # Without these flags the runner's docker build pushes an OCI image index with a
+        # provenance attestation; release.sh then records the index digest while Cloud Run
+        # serves the platform manifest digest, so they differ (Student Guide 7.6 needs them equal).
+        build = re.search(r"docker build [^\n]*", self.text)
+        self.assertIsNotNone(build, "docker build step not found")
+        self.assertIn("--provenance=false", build.group(0))
+        self.assertIn("--sbom=false", build.group(0))
+
     def test_validates_full_sha_and_calls_release_and_smoke_scripts(self):
         self.assertIn("^[0-9a-f]{40}$", self.text)
         self.assertIn("bash deploy/release.sh", self.text)

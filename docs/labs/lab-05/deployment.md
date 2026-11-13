@@ -9,6 +9,7 @@ Course Project Management System (CPMS) — CPE334 Theme 6
 | 0.3 | 2026-11-12 | phet526 | PR #24 review fixes: idempotent secret/DB-user creation in `deploy.sh`, 40-char SHA + `ROLLBACK=true` in `release.sh`, strict retry/credential handling in `smoke_test.py`, `teardown.sh` resource summary, pinned v7 Actions + Python `3.14`, and live C-01 CI run evidence |
 | 0.4 | 2026-11-13 | phet526 | GCP resources specification, first Cloud Run deployment from commit `a9cc472` (`https://cpms-6pjdhtz32a-as.a.run.app`), verification evidence (C-04), and WIF keyless GitHub authentication setup (#20; PR #39 review fixes) |
 | 0.5 | 2026-11-13 | ILoveSiesta | Release procedure (#21): environment `demo`, ruleset `protect-main`, merge-gate proof (C-02), `deploy.yml` (Deploy demo), how to find the running commit; Dependabot limited to GitHub Actions |
+| 0.6 | 2026-11-13 | ILoveSiesta | First pipeline release recorded (§6.4); `deploy.yml` builds one image manifest (`--provenance=false --sbom=false`) so the run summary and revision digests match; footer shows the release version |
 
 Release being deployed: Sprint 1 `v0.1.0` (`25211ac`) plus the Lab 5 changes. Lab 5 Issues: #18–#22 (label `lab5`,
 milestone "Lab 5"). Staging branch for Lab 5: `lab5-staging`.
@@ -228,7 +229,14 @@ Rollback (used in #22): Actions → Deploy demo → Run workflow on `main` with 
 - **Cloud Run:** service `cpms` → Revision history → the revision with 100% traffic → its container image digest. This must equal the run summary digest.
 - **Artifact Registry:** `cpms/cpms` → the image whose tag is that SHA has the same digest.
 
-First pipeline releases and their evidence are recorded here after they run (C-06).
+#### Pipeline releases (C-06)
+
+| Release | Release PR → merge commit | Deploy demo run | Revision (100% traffic) | Migration execution | Notes |
+|---|---|---|---|---|---|
+| 1 | #42 → `1da4813` | [43462038722](https://github.com/ILoveSiesta/Course-Project-Management-System/actions/runs/43462038722), green | `cpms-00002-g9l` | `cpms-migrate-zfjp9`, succeeded | Image tag = `1da481356373ce118a6714e836f60cae7050e7cf`; smoke PASS ×4 + SKIP login. The run summary digest `sha256:7c285e56…` is an **image index** (the build added a provenance attestation); Cloud Run serves the platform manifest inside it, `sha256:35c03f99…`. Fixed for the next release (below) |
+| 2 | recorded after the release (Student Guide 7.7, visible change: footer "CPMS v0.1.1") | | | | |
+
+**Why `deploy.yml` differs from the kit:** `docker build --provenance=false --sbom=false` pushes a single image manifest, not an index plus attestations. The digest that `release.sh` writes to the run summary is then the same digest Cloud Run shows for the revision and Artifact Registry shows for the tag. Student Guide 7.6 needs these to be equal.
 
 ### 6.5 Dependabot
 
