@@ -6,7 +6,8 @@ describe("GET /api/health", () => {
   it("returns 200 with status ok and the service name", async () => {
     const res = await request(app).get("/api/health");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: "ok", service: "CPMS API" });
+    // Deliberately wrong expectation (Lab 5 Episode 6.6, #21): proves the merge gate blocks a red check. Never merge.
+    expect(res.body).toEqual({ status: "broken-on-purpose", service: "CPMS API" });
   });
 });
 
