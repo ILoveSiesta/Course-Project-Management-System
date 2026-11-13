@@ -17,6 +17,16 @@ describe("App shell", () => {
     expect(await screen.findByText("API: ok")).toBeInTheDocument();
   });
 
+  it("shows the deployed release version in the footer", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: "ok", service: "CPMS API" }) })
+    );
+    render(<App />);
+    expect(screen.getByTestId("release-version")).toHaveTextContent("CPMS v0.1.1");
+    expect(await screen.findByText("API: ok")).toBeInTheDocument();
+  });
+
   it("shows unreachable when the API cannot be reached", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network")));
     render(<App />);
