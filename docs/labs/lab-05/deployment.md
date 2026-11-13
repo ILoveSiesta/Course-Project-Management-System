@@ -8,6 +8,7 @@ Course Project Management System (CPMS) — CPE334 Theme 6
 | 0.2 | 2026-11-12 | phet526 | CI specification and deploy scripts design (#19): `ci-docker.yml`, `deploy/` scripts (`deploy.sh`, `release.sh`, `smoke_test.py`, `teardown.sh`), offline tests |
 | 0.3 | 2026-11-12 | phet526 | PR #24 review fixes: idempotent secret/DB-user creation in `deploy.sh`, 40-char SHA + `ROLLBACK=true` in `release.sh`, strict retry/credential handling in `smoke_test.py`, `teardown.sh` resource summary, pinned v7 Actions + Python `3.14`, and live C-01 CI run evidence |
 | 0.4 | 2026-11-13 | phet526 | GCP resources specification, first Cloud Run deployment from commit `a9cc472` (`https://cpms-6pjdhtz32a-as.a.run.app`), verification evidence (C-04), and WIF keyless GitHub authentication setup (#20; PR #39 review fixes) |
+| 0.5 | 2026-11-13 | ILoveSiesta | Release procedure (#21): environment `demo`, ruleset `protect-main`, merge-gate proof (C-02), `deploy.yml` (Deploy demo), how to find the running commit; Dependabot limited to GitHub Actions |
 
 Release being deployed: Sprint 1 `v0.1.0` (`25211ac`) plus the Lab 5 changes. Lab 5 Issues: #18–#22 (label `lab5`,
 milestone "Lab 5"). Staging branch for Lab 5: `lab5-staging`.
@@ -180,6 +181,59 @@ Project `cpe334-cpms`, region `asia-southeast1`. First deployed from Cloud Shell
   - Offline script checks after PR #24 review fixes: `bash -n`, `test_deploy_stub.sh` (including fake-`gcloud` re-run idempotency test), `test_release_stub.sh` (including `ROLLBACK=true` and invalid tag/rollback checks), and `test_smoke.py` (8/8 unittest cases).
   - `python deploy/smoke_test.py http://localhost:3000` against `docker compose up -d` → `PASS /api/health`, `PASS /api/ready`, `PASS /`, `PASS /api/teams (401 unauthenticated)`, `SKIP login`.
 
-## 6. Release procedure (#21), persistence and rollback (#22)
+## 6. Merge gate and release procedure (#21)
 
-To be completed by those issues.
+Student Guide Episodes 6.4–6.6 and 7; handout R-06, R-07, R-08; checks C-02, C-06.
+
+### 6.1 GitHub settings (Episode 6.4–6.5)
+
+| Setting | Value |
+|---|---|
+| Environment | `demo`; deployment branches: `main` only; no environment secrets |
+| Environment variables | `GCP_PROJECT_ID` = `cpe334-cpms`, `GCP_REGION` = `asia-southeast1`, `WIF_PROVIDER` = `projects/<project number>/locations/global/workloadIdentityPools/github-actions/providers/github-main`, `WIF_SERVICE_ACCOUNT` = `cpms-deployer@cpe334-cpms.iam.gserviceaccount.com` (variables, not secrets) |
+| Ruleset `protect-main` | Active; bypass list empty; target: default branch (`main`); restrict deletions; block force pushes; pull request with 1 approval; required status check `test-and-docker` with branches up to date |
+
+`demo`, the file name `deploy.yml` and the IDs of this repository are also part of the Workload Identity Federation condition (§4.1). Renaming one of them stops the sign-in.
+
+### 6.2 Merge gate proof (Episode 6.6, C-02)
+
+Throwaway branch `test/prove-gate` from `main` with one deliberately wrong assertion in `server/tests/health.api.test.ts`. PR #40 into `main`: `test-and-docker` failed ([run 43453823467](https://github.com/ILoveSiesta/Course-Project-Management-System/actions/runs/43453823467), server 1 failed | 83 passed), the check was marked Required and GitHub showed "Merging is blocked". The PR was closed without merging and the branch deleted. Screenshots are on #21.
+
+### 6.3 Release procedure (Episode 7)
+
+Only `main` deploys, so every merge into `main` is a release.
+
+1. Feature branch from `lab5-staging` → PR into `lab5-staging` → `test-and-docker` green → the other member reviews and merges (merge commit).
+2. Sync `lab5-staging` with `main` if `main` has a newer merge commit (the ruleset requires up-to-date branches): `git switch lab5-staging && git pull && git merge origin/main && git push`.
+3. Release PR: base `main`, compare `lab5-staging` → `test-and-docker` green → the other member approves and merges with a merge commit.
+4. The push to `main` starts **Deploy demo** (`.github/workflows/deploy.yml`). Nobody types a deploy command:
+   1. `test`: reuses `ci-docker.yml` (`test-and-docker`).
+   2. `deploy` (environment `demo`): checks the four variables and that the tag is a full 40-character SHA.
+   3. It signs in to Google Cloud with Workload Identity Federation (no key file).
+   4. It builds and pushes `asia-southeast1-docker.pkg.dev/cpe334-cpms/cpms/cpms:<full commit SHA>`.
+   5. It runs `deploy/release.sh`: resolve the digest, update and execute `cpms-migrate`, update `cpms` to the digest, send 100% traffic to the latest revision.
+   6. It runs `deploy/smoke_test.py` against the service URL: health, readiness, HTML, unauthenticated `/api/teams` → 401. Login is skipped because `SMOKE_EMAIL`/`SMOKE_PASSWORD` are not set.
+   7. It writes the run summary: commit image tag, digest, rollback flag, URL.
+5. Check (Episode 7.5–7.6):
+   - the run summary's image tag equals the merged commit;
+   - Cloud Run → `cpms` → Revision history: the newest revision has 100% traffic and the same digest;
+   - Cloud Run → Jobs → `cpms-migrate`: the latest execution succeeded;
+   - Artifact Registry `cpms/cpms` has the image tagged with that SHA.
+
+Rollback (used in #22): Actions → Deploy demo → Run workflow on `main` with `image_tag` = the full SHA of an earlier release. Tests, build and migration are skipped (`ROLLBACK=true` in `release.sh`).
+
+### 6.4 How to find the running commit
+
+- **Actions:** Deploy demo → the latest green run → Summary → "Commit image tag" (the full SHA) and "Digest".
+- **Cloud Run:** service `cpms` → Revision history → the revision with 100% traffic → its container image digest. This must equal the run summary digest.
+- **Artifact Registry:** `cpms/cpms` → the image whose tag is that SHA has the same digest.
+
+First pipeline releases and their evidence are recorded here after they run (C-06).
+
+### 6.5 Dependabot
+
+`.github/dependabot.yml` proposes weekly updates for the SHA-pinned GitHub Actions only, as in the starter kit. The earlier `npm` entries opened #26–#38 straight into `main`; those PRs were closed unmerged, and the config was reduced in #21.
+
+## 7. Persistence and rollback (#22)
+
+To be completed by #22.
