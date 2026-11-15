@@ -10,6 +10,8 @@ Course Project Management System (CPMS) — CPE334 Theme 6
 | 0.4 | 2026-11-13 | phet526 | GCP resources specification, first Cloud Run deployment from commit `a9cc472` (`https://cpms-6pjdhtz32a-as.a.run.app`), verification evidence (C-04), and WIF keyless GitHub authentication setup (#20; PR #39 review fixes) |
 | 0.5 | 2026-11-13 | ILoveSiesta | Release procedure (#21): environment `demo`, ruleset `protect-main`, merge-gate proof (C-02), `deploy.yml` (Deploy demo), how to find the running commit; Dependabot limited to GitHub Actions |
 | 0.6 | 2026-11-13 | ILoveSiesta | First pipeline release recorded (§6.4); `deploy.yml` builds one image manifest (`--provenance=false --sbom=false`) so the run summary and revision digests match; footer shows the release version |
+| 0.7 | 2026-11-14 | ILoveSiesta | Release 2 recorded (§6.4): #44 → `53003a5`, run 43470205241, revision `cpms-00003-xkm`, one digest everywhere; tag `v0.1.1` |
+| 0.8 | 2026-11-14 | phet526 | Persistence and rollback evidence across restart, rollback, and roll-forward (C-05, Episode 8), and Cloud SQL pause/resume procedure with public access control (Episode 9) (#22) |
 
 Release being deployed: Sprint 1 `v0.1.0` (`25211ac`) plus the Lab 5 changes. Lab 5 Issues: #18–#22 (label `lab5`,
 milestone "Lab 5"). Staging branch for Lab 5: `lab5-staging`.
@@ -234,7 +236,7 @@ Rollback (used in #22): Actions → Deploy demo → Run workflow on `main` with 
 | Release | Release PR → merge commit | Deploy demo run | Revision (100% traffic) | Migration execution | Notes |
 |---|---|---|---|---|---|
 | 1 | #42 → `1da4813` | [43462038722](https://github.com/ILoveSiesta/Course-Project-Management-System/actions/runs/43462038722), green | `cpms-00002-g9l` | `cpms-migrate-zfjp9`, succeeded | Image tag = `1da481356373ce118a6714e836f60cae7050e7cf`; smoke PASS ×4 + SKIP login. The run summary digest `sha256:7c285e56…` is an **image index** (the build added a provenance attestation); Cloud Run serves the platform manifest inside it, `sha256:35c03f99…`. Fixed for the next release (below) |
-| 2 | recorded after the release (Student Guide 7.7, visible change: footer "CPMS v0.1.1") | | | | |
+| 2 (tag `v0.1.1`) | #44 → `53003a5` | [43470205241](https://github.com/ILoveSiesta/Course-Project-Management-System/actions/runs/43470205241), green | `cpms-00003-xkm` | `cpms-migrate-wgzn9`, succeeded | Image tag = `53003a5a5c066b36149c5736b17cb2dcddd3ae23`; digest `sha256:a1389661d7b38486aae2f3c185ebb32e25e7f206fd8c13359a91e4b7122d8fba` is the same in the run summary, the revision and the Artifact Registry tag (one manifest, 139.1 MB); smoke PASS ×4 + SKIP login; the public URL footer shows "CPMS v0.1.1" after the merge alone (Student Guide 7.7) |
 
 **Why `deploy.yml` differs from the kit:** `docker build --provenance=false --sbom=false` pushes a single image manifest, not an index plus attestations. The digest that `release.sh` writes to the run summary is then the same digest Cloud Run shows for the revision and Artifact Registry shows for the tag. Student Guide 7.6 needs these to be equal.
 
@@ -244,4 +246,132 @@ Rollback (used in #22): Actions → Deploy demo → Run workflow on `main` with 
 
 ## 7. Persistence and rollback (#22)
 
-To be completed by #22.
+Student Guide Episodes 8 and 9; Handout R-04, R-08; check **C-05**.
+
+CPMS application data is fully persisted in Cloud SQL for PostgreSQL 16 (`cpms-pg`). The Cloud Run container instances (`cpms`) are completely stateless. Container instances can be scaled to zero, restarted, redeployed, rolled back, or rolled forward without affecting application data or requiring database re-seeding.
+
+### 7.1 Persistence verification across restart, rollback and roll-forward (Episode 8, C-05)
+
+To prove data persistence across container lifecycle changes and deployment operations, a live test record was created on the production URL (`https://cpms-6pjdhtz32a-as.a.run.app`) and tracked through four distinct lifecycle states.
+
+The test record is a milestone titled **`Milestone C-05 Persistenc`** (using the core project management feature, as required by Student Guide 8.1). In addition to database entity persistence, the active supervisor authentication session also persisted seamlessly across container restart and rollback without re-login (covering Student Guide 8.2 step 1).
+
+#### 1. Initial record creation (State 1: Release 2, `v0.1.1`)
+- Signed in as Supervisor One (`supervisor1@cpms.test`) at `/login`.
+- Under Team Alpha (`/supervisor/teams/1`), created milestone **`Milestone C-05 Persistenc`** (Due: 22 Nov 2026, 00:43 ICT).
+- Verified footer displayed **`API: ok CPMS v0.1.1`** on the live service revision `cpms-00003-xkm`.
+
+<img width="1706" height="827" alt="State 1: Record created on v0.1.1" src="https://github.com/user-attachments/assets/235e6288-d6d6-44fe-a965-cf3b6cd027fd" />
+
+<img width="360" alt="Footer close-up: CPMS v0.1.1 (State 1)" src="https://github.com/user-attachments/assets/c5b28718-36e0-4913-a1cf-f34497bfad11" />
+
+#### 2. Container restart / redeploy without code changes (State 2)
+- Triggered a new Cloud Run revision deployment via Google Cloud Console without modifying container configuration or code (`cpms-00004-ksx` serving 100% traffic).
+- Refreshed the public URL (`https://cpms-6pjdhtz32a-as.a.run.app/supervisor/teams/1`).
+- **Result:** `Milestone C-05 Persistenc` persisted intact with footer `CPMS v0.1.1`.
+
+<img width="1024" height="499" alt="State 2a: Cloud Run revision 4 serving 100% traffic" src="https://github.com/user-attachments/assets/d84219cb-d6f5-4437-aaca-a6e8cd020193" />
+
+<img width="1706" height="827" alt="State 2b: Data persisted after revision restart" src="https://github.com/user-attachments/assets/b8b2bb0e-89a4-453b-b6d8-a7b1ecec1cea" />
+
+<img width="440" alt="Footer close-up: CPMS v0.1.1 (State 2b)" src="https://github.com/user-attachments/assets/6b7862bd-7d10-454a-8ec1-e667f990a9c8" />
+
+#### 3. Rollback to Release 1 (State 3: Episode 8 rollback)
+- Triggered manual rollback via GitHub Actions: **Actions → Deploy demo → Run workflow** on `main` with `image_tag` set to Release 1 commit SHA `1da481356373ce118a6714e836f60cae7050e7cf` ([run 43476893936](https://github.com/ILoveSiesta/Course-Project-Management-System/actions/runs/43476893936)).
+- Deploy workflow set `ROLLBACK=true`: CI tests and database migration were skipped; Cloud Run service `cpms` was updated to revision `cpms-00005-sv4` serving digest `sha256:7c285e56…` at 100% traffic.
+- Hard-refreshed public URL:
+  - **Visible change:** Footer version `CPMS v0.1.1` disappeared (reverted to `API: ok` only, matching Release 1 behavior).
+  - **Persistence check:** Milestone `Milestone C-05 Persistenc` persisted untouched in Cloud SQL.
+
+<img width="1440" height="900" alt="State 3a: Deploy demo rollback run 43476893936" src="https://github.com/user-attachments/assets/54346a06-ced0-443b-be2a-37ce0835db1c" />
+
+<img width="1706" height="827" alt="State 3b: Data persisted during rollback to Release 1" src="https://github.com/user-attachments/assets/629c3479-bcbf-4811-a50f-8a26f2fc98b8" />
+
+<img width="240" alt="Footer close-up: API: ok without v0.1.1 (State 3b)" src="https://github.com/user-attachments/assets/02bd83c8-0cef-4c87-b95f-c7a6e51489eb" />
+
+#### 4. Roll-forward to Release 2 (State 4)
+- Triggered roll-forward via GitHub Actions: **Actions → Deploy demo → Run workflow** on `main` with `image_tag` set to Release 2 commit SHA `53003a5a5c066b36149c5736b17cb2dcddd3ae23` ([run 43477461502](https://github.com/ILoveSiesta/Course-Project-Management-System/actions/runs/43477461502)).
+- Deployed revision `cpms-00006-jt5` serving digest `sha256:a1389661…` at 100% traffic.
+- Hard-refreshed public URL:
+  - **Visible change:** Footer version **`CPMS v0.1.1`** restored.
+  - **Persistence check:** Milestone `Milestone C-05 Persistenc` persisted untouched.
+
+<img width="1440" height="900" alt="State 4a: Deploy demo roll-forward run 43477461502" src="https://github.com/user-attachments/assets/2530cd76-d50b-45b0-a6f8-7b5bcb725da8" />
+
+<img width="1706" height="827" alt="State 4b: Data persisted after roll-forward to v0.1.1" src="https://github.com/user-attachments/assets/6cb1d00d-6682-4672-8014-17d027f16888" />
+
+<img width="440" alt="Footer close-up: CPMS v0.1.1 (State 4b)" src="https://github.com/user-attachments/assets/9cabeef9-3ccc-4114-ad9e-72a4f1a0ea33" />
+
+#### Summary of persistence and rollback lifecycle (C-05)
+
+| State | Action | Trigger | Cloud Run Revision | Image Tag / Digest | Visible Change on Web | Data Persistence |
+|---|---|---|---|---|---|---|
+| **1. Created** | Test record created | User in browser | `cpms-00003-xkm` | `53003a5` / `sha256:a1389661…` | Footer shows "CPMS v0.1.1" | Created in DB |
+| **2. Restart** | Redeploy without code change | Cloud Console "Redeploy" | `cpms-00004-ksx` (100%) | `53003a5` / `sha256:a1389661…` | Footer shows "CPMS v0.1.1" | **Persisted** |
+| **3. Rollback** | Revert to Release 1 | Actions workflow dispatch ([43476893936](https://github.com/ILoveSiesta/Course-Project-Management-System/actions/runs/43476893936)) | `cpms-00005-sv4` (100%) | `1da4813` / `sha256:7c285e56…` | Footer version gone | **Persisted** |
+| **4. Roll-forward** | Return to Release 2 | Actions workflow dispatch ([43477461502](https://github.com/ILoveSiesta/Course-Project-Management-System/actions/runs/43477461502)) | `cpms-00006-jt5` (100%) | `53003a5` / `sha256:a1389661…` | Footer shows "CPMS v0.1.1" | **Persisted** |
+
+### 7.2 Cloud SQL Pause and Resume Procedure (Episode 9, R-04)
+
+Cloud SQL PostgreSQL instances accrue hourly charges for CPU and RAM while running. To conserve free trial billing credits during periods of inactivity (e.g. overnight or between evaluation sessions), the instance can be paused and resumed without losing data or configurations.
+
+> **Warning (Student Guide Episode 9):** Do **NOT** pause the service during a deployment pipeline run, an active demonstration, or before grading is complete. The public URL must remain reachable and functional throughout evaluation. Additionally, do not merge a release PR into `main` while paused (Episode 9.3), as the automatic Deploy demo workflow requires an active database for migration and smoke tests.
+
+#### 1. Pause procedure (Episode 9.1: close public access & stop compute)
+Run in Google Cloud Shell or authenticated terminal:
+
+1. **Remove public invoker access from Cloud Run:**
+   ```bash
+   gcloud run services remove-iam-policy-binding cpms \
+     --member="allUsers" \
+     --role="roles/run.invoker" \
+     --region="asia-southeast1" \
+     --project="cpe334-cpms"
+   ```
+   Ensure Cloud Run invoker IAM check is enforced (in case public access was toggled in Console):
+   ```bash
+   gcloud run services update cpms \
+     --invoker-iam-check \
+     --region="asia-southeast1" \
+     --project="cpe334-cpms"
+   ```
+2. **Stop the Cloud SQL PostgreSQL instance to cease compute and RAM billing:**
+   ```bash
+   gcloud sql instances patch cpms-pg \
+     --activation-policy=NEVER \
+     --project="cpe334-cpms"
+   ```
+3. **Verify the stopped activation policy:**
+   ```bash
+   gcloud sql instances describe cpms-pg \
+     --project="cpe334-cpms" \
+     --format="value(settings.activationPolicy)"
+   ```
+   Expected output: `NEVER`.
+4. **Endpoint response:**
+   - With public invoker removed, requests to the public URL return `403 Forbidden` (`Error: Forbidden Your client does not have permission to get URL / from this server.`).
+   - If public access were kept open without Cloud SQL, requests would return `503 Service Unavailable` once database readiness checks fail.
+
+#### 2. Resume procedure (Episode 9.2: restart database & restore public access)
+When testing, demonstration or grading resumes:
+
+1. **Restore Cloud SQL compute instance:**
+   ```bash
+   gcloud sql instances patch cpms-pg \
+     --activation-policy=ALWAYS \
+     --project="cpe334-cpms"
+   ```
+   Wait 1–2 minutes until instance status becomes `RUNNABLE`.
+2. **Re-add public invoker access to Cloud Run:**
+   ```bash
+   gcloud run services add-iam-policy-binding cpms \
+     --member="allUsers" \
+     --role="roles/run.invoker" \
+     --region="asia-southeast1" \
+     --project="cpe334-cpms"
+   ```
+3. **Verify database readiness and public accessibility:**
+   ```bash
+   curl -i https://cpms-6pjdhtz32a-as.a.run.app/api/ready
+   ```
+   Expected output: `HTTP/2 200` with `{"status":"ready","db":"connected"}`.
