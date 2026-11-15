@@ -315,7 +315,7 @@ The test record is a milestone titled **`Milestone C-05 Persistenc`** (using the
 
 Cloud SQL PostgreSQL instances accrue hourly charges for CPU and RAM while running. To conserve free trial billing credits during periods of inactivity (e.g. overnight or between evaluation sessions), the instance can be paused and resumed without losing data or configurations.
 
-> **Warning (Student Guide Episode 9):** Do **NOT** pause the service during a deployment pipeline run, an active demonstration, or before grading is complete. The public URL must remain reachable and functional throughout evaluation.
+> **Warning (Student Guide Episode 9):** Do **NOT** pause the service during a deployment pipeline run, an active demonstration, or before grading is complete. The public URL must remain reachable and functional throughout evaluation. Additionally, do not merge a release PR into `main` while paused (Episode 9.3), as the automatic Deploy demo workflow requires an active database for migration and smoke tests.
 
 #### 1. Pause procedure (Episode 9.1: close public access & stop compute)
 Run in Google Cloud Shell or authenticated terminal:
