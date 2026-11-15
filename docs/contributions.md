@@ -6,8 +6,8 @@
 | 0.2 | 2026-11-06 | ILoveSiesta | Sprint 1 contributions (issues #1–#6, #13, #15; PRs #7–#12, #14) |
 | 0.3 | 2026-11-14 | phet526 | Lab 5 contributions (issues #18–#22; PRs #23–#25, #39–#45, and final release) |
 
-Sources: GitHub issues and PRs (author, reviewer, merged by) and `git log` on `sprint-1`. Both students
-worked on requirements/design, tests, implementation and review in Sprint 1; issues alternated between
+Sources: GitHub issues and PRs (author, reviewer, merged by) and `git log` on `sprint-1` (Sprint 1) and `lab5-staging` / `main` (Lab 5). Both students
+worked on requirements/design, tests, implementation and review; issues alternated between
 them, and the student who did not write an issue reviewed its PR.
 
 ## Sprint 1
@@ -21,7 +21,7 @@ them, and the student who did not write an issue reviewed its PR.
 
 | Student | Issues owned / delivered | Implementation & Automation | Live GCP & Pipeline Evidence | Reviews & Merge Gate |
 |---|---|---|---|---|
-| **ILoveSiesta** | #18 Cloud-ready app & Docker (PR #23)<br>#21 Merge gate & deploy pipeline (PR #41, #42, #43, #44, #45) | Dockerfile & compose (Node 24 alpine, root app); environment `demo`, ruleset `protect-main`, Deploy demo workflow (`deploy.yml`), single-manifest build fix (`--provenance=false --sbom=false`), visible version in footer | Merge gate proof with deliberate failing test (PR #40, C-02); Release 1 & Release 2 pipeline deployments (C-06, runs 43462038722 & 43470205241); tag `v0.1.1` | Reviewed & approved PR #24 (CI/deploy scripts), PR #39 (GCP/WIF), and PR for #22 (final docs) |
-| **phet526** | #19 CI & deploy scripts (PR #24)<br>#20 GCP project & WIF (PR #39)<br>#22 Persistence, rollback & final docs | GitHub Actions CI (`ci-docker.yml`), CPMS deployment automation scripts (`deploy/` deploy, release, smoke, teardown), offline unit tests (`deploy/tests/*`); GCP project initialization (`cpe334-cpms`), Cloud SQL instance `cpms-pg`, Secret Manager secrets, WIF pool/provider; final `deployment.md` §7, pause/resume procedure | Live CI run evidence (C-01, run 43234818752); first Cloud Run deployment from Cloud Shell & C-04 live UI verification; data persistence verification across container restart, rollback to Release 1 and roll-forward to Release 2 (C-05, runs 43476893936 & 43477461502) | Reviewed & approved PR #23 (Docker), PR #41 (Deploy demo), PR #43 (Deploy proof), PR #44 (Release 2), PR #45 (Release 2 docs); merged PRs with merge commits |
+| **ILoveSiesta** | #18 Cloud-ready app & Docker (PR #23)<br>#21 Merge gate & deploy pipeline (PR #41, #42, #43, #44, #45) | Dockerfile & compose (Node 24 alpine, root app); environment `demo`, ruleset `protect-main`, Deploy demo workflow (`deploy.yml`), single-manifest build fix (`--provenance=false --sbom=false`), visible version in footer | Merge gate proof with deliberate failing test (PR #40, C-02); Release 1 & Release 2 pipeline deployments (C-06, runs 43462038722 & 43470205241); tag `v0.1.1` | Reviewed & approved PR #24 (CI/deploy scripts), PR #39 (GCP/WIF), and PR #46 (final docs); merged PR #25 (Sprint 1 release to main) |
+| **phet526** | #19 CI & deploy scripts (PR #24)<br>#20 GCP project & WIF (PR #39)<br>#22 Persistence, rollback & final docs | GitHub Actions CI (`ci-docker.yml`), CPMS deployment automation scripts (`deploy/` deploy, release, smoke, teardown), offline unit tests (`deploy/tests/*`); GCP project initialization (`cpe334-cpms`), Cloud SQL instance `cpms-pg`, Secret Manager secrets, WIF pool/provider; final `deployment.md` §7, pause/resume procedure | Live CI run evidence (C-01, run 43234818752); first Cloud Run deployment from Cloud Shell & C-04 live UI verification; data persistence verification across container restart, rollback to Release 1 and roll-forward to Release 2 (C-05, runs 43476893936 & 43477461502) | Reviewed & approved PR #23 (Docker), PR #41 (Deploy demo), PR #42 (Release 1 to main), PR #43 (Deploy proof), PR #44 (Release 2 to main), PR #45 (Release 2 docs); merged PRs with merge commits |
 
 AI assistance is declared in [`ai-use.md`](ai-use.md).
