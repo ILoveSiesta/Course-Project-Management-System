@@ -3,6 +3,7 @@
 | Version | Date | Author(s) | Change |
 |---|---|---|---|
 | 0.1 | 2026-11-17 | ILoveSiesta | UAT cases UAT-01 to UAT-07 and handoff for the Sprint 1 release (#49) |
+| 0.2 | 2026-11-18 | ILoveSiesta | PR #51 review: note on existing milestones (§1.5), DevTools paste note (§2.1, UAT-07), note on long unbroken titles (§1.3); UAT Team row removed from §1.1 (UAT Team identities are recorded in the Lab 6 PDF) |
 
 This document is given to the independent UAT Team. It must be possible to run every case from this
 document alone. Lab 6 handout §3.1 (Part A) asks for executable cases with stable IDs, Sprint 1
@@ -17,7 +18,6 @@ expected results, plus a safe handoff.
 |---|---|
 | Product | Course Project Management System (CPMS), theme 6: teams submit milestone work, supervisors give feedback |
 | Product Team | ILoveSiesta, phet526 (GitHub) |
-| UAT Team | Recorded when the handoff is sent (team, both students, date) |
 | Repository | https://github.com/ILoveSiesta/Course-Project-Management-System |
 | Deployed URL | https://cpms-6pjdhtz32a-as.a.run.app |
 
@@ -49,6 +49,9 @@ editing or deleting milestones, submissions or feedback; grades/scores; progress
 team management by supervisors; self-registration and password reset; mobile layout. These are planned
 for Sprints 2 and 3.
 
+> **Note from the Product Team dry run:** a very long title with no spaces (for example the 120-character
+> title in UAT-04) is stored and shown in full, but the text runs past the right edge of its card.
+
 ### 1.4 Accounts
 
 All accounts are synthetic seed data. **Passwords are sent to you privately, never in this document.**
@@ -71,6 +74,8 @@ All accounts use the same password.
 - The service scales to zero when idle. The first page load after a pause can take up to about 20
   seconds; this is not a defect. If a page has not loaded after 60 seconds, record the case as BLOCKED.
 - **Data setup:** the seed has teams and accounts but no milestones. Each case creates its own milestone.
+  Team Alpha on this deployment already has milestones from our earlier tests (for example
+  `Lab 5 Cloud Test` and `UAT-DRY-...`); ignore them and use only the milestones you create.
   Name every milestone `UAT-<your team>-<case ID>-<run>` (for example `UAT-T07-UAT02-1`) so cases do not
   share data and can be run again.
 - **Cases are independent** and can run in any order, except UAT-06, which uses the milestone created in
@@ -213,7 +218,8 @@ Severity (by user impact):
 
 #### 2.1 Console commands for UAT-05 step 8
 
-Replace `<teamId>` and `<submissionId>`. The submission ID is not shown on screen; use `1` if you do not
+Chrome and Edge block pasting into the Console the first time: type `allow pasting` and press Enter, then
+paste again. Replace `<teamId>` and `<submissionId>`. The submission ID is not shown on screen; use `1` if you do not
 know it: a student is refused with 403 before the server looks up the submission.
 
 ```js
@@ -253,7 +259,7 @@ call('/api/submissions/<submissionId>/feedback', { comment: 'UAT05 student attem
 | 2 | Enter `nobody@cpms.test` and any password | The same message "Invalid email or password" (it does not say whether the email exists) |
 | 3 | Type the address `/student` without logging in | You are sent to the Sign In page |
 | 4 | Log in with the real S1 password | Student Dashboard at `/student`, header shows "Student One", badge **Student** and **Log out** |
-| 5 | Optional server check: in the Console run `window.oldToken = sessionStorage.getItem('cpms_token')` | – |
+| 5 | Optional server check: open the developer tools (F12) → Console (if pasting is blocked, type `allow pasting` first) and run `window.oldToken = sessionStorage.getItem('cpms_token')` | – |
 | 6 | Click **Log out** | Sign In page |
 | 7 | Press the browser Back button, or type `/student` | You stay on (or return to) the Sign In page; no team data is shown |
 | 8 | Optional server check: in the Console (same tab) run `fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + window.oldToken } }).then(async r => console.log(r.status, await r.text()))` | Status **401** and `UNAUTHENTICATED`: the old token was revoked by logout |
