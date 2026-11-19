@@ -4,6 +4,7 @@
 |---|---|---|---|
 | 0.1 | 2026-11-17 | ILoveSiesta | UAT cases UAT-01 to UAT-07 and handoff for the Sprint 1 release (#49) |
 | 0.2 | 2026-11-18 | ILoveSiesta | PR #51 review: note on existing milestones (§1.5), DevTools paste note (§2.1, UAT-07), note on long unbroken titles (§1.3); UAT Team row removed from §1.1 (UAT Team identities are recorded in the Lab 6 PDF) |
+| 0.3 | 2026-11-19 | phet526 | Address #52: make UAT-06 independent with its own fresh milestone (`UAT-<team>-UAT06-<run>`) and state the 3-version limit (`BR-07`) in preconditions (§1.5, UAT-06) |
 
 This document is given to the independent UAT Team. It must be possible to run every case from this
 document alone. Lab 6 handout §3.1 (Part A) asks for executable cases with stable IDs, Sprint 1
@@ -78,8 +79,10 @@ All accounts use the same password.
   `Lab 5 Cloud Test` and `UAT-DRY-...`); ignore them and use only the milestones you create.
   Name every milestone `UAT-<your team>-<case ID>-<run>` (for example `UAT-T07-UAT02-1`) so cases do not
   share data and can be run again.
-- **Cases are independent** and can run in any order, except UAT-06, which uses the milestone created in
-  UAT-01 (stated in its preconditions).
+- **All cases are independent** and can run in any order. Each case that submits work creates its own fresh
+  milestone (`UAT-<your team>-<case ID>-<run>`) so repeated runs or retests never hit the 3-version limit
+  (BR-07). (UAT-05 only reads an existing Team Alpha milestone with at least one submission and one feedback
+  entry, such as one created in UAT-01.)
 - **Reset/cleanup:** Sprint 1 has no delete operation, so data cannot and need not be removed. Never reuse
   a milestone from an earlier run: a milestone accepts at most 3 versions. To repeat a case, create a new
   milestone with the next run number. Data on this deployment survives restarts and redeployments.
@@ -231,19 +234,24 @@ call('/api/submissions/<submissionId>/feedback', { comment: 'UAT05 student attem
 
 ### UAT-06 State, history and persistence
 
-- **References:** BR-06, BR-09, FR-03, FR-13, FR-14, FR-16, FR-17; AC-01-06, AC-03-02, AC-03-05, AC-04-02, AC-04-06, AC-04-07
+- **References:** BR-06, BR-07, BR-09, FR-03, FR-13, FR-14, FR-16, FR-17; AC-01-06, AC-03-02, AC-03-05, AC-04-02, AC-04-06, AC-04-07
 - **Purpose:** feedback stays attached to the version it was written for after a new version is submitted, versions are kept in order, and everything is still there after logging out and in again.
 - **Roles/accounts:** S1, S2, SV1
-- **Preconditions:** run **after UAT-01**, on the UAT-01 milestone (version 1 with one feedback entry). If UAT-01 failed, create a new milestone and repeat UAT-01 steps 3–8 first.
-- **Inputs:** submission title `Revised report`, link `https://example.com/uat01-v2`; second feedback `Version 1 reviewed again.`
+- **Preconditions:** none (independent of UAT-01). **3-version limit (BR-07):** each milestone accepts at most 3 versions and Sprint 1 has no delete operation. Always create a fresh milestone `UAT-<team>-UAT06-<run>` for every run or retest (never reuse a milestone from an earlier run: a milestone with 2 versions breaks the V1/V2 sequence, and one that already has 3 versions blocks step 3 with `"Maximum of 3 versions reached for this milestone."`).
+- **Inputs:**
+  - Milestone title `UAT-<team>-UAT06-<run>`, description `Sprint 1 UAT history and persistence`, deadline tomorrow 23:59
+  - Version 1: submission title `Draft report`, description `First version`, link `https://example.com/uat06-v1`; first feedback `Good start. Add the test plan.`
+  - Version 2: submission title `Revised report`, link `https://example.com/uat06-v2`; second feedback `Version 1 reviewed again.`
 
 | Step | Action | Expected result |
 |---|---|---|
-| 1 | As **S2**, open the UAT-01 milestone and submit `Revised report` | "Version 2: Revised report", "Submitted by: Student Two"; version 1 is still listed above it with its original title and link |
-| 2 | Look at the Feedback part of both versions | Version 1 still has "Good start. Add the test plan." by Supervisor One; version 2 shows "No feedback yet." |
-| 3 | As SV1, open the milestone and add the second feedback to **version 1** | Version 1 lists both comments, oldest first; version 2 still has none |
-| 4 | SV1 and S2: click **Log out** | Both windows return to the Sign In page |
-| 5 | Close the browser completely, open it again, log in as S1 and open the milestone | Version 1 (Draft report, Student One) and version 2 (Revised report, Student Two) in this order; version 1 has both feedback entries with author and ICT time; version 2 has none |
+| 1 | As SV1 on Team Alpha, create milestone `UAT-<team>-UAT06-<run>` (description `Sprint 1 UAT history and persistence`, deadline tomorrow 23:59). As **S1**, open it and submit Version 1 (`Draft report`, description `First version`, link `https://example.com/uat06-v1`) | "Version 1: Draft report" (`Submitted by: Student One`) is listed with badge **On time**, description `First version`, and "No feedback yet." under Feedback |
+| 2 | As SV1, open `UAT-<team>-UAT06-<run>` and add the first feedback (`Good start. Add the test plan.`) to **version 1** | The comment appears under version 1 with "by Supervisor One on <time> (ICT)" |
+| 3 | As **S2**, open `UAT-<team>-UAT06-<run>` and submit `Revised report` (`https://example.com/uat06-v2`) | "Version 2: Revised report", "Submitted by: Student Two"; version 1 is still listed above it with its original title and link |
+| 4 | Look at the Feedback part of both versions | Version 1 still has "Good start. Add the test plan." by Supervisor One; version 2 shows "No feedback yet." |
+| 5 | As SV1, open the milestone and add the second feedback (`Version 1 reviewed again.`) to **version 1** | Version 1 lists both comments, oldest first; version 2 still has none |
+| 6 | SV1 and S2: click **Log out** | Both windows return to the Sign In page |
+| 7 | Close the browser completely, open it again, log in as S1 and open `UAT-<team>-UAT06-<run>` | Version 1 (Draft report, Student One) and version 2 (Revised report, Student Two) in this order; version 1 has both feedback entries with author and ICT time; version 2 has none |
 
 ### UAT-07 Authentication: wrong password, logout and session end
 
