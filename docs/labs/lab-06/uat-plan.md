@@ -5,6 +5,7 @@
 | 0.1 | 2026-11-17 | ILoveSiesta | UAT cases UAT-01 to UAT-07 and handoff for the Sprint 1 release (#49) |
 | 0.2 | 2026-11-18 | ILoveSiesta | PR #51 review: note on existing milestones (§1.5), DevTools paste note (§2.1, UAT-07), note on long unbroken titles (§1.3); UAT Team row removed from §1.1 (UAT Team identities are recorded in the Lab 6 PDF) |
 | 0.3 | 2026-11-19 | phet526 | Address #52: make UAT-06 independent with its own fresh milestone (`UAT-<team>-UAT06-<run>`) and state the 3-version limit (`BR-07`) in preconditions (§1.5, UAT-06) |
+| 0.4 | 2026-11-20 | ILoveSiesta | #56: retest release `v0.1.2` (footer `CPMS v0.1.2`) added to §1.2 for the #54 retest; §1.3 note updated (#54 fixed in PR #55); UAT-04 step 3 expected result now states that the title wraps inside its card |
 
 This document is given to the independent UAT Team. It must be possible to run every case from this
 document alone. Lab 6 handout §3.1 (Part A) asks for executable cases with stable IDs, Sprint 1
@@ -36,6 +37,16 @@ The Product Team will **not** deploy anything during your test sessions. If a ch
 (for example a defect fix), we will tell you first and give you the new commit and Cloud Run revision.
 Results and acceptance apply only to the version you recorded.
 
+**Retest release (Lab 6 Part D).** This release is for retesting the accepted defect #54 and re-running the affected cases:
+
+| Item | Value |
+|---|---|
+| Release | tag `v0.1.2`, released from `sprint-1` to `main` |
+| Changes compared with `38dc25c` | Fix for #54: long unbroken text wraps inside its card (PR #55, CSS only); footer label `CPMS v0.1.2` (#56); UAT plan and findings documents. No Sprint 2 or 3 feature, and no change to API, database or business rules |
+| How to check the version on screen | Footer of every page shows `CPMS v0.1.2` |
+| Commit and deployed revision | Sent to you before the deployment, and recorded with your retest results |
+| Cases to retest | UAT-04 (step 3 is the #54 reproduction) and UAT-06 (v0.3 steps, see #52) |
+
 ### 1.3 Accepted-for-test scope (Sprint 1 only)
 
 | Feature | What is in scope |
@@ -52,6 +63,7 @@ for Sprints 2 and 3.
 
 > **Note from the Product Team dry run:** a very long title with no spaces (for example the 120-character
 > title in UAT-04) is stored and shown in full, but the text runs past the right edge of its card.
+> This happens on the tested release `38dc25c`. The UAT Team reported it as #54, and it is fixed in the retest release `v0.1.2` (PR #55).
 
 ### 1.4 Accounts
 
@@ -194,7 +206,7 @@ Severity (by user impact):
 |---|---|---|
 | 1 | As SV1 on Team Alpha, leave all fields empty and click **Create milestone** | "Required" under Title and under Deadline; nothing is added |
 | 2 | Enter title T121 and a deadline tomorrow; click **Create milestone** | "Too long (max 120 characters)" under Title; nothing is added |
-| 3 | Change the title to T120 (same deadline); click **Create milestone** | The milestone is created and listed with the full 120-character title |
+| 3 | Change the title to T120 (same deadline); click **Create milestone** | The milestone is created and listed with the full 120-character title. On `v0.1.2` the title wraps onto more lines inside the Milestones card, and the page has no horizontal scrollbar (#54) |
 | 4 | As S1, open that milestone; enter title `Link test`, link `not-a-link`; click **Submit work** | "Link must be an http or https URL" under Link; "No submissions yet." remains |
 | 5 | Change the link to `ftp://example.com/file`; click **Submit work** | The same link message; still no submission |
 | 6 | Clear the title (link `https://example.com/uat04`); click **Submit work** | "Required" under Submission title; still no submission |
