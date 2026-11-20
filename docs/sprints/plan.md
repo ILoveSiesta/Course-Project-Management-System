@@ -6,6 +6,7 @@
 | 0.2 | 2026-11-04 | ILoveSiesta | Sprint goals, feature allocation, dependencies and outcomes based on `docs/features.md` v0.2 |
 | 0.3 | 2026-11-05 | ILoveSiesta | Shared UI styling added to Sprint 1 inside #3 F-02 (CHG-01); no change to sprint goals or feature allocation |
 | 0.4 | 2026-11-06 | ILoveSiesta | D-06 agreed without TA confirmation: removed the TA dependency of F-13 and the related risk |
+| 0.5 | 2026-11-17 | ILoveSiesta | §3: Lab 6 runs on the `sprint-1` staging branch (TA decision) instead of landing in Sprint 2 (#48) |
 
 Feature IDs refer to `docs/features.md`; requirement IDs to `docs/srs.md`.
 
@@ -65,7 +66,7 @@ their next issue, so each feature can start as soon as the previous one is merge
 | Lab | Due | Runs on | Sprint where it lands |
 |---|---|---|---|
 | Lab 5 — Docker, CI/CD, GCP | 15 Nov | Sprint 1 release `v0.1.0` | Sprint 2 (establishes SR-03) |
-| Lab 6 — Cross-team UAT and defects | 22 Nov | A recorded release | Sprint 2 (defect fixes as `fix/` branches) |
+| Lab 6 — Cross-team UAT and defects | 22 Nov | Sprint 1 scope on the recorded release `38dc25c` | Sprint 1 staging `sprint-1` (TA decision, 17 Nov): UAT documents and defect fixes as branches from `sprint-1`, released to `main` once at the end of Lab 6 |
 | Lab 7 — Maintenance change and release readiness | 29 Nov | Current release | Sprint 2–3 boundary (approved change kept separate from feature work) |
 
 ## 4. Risks and responses

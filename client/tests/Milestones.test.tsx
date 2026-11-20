@@ -2,6 +2,26 @@ import { render, screen, fireEvent, waitFor, within } from "@testing-library/rea
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import App from "../src/App.js";
 
+type NodeFs = {
+  existsSync(path: string): boolean;
+  readFileSync(path: string, encoding: "utf-8"): string;
+};
+type NodeGlobal = { process?: { getBuiltinModule?(id: string): NodeFs } };
+
+function readThemeCss(): string {
+  const fsModule = (globalThis as unknown as NodeGlobal).process?.getBuiltinModule?.("node:fs");
+  if (!fsModule) throw new Error("Node fs builtin module unavailable");
+  const cssPath = ["src/theme.css", "client/src/theme.css"].find((p) => fsModule.existsSync(p));
+  if (!cssPath) throw new Error("client/src/theme.css not found");
+  return fsModule.readFileSync(cssPath, "utf-8");
+}
+
+function cssRuleBody(css: string, selector: string): string {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = css.match(new RegExp(`(?:^|\\n)\\s*${escaped}\\s*\\{([^}]*)\\}`, "m"));
+  return match ? match[1] : "";
+}
+
 type MockResponse = { status: number; body?: unknown };
 type Handler = (url: string, init?: RequestInit) => MockResponse | undefined;
 
@@ -149,5 +169,44 @@ describe("F-02 Team view and milestone UI", () => {
 
     expect(await screen.findByText("Required")).toBeInTheDocument();
     expect(screen.getByText("Deadline must be in the future")).toBeInTheDocument();
+  });
+
+  it("Issue #54: renders long unbroken milestone title/description and defines CSS wrapping rules", async () => {
+    const longTitle = `UAT04-${"a".repeat(114)}`;
+    const longDescription = "d".repeat(200);
+    const longMilestone = { ...srsMilestone, id: 19, title: longTitle, description: longDescription };
+
+    mockApi(supervisor, (url, init) => {
+      if (url.endsWith("/api/teams/1") && !init?.method) return { status: 200, body: { team: alpha } };
+      if (url.endsWith("/api/teams/1/milestones") && !init?.method) {
+        return { status: 200, body: { milestones: [longMilestone] } };
+      }
+    });
+    startAt("/supervisor/teams/1");
+
+    render(<App />);
+
+    const titleLink = await screen.findByRole("link", { name: longTitle });
+    expect(titleLink.closest(".milestone-title")).not.toBeNull();
+    expect(titleLink.closest(".card")).not.toBeNull();
+
+    const descEl = screen.getByText(longDescription);
+    expect(descEl).toHaveClass("milestone-description");
+
+    const themeCss = readThemeCss();
+    expect(themeCss.length).toBeGreaterThan(0);
+
+    const cardRule = cssRuleBody(themeCss, ".card");
+    expect(cardRule).toMatch(/overflow-wrap:\s*anywhere/);
+    expect(cardRule).toMatch(/min-width:\s*0/);
+
+    expect(cssRuleBody(themeCss, ".milestone-title")).toMatch(/overflow-wrap:\s*anywhere/);
+    expect(cssRuleBody(themeCss, ".milestone-description")).toMatch(/overflow-wrap:\s*anywhere/);
+
+    const submissionHeaderHeadingRule = cssRuleBody(themeCss, ".submission-header h4");
+    expect(submissionHeaderHeadingRule).toMatch(/overflow-wrap:\s*anywhere/);
+    expect(submissionHeaderHeadingRule).toMatch(/min-width:\s*0/);
+
+    expect(cssRuleBody(themeCss, ".feedback-comment")).toMatch(/overflow-wrap:\s*anywhere/);
   });
 });
