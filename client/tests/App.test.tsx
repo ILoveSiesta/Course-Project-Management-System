@@ -23,7 +23,7 @@ describe("App shell", () => {
       vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: "ok", service: "CPMS API" }) })
     );
     render(<App />);
-    expect(screen.getByTestId("release-version")).toHaveTextContent("CPMS v0.1.2");
+    expect(screen.getByTestId("release-version")).toHaveTextContent("CPMS v0.2.0");
     expect(await screen.findByText("API: ok")).toBeInTheDocument();
   });
 
