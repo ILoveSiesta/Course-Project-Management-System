@@ -5,8 +5,9 @@
 | 0.1 | 2026-11-03 | | Document skeleton |
 | 0.2 | 2026-11-06 | ILoveSiesta | Sprint 1 contributions (issues #1–#6, #13, #15; PRs #7–#12, #14) |
 | 0.3 | 2026-11-14 | phet526 | Lab 5 contributions (issues #18–#22; PRs #23–#25, #39–#45, and final release) |
+| 0.4 | 2026-11-21 | ILoveSiesta | Lab 6 contributions as in the Lab 6 report §D.5 (issues #48, #49, #52, #54, #56; PRs #50, #51, #53, #55, #57, #58) (#60) |
 
-Sources: GitHub issues and PRs (author, reviewer, merged by) and `git log` on `sprint-1` (Sprint 1) and `lab5-staging` / `main` (Lab 5). Both students
+Sources: GitHub issues and PRs (author, reviewer, merged by) and `git log` on `sprint-1` (Sprint 1 and Lab 6) and `lab5-staging` / `main` (Lab 5). Both students
 worked on requirements/design, tests, implementation and review; issues alternated between
 them, and the student who did not write an issue reviewed its PR.
 
@@ -23,5 +24,15 @@ them, and the student who did not write an issue reviewed its PR.
 |---|---|---|---|---|
 | **ILoveSiesta** | #18 Cloud-ready app & Docker (PR #23)<br>#21 Merge gate & deploy pipeline (PR #41, #42, #43, #44, #45) | Dockerfile & compose (Node 24 alpine, root app); environment `demo`, ruleset `protect-main`, Deploy demo workflow (`deploy.yml`), single-manifest build fix (`--provenance=false --sbom=false`), visible version in footer | Merge gate proof with deliberate failing test (PR #40, C-02); Release 1 & Release 2 pipeline deployments (C-06, runs 43462038722 & 43470205241); tag `v0.1.1` | Reviewed & approved PR #24 (CI/deploy scripts), PR #39 (GCP/WIF), and PR #46 (final docs); merged PR #25 (Lab 5 release of #19 to main) |
 | **phet526** | #19 CI & deploy scripts (PR #24)<br>#20 GCP project & WIF (PR #39)<br>#22 Persistence, rollback & final docs | GitHub Actions CI (`ci-docker.yml`), CPMS deployment automation scripts (`deploy/` deploy, release, smoke, teardown), offline unit tests (`deploy/tests/*`); GCP project initialization (`cpe334-cpms`), Cloud SQL instance `cpms-pg`, Secret Manager secrets, WIF pool/provider; final `deployment.md` §7, pause/resume procedure | Live CI run evidence (C-01, run 43234818752); first Cloud Run deployment from Cloud Shell & C-04 live UI verification; data persistence verification across container restart, rollback to Release 1 and roll-forward to Release 2 (C-05, runs 43476893936 & 43477461502) | Reviewed & approved PR #23 (Docker), PR #41 (Deploy demo), PR #42 (Release 1 to main), PR #43 (Deploy proof), PR #44 (Release 2 to main), PR #45 (Release 2 docs); merged PRs with merge commits |
+
+## Lab 6 (cross-team UAT and defect management)
+
+| Work | ILoveSiesta | phet526 |
+|---|---|---|
+| Part A (Product Team) | #48 PR #50 (CI on `sprint-1`); #49 PR #51 wrote `uat-plan.md` v0.1–0.2 and the local dry-run; #56 PR #57 v0.4 | Reviewed and merged PR #50 and PR #51; dry-ran the 7 cases by hand on the public URL; sent the passwords to the partner team privately; v0.3 (PR #53) |
+| Part B (UAT Team) | Ran UAT-01..03 of YMOM and captured the screenshots; selected the screenshots and packaged the evidence sent to the partner team | Ran UAT-04..06 of YMOM; checked the YMOM contracts and ran UAT-ADD-01/02 |
+| Part C | Reviewed the triage and PR #53, PR #55; recorded the findings in both directions | Triaged #52 (not-defect) and #54 (accepted Minor); reported YMOM #60 and #59 |
+| Part D | Reviewed PR #55 (ran RED/GREEN, E2E, checked 1280/375 px) and merged it; RED/GREEN footer in PR #57; opened release PR #58, tag `v0.1.2`; retested YMOM #60/#59 | Wrote RED `044ea2a` and GREEN `d4590dc` (PR #55); reviewed and merged PR #57 and PR #58; checked Deploy demo and the URL after deployment |
+| Pair work | Decided the YMOM acceptance together before sending it; coordinated test times and deployment notices with the partner team; produced the Lab 6 report PDF | (same) |
 
 AI assistance is declared in [`ai-use.md`](ai-use.md).
