@@ -127,6 +127,11 @@ export const StudentMilestone: React.FC = () => {
               Due: <span>{formatDeadline(milestone.deadline)}</span>
             </div>
             {milestone.description && <p className="milestone-description">{milestone.description}</p>}
+            <p className="history-link-row">
+              <Link to={`/student/milestones/${milestone.id}/history`} className="btn btn-secondary">
+                View revision history
+              </Link>
+            </p>
           </section>
 
           <SubmissionList submissions={submissions} />

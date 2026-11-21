@@ -2,7 +2,13 @@ import { Prisma } from "@prisma/client";
 import { getPrisma } from "../prisma.js";
 import { AuthenticatedUser } from "../middleware/auth.js";
 import { HttpError, notFound } from "../utils/httpError.js";
-import { calculateDaysLate, isWithinLateWindow, validateSubmissionInput } from "../utils/submissionValidation.js";
+import {
+  buildRevisionHistory,
+  calculateDaysLate,
+  isWithinLateWindow,
+  parseHistoryOrder,
+  validateSubmissionInput,
+} from "../utils/submissionValidation.js";
 import { scopeFilter } from "./teams.service.js";
 import { feedbackInclude, toFeedbackDto } from "./feedback.service.js";
 
@@ -120,4 +126,31 @@ export async function getSubmission(user: AuthenticatedUser, submissionId: numbe
 
   if (!submission) throw notFound();
   return toSubmissionDto(submission);
+}
+
+// F-07 (FR-15): dedicated read-only revision history in one query (scope checked before query validation).
+export async function getRevisionHistory(user: AuthenticatedUser, milestoneId: number, rawOrder: unknown) {
+  const milestone = await getPrisma().milestone.findFirst({
+    where: { id: milestoneId, team: scopeFilter(user) },
+    include: {
+      team: { select: { name: true } },
+      submissions: {
+        include: submissionInclude,
+        orderBy: { version: "asc" },
+      },
+    },
+  });
+  if (!milestone) throw notFound();
+
+  const order = parseHistoryOrder(rawOrder);
+  const milestoneSummary = {
+    id: milestone.id,
+    teamId: milestone.teamId,
+    teamName: milestone.team.name,
+    title: milestone.title,
+    description: milestone.description,
+    deadline: milestone.deadline.toISOString(),
+  };
+
+  return buildRevisionHistory(milestoneSummary, milestone.submissions.map(toSubmissionDto), order);
 }
