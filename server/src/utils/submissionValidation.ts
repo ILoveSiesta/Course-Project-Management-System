@@ -19,6 +19,14 @@ export function calculateDaysLate(submittedAt: Date, deadline: Date): number {
   return Math.ceil(diff / DAY_MS);
 }
 
+// BR-05 rev. (CHG-03, CR #59): late submissions are accepted for at most 7 x 24 h after the deadline.
+// The boundary is inclusive: exactly deadline + 7 days is accepted, 1 ms later is not.
+export const LATE_WINDOW_MS = 7 * DAY_MS;
+
+export function isWithinLateWindow(submittedAt: Date, deadline: Date): boolean {
+  return submittedAt.getTime() <= deadline.getTime() + LATE_WINDOW_MS;
+}
+
 // BR-08: title 1–120 characters after trimming, optional description up to 2000 characters,
 // link absolute http or https URL up to 2048 characters.
 export function validateSubmissionInput(body: unknown): SubmissionInput {
