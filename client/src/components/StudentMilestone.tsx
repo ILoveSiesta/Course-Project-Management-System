@@ -10,6 +10,7 @@ import {
   getMilestoneSubmissionsApi,
 } from "../api.js";
 import { formatDeadline } from "../format.js";
+import { isLateWindowClosed } from "../submissionWindow.js";
 import { SubmissionList } from "./SubmissionList.js";
 
 const FIELD_MESSAGES: Record<string, string> = {
@@ -92,7 +93,10 @@ export const StudentMilestone: React.FC = () => {
       if (err instanceof ApiError && err.status === 401) return logout();
       if (err instanceof ApiError && err.code === "VALIDATION_ERROR") {
         setFieldErrors(err.details);
-      } else if (err instanceof ApiError && err.code === "VERSION_LIMIT_REACHED") {
+      } else if (
+        err instanceof ApiError &&
+        (err.code === "VERSION_LIMIT_REACHED" || err.code === "SUBMISSION_WINDOW_CLOSED")
+      ) {
         setFormError(err.message);
       } else {
         setFormError(err instanceof Error ? err.message : "Could not submit work");
@@ -131,6 +135,8 @@ export const StudentMilestone: React.FC = () => {
             <h3>{submissions.length > 0 ? "Resubmit work" : "Submit work"}</h3>
             {submissions.length >= 3 ? (
               <p className="alert">Maximum of 3 versions reached for this milestone.</p>
+            ) : isLateWindowClosed(milestone.deadline) ? (
+              <p className="alert">Late submissions are accepted up to 7 days after the deadline.</p>
             ) : (
               <>
                 {formError && <p role="alert" className="alert">{formError}</p>}

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from "vitest";
 import request from "supertest";
 import { app } from "../../src/app.js";
 import { getPrisma } from "../../src/prisma.js";
@@ -370,6 +370,163 @@ describe("F-03 Student Submits Milestone Work and Views Submissions API", () => 
         where: { milestoneId: mBetaId },
       });
       expect(count).toBe(3);
+    });
+  });
+
+  // CR #59 / CHG-03 (F-03 contract v0.2): late submissions accepted for at most 7 x 24 h after the deadline.
+  describe("BR-05 rev. (CHG-03): 7-day late window", () => {
+    const WINDOW = 7 * DAY;
+    const WINDOW_CLOSED = {
+      code: "SUBMISSION_WINDOW_CLOSED",
+      message: "Late submissions are accepted up to 7 days after the deadline",
+    };
+    const validBody = { title: "Late window work", link: "https://example.com/late-window" };
+    let supervisor1Id: number;
+    let student1Id: number;
+
+    beforeAll(async () => {
+      supervisor1Id = (await getPrisma().user.findUniqueOrThrow({ where: { email: "supervisor1@cpms.test" } })).id;
+      student1Id = (await getPrisma().user.findUniqueOrThrow({ where: { email: "student1@cpms.test" } })).id;
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    // Created directly in the database because milestone creation requires a future deadline (BR-04).
+    async function alphaMilestone(deadline: Date, title: string) {
+      const m = await getPrisma().milestone.create({
+        data: { teamId: teamIds["Team Alpha"], title, deadline, createdById: supervisor1Id },
+      });
+      createdMilestoneIds.push(m.id);
+      return m;
+    }
+
+    // A version stored directly, as data that existed before the change.
+    function storedVersion(milestoneId: number, version: number, submittedAt: Date, daysLate: number) {
+      return getPrisma().submission.create({
+        data: {
+          milestoneId,
+          submittedById: student1Id,
+          version,
+          title: `Stored version ${version}`,
+          link: `https://example.com/stored-${version}`,
+          submittedAt,
+          daysLate,
+        },
+      });
+    }
+
+    function submit(milestoneId: number, token: string | undefined, body: object = validBody) {
+      const req = request(app).post(`/api/milestones/${milestoneId}/submissions`);
+      if (token) req.set("Authorization", `Bearer ${token}`);
+      return req.send(body);
+    }
+
+    const countOf = (milestoneId: number) => getPrisma().submission.count({ where: { milestoneId } });
+
+    it("TEST-03-19: accepted at exactly deadline + 7 days (daysLate 7), rejected 1 ms later with nothing stored", async () => {
+      const realNow = Date.now();
+      const deadline = new Date(realNow - WINDOW);
+      const m = await alphaMilestone(deadline, "CHG-03 boundary");
+
+      // Only Date is faked; timers used by Supertest and Prisma keep running.
+      vi.useFakeTimers({ toFake: ["Date"] });
+
+      vi.setSystemTime(deadline.getTime() + WINDOW);
+      const atBoundary = await submit(m.id, tokens.student1);
+      expect(atBoundary.status).toBe(201);
+      expect(atBoundary.body.submission.version).toBe(1);
+      expect(atBoundary.body.submission.daysLate).toBe(7);
+
+      vi.setSystemTime(deadline.getTime() + WINDOW + 1);
+      const afterWindow = await submit(m.id, tokens.student1, { ...validBody, title: "One millisecond too late" });
+      expect(afterWindow.status).toBe(409);
+      expect(afterWindow.body.error).toEqual(WINDOW_CLOSED);
+
+      expect(await countOf(m.id)).toBe(1);
+    });
+
+    it("TEST-03-20: closed window keeps the version limit first and the 401/403/404/400 answers", async () => {
+      const deadline = new Date(Date.now() - 8 * DAY);
+
+      // (a) 3 versions already stored: the version limit is reported, not the window
+      const full = await alphaMilestone(deadline, "CHG-03 closed, 3 versions");
+      for (const v of [1, 2, 3]) {
+        await storedVersion(full.id, v, new Date(deadline.getTime() + v * 60 * 60 * 1000), 1);
+      }
+      const limit = await submit(full.id, tokens.student1);
+      expect(limit.status).toBe(409);
+      expect(limit.body.error.code).toBe("VERSION_LIMIT_REACHED");
+      expect(await countOf(full.id)).toBe(3);
+
+      // (b) no versions: earlier checks still answer before the window
+      const empty = await alphaMilestone(deadline, "CHG-03 closed, empty");
+
+      const invalid = await submit(empty.id, tokens.student1, { title: "Bad link", link: "not-a-url" });
+      expect(invalid.status).toBe(400);
+      expect(invalid.body.error.code).toBe("VALIDATION_ERROR");
+      expect(invalid.body.error.details).toEqual({ link: "INVALID_URL" });
+
+      const asSupervisor = await submit(empty.id, tokens.supervisor1);
+      expect(asSupervisor.status).toBe(403);
+      expect(asSupervisor.body.error.code).toBe("FORBIDDEN");
+
+      const otherTeam = await submit(empty.id, tokens.student3);
+      expect(otherTeam.status).toBe(404);
+      expect(otherTeam.body.error.code).toBe("NOT_FOUND");
+
+      const noToken = await submit(empty.id, undefined);
+      expect(noToken.status).toBe(401);
+      expect(noToken.body.error.code).toBe("UNAUTHENTICATED");
+
+      expect(await countOf(empty.id)).toBe(0);
+    });
+
+    it("TEST-03-21: versions stored before the change with daysLate > 7 are still listed unchanged", async () => {
+      const deadline = new Date(Date.now() - 30 * DAY);
+      const m = await alphaMilestone(deadline, "CHG-03 historical data");
+      const old = await storedVersion(m.id, 1, new Date(deadline.getTime() + 11.5 * DAY), 12);
+
+      const asStudent = await request(app)
+        .get(`/api/milestones/${m.id}/submissions`)
+        .set("Authorization", `Bearer ${tokens.student1}`);
+      expect(asStudent.status).toBe(200);
+      expect(asStudent.body.submissions).toHaveLength(1);
+      expect(asStudent.body.submissions[0]).toMatchObject({ id: old.id, version: 1, daysLate: 12 });
+
+      const asSupervisor = await request(app)
+        .get(`/api/milestones/${m.id}/submissions`)
+        .set("Authorization", `Bearer ${tokens.supervisor1}`);
+      expect(asSupervisor.status).toBe(200);
+      expect(asSupervisor.body.submissions[0]).toMatchObject({ id: old.id, version: 1, daysLate: 12 });
+
+      const single = await request(app)
+        .get(`/api/submissions/${old.id}`)
+        .set("Authorization", `Bearer ${tokens.student1}`);
+      expect(single.status).toBe(200);
+      expect(single.body.submission).toMatchObject({ id: old.id, daysLate: 12 });
+    });
+
+    it("TEST-03-22: extending the deadline (F-05, BR-13) reopens a closed window; daysLate uses the new deadline", async () => {
+      const m = await alphaMilestone(new Date(Date.now() - 10 * DAY), "CHG-03 extension");
+
+      const closed = await submit(m.id, tokens.student1);
+      expect(closed.status).toBe(409);
+      expect(closed.body.error).toEqual(WINDOW_CLOSED);
+      expect(await countOf(m.id)).toBe(0);
+
+      const extended = await request(app)
+        .patch(`/api/milestones/${m.id}`)
+        .set("Authorization", `Bearer ${tokens.supervisor1}`)
+        // 23 h ago, so the next submission is less than 24 h late (an exact 24 h would round up to 2 days).
+        .send({ deadline: new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString() });
+      expect(extended.status).toBe(200);
+
+      const reopened = await submit(m.id, tokens.student1);
+      expect(reopened.status).toBe(201);
+      expect(reopened.body.submission.version).toBe(1);
+      expect(reopened.body.submission.daysLate).toBe(1);
     });
   });
 });

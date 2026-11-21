@@ -18,6 +18,7 @@
 | 1.4 | 2026-11-12 | ILoveSiesta | Approved change CHG-02 (Lab 5 deployment design) (#18) |
 | 1.5 | 2026-11-21 | ILoveSiesta | F-05 AC/tests and results on the feature branch (commit `fdfdff4`, #62): FR-10, BR-13; F-05 rows added to BR-02, BR-03, BR-04 |
 | 1.6 | 2026-11-21 | ILoveSiesta | Approved change CHG-03 (Lab 7 change request #59, BR-05 7-day late window): BR-05 and FR-12 rows list the revised and new AC/tests as PLANNED; earlier PASS kept for the v0.1 rule; coverage gap added |
+| 1.7 | 2026-11-21 | ILoveSiesta | CHG-03 rows: RED `f5deaf7` → GREEN `8259688` on the feature branch (#59); revised BR-05 and FR-12 window rows PASS on `8259688` (accepted release recorded at the release) |
 
 Feature and responsibility IDs refer to `docs/features.md`.
 
@@ -44,7 +45,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | FR-10 Edit / extend milestone | F-05 | 2 | AC-05-01, AC-05-02, AC-05-08, AC-05-09 | TEST-05-01, TEST-05-02, TEST-05-09, TEST-05-10 | `server/tests/api/milestone-edit.api.test.ts`; `client/tests/MilestoneEdit.test.tsx` | PASS | `fdfdff4` |
 | FR-11 Milestone for several teams | F-06 | 2 | Sprint 2 contract | — | — | PLANNED | — |
 | FR-12 Submit work | F-03 | 1 | AC-03-01, AC-03-12 | TEST-03-01, TEST-03-15; TEST-E2E-01 (#6) | `server/tests/api/submissions.api.test.ts`; `client/tests/Submissions.test.tsx`; `e2e/sprint1-normal-journey.spec.ts` | PASS | `5936f32` |
-| FR-12 Submit work — 7-day late window (CHG-03) | F-03 (contract v0.2) | Lab 7 (Sprint 2) | AC-03-14, AC-03-15, AC-03-18 | TEST-03-19, TEST-03-20, TEST-03-23, TEST-03-24 | — | PLANNED | — |
+| FR-12 Submit work — 7-day late window (CHG-03) | F-03 (contract v0.2) | Lab 7 (Sprint 2) | AC-03-14, AC-03-15, AC-03-18 | TEST-03-19, TEST-03-20, TEST-03-23, TEST-03-24 | `server/tests/api/submissions.api.test.ts`; `client/tests/Submissions.test.tsx` | PASS | `8259688` |
 | FR-13 View submissions, late flag | F-03 | 1 | AC-03-04..06, AC-03-12, AC-03-13 | TEST-03-04..07, TEST-03-15..17; TEST-E2E-01 (#6) | `server/tests/api/submissions.api.test.ts`; `server/tests/unit/submission-rules.test.ts`; `client/tests/Submissions.test.tsx`; `e2e/sprint1-normal-journey.spec.ts` | PASS | `5936f32` |
 | FR-14 Resubmit as new version | F-03 | 1 | AC-03-02, AC-03-03 | TEST-03-02, TEST-03-03, TEST-03-15 | `server/tests/api/submissions.api.test.ts`; `client/tests/Submissions.test.tsx` | PASS | `65aaf05` |
 | FR-15 Revision history | F-07 | 2 | Sprint 2 contract | — | — | PLANNED | — |
@@ -66,7 +67,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | BR-03 Supervisor-only operations | SR-01; F-02, F-04 (Sprint 1); F-05, F-06, F-08, F-13 (later) | 1 | AC-01-07, AC-02-07, AC-03-08, AC-04-03; AC-05-04 | TEST-01-10, TEST-02-07, TEST-03-10, TEST-04-03; TEST-05-04 | `server/tests/api/auth.api.test.ts`; `server/tests/api/teams-milestones.api.test.ts`; `server/tests/api/submissions.api.test.ts`; `server/tests/api/feedback.api.test.ts`; `server/tests/api/milestone-edit.api.test.ts` | PASS (F-01 guard, F-02 create, F-03 student-only, F-04 feedback, F-05 edit) | `fdfdff4` |
 | BR-04 Milestone validation, future deadline | F-02, F-05 (F-06 later) | 1 | AC-02-08; AC-05-05 | TEST-02-08, TEST-02-11, TEST-02-15; TEST-05-05, TEST-05-08 | `server/tests/api/teams-milestones.api.test.ts`; `server/tests/unit/milestone-validation.test.ts`; `client/tests/Milestones.test.tsx`; `server/tests/api/milestone-edit.api.test.ts`; `server/tests/unit/milestone-update-validation.test.ts` | PASS | `fdfdff4` |
 | BR-05 Late flag and days late (v0.1 rule) | F-03 | 1 | AC-03-04 (v0.1) | TEST-03-04, TEST-03-05 | `server/tests/api/submissions.api.test.ts`; `server/tests/unit/submission-rules.test.ts` | PASS (v0.1 rule, superseded by CHG-03) | `65aaf05` |
-| BR-05 rev. — late window of 7 × 24 h (CHG-03) | F-03 (contract v0.2); interaction with F-05 | Lab 7 (Sprint 2) | AC-03-04 (rev.), AC-03-14, AC-03-15, AC-03-16, AC-03-17, AC-03-18 | TEST-03-04, TEST-03-05, TEST-03-18..TEST-03-24; regression TEST-03-25 | — | PLANNED | — |
+| BR-05 rev. — late window of 7 × 24 h (CHG-03) | F-03 (contract v0.2); interaction with F-05 | Lab 7 (Sprint 2) | AC-03-04 (rev.), AC-03-14, AC-03-15, AC-03-16, AC-03-17, AC-03-18 | TEST-03-04, TEST-03-05, TEST-03-18..TEST-03-24; regression TEST-03-25 | `server/tests/unit/submission-rules.test.ts`; `server/tests/api/submissions.api.test.ts`; `client/tests/Submissions.test.tsx`; `e2e/*.spec.ts` | PASS | `8259688` |
 | BR-06 Sequential, unique versions | F-03 | 1 | AC-03-01, AC-03-02, AC-03-11 | TEST-03-01, TEST-03-02, TEST-03-14 | `server/tests/api/submissions.api.test.ts` | PASS | `65aaf05` |
 | BR-07 Max 3 versions | F-03 | 1 | AC-03-03 | TEST-03-03, TEST-03-16; TEST-E2E-02 (#6) | `server/tests/api/submissions.api.test.ts`; `client/tests/Submissions.test.tsx`; `e2e/sprint1-rejection-journey.spec.ts` | PASS | `5936f32` |
 | BR-08 Submission validation | F-03 | 1 | AC-03-09 | TEST-03-11, TEST-03-12 | `server/tests/api/submissions.api.test.ts`; `server/tests/unit/submission-rules.test.ts` | PASS | `65aaf05` |
@@ -104,7 +105,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 - F-05 AC and tests are implemented and passing on commit `fdfdff4` (feature branch; accepted release recorded at the Sprint 2 release).
 - E2E #6 verified Sprint 1 normal domain journey (TEST-E2E-01) and rejection journey (TEST-E2E-02) on commit `5936f32` (the reviewed head of PR #12; specs first passed on `049bbfe`).
 - Sprint 2–3 requirements have a feature and sprint but no AC or tests yet; this is expected at Deliverable 1.
-- BR-05 was revised by CHG-03 (Lab 7, #59). The v0.1 rule's PASS results stay recorded; the revised rule (AC-03-04 rev., AC-03-14..AC-03-18) is PLANNED until the RED/GREEN commits run. Impact analysis: `docs/labs/lab-07/change-impact.md`.
+- BR-05 was revised by CHG-03 (Lab 7, #59). The v0.1 rule's PASS results stay recorded; the revised rule (AC-03-04 rev., AC-03-14..AC-03-18) failed on the pre-change code at RED `f5deaf7` and passes on GREEN `8259688` (feature branch; accepted release and deployed revision recorded at the release). Impact analysis: `docs/labs/lab-07/change-impact.md`.
 - NFR-05 is partly verified (404 and F-01 validation/auth error shapes). 5xx cases come with later features.
 - F-13 / FR-07 (team management) is planned for Sprint 3 as decided in D-06.
 

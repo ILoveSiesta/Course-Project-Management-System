@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import App from "../src/App.js";
 
 type MockResponse = { status: number; body?: unknown };
@@ -80,6 +80,15 @@ describe("F-03 Submissions UI", () => {
   beforeEach(() => {
     sessionStorage.clear();
     vi.restoreAllMocks();
+    // CR #59 (F-03 contract v0.2): the fixtures use a fixed deadline (8 Nov 2026), so the browser clock is
+    // fixed inside its 7-day late window; otherwise the form would be hidden once the real date passes it.
+    // Only Date is faked, so Testing Library's timers keep running.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-09T00:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("TEST-03-15: student views milestone detail, submissions list and submits a new version", async () => {
@@ -175,5 +184,64 @@ describe("F-03 Submissions UI", () => {
 
     // Supervisor has NO submit form
     expect(screen.queryByRole("button", { name: "Submit work" })).not.toBeInTheDocument();
+  });
+
+  it("TEST-03-23: late window closed: notice replaces the form and existing versions are still listed", async () => {
+    // Window closes at 2026-11-08T16:59:00.000Z; the clock is 2026-11-09T00:00:00.000Z.
+    const closedMilestone = { ...srsMilestone, deadline: "2026-11-01T16:59:00.000Z" };
+    mockApi(student, (url) => {
+      if (url.endsWith("/api/milestones/10")) {
+        return { status: 200, body: { milestone: closedMilestone } };
+      }
+      if (url.endsWith("/api/milestones/10/submissions")) {
+        return { status: 200, body: { submissions: [subV1] } };
+      }
+    });
+
+    startAt("/student/milestones/10");
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "SRS draft" })).toBeInTheDocument();
+    expect(await screen.findByText("Version 1: SRS draft v1")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Late submissions are accepted up to 7 days after the deadline.")
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Submission title")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Submit work" })).not.toBeInTheDocument();
+  });
+
+  it("TEST-03-24: server answers 409 SUBMISSION_WINDOW_CLOSED: message shown, form values kept", async () => {
+    mockApi(student, (url, init) => {
+      if (url.endsWith("/api/milestones/10") && !init?.method) {
+        return { status: 200, body: { milestone: srsMilestone } };
+      }
+      if (url.endsWith("/api/milestones/10/submissions") && init?.method === "POST") {
+        return {
+          status: 409,
+          body: {
+            error: {
+              code: "SUBMISSION_WINDOW_CLOSED",
+              message: "Late submissions are accepted up to 7 days after the deadline",
+            },
+          },
+        };
+      }
+      if (url.endsWith("/api/milestones/10/submissions")) {
+        return { status: 200, body: { submissions: [subV1] } };
+      }
+    });
+
+    startAt("/student/milestones/10");
+    render(<App />);
+
+    fireEvent.change(await screen.findByLabelText("Submission title"), { target: { value: "Too late" } });
+    fireEvent.change(screen.getByLabelText("Link"), { target: { value: "https://example.com/too-late" } });
+    fireEvent.click(screen.getByRole("button", { name: "Submit work" }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Late submissions are accepted up to 7 days after the deadline");
+    expect(screen.getByLabelText("Submission title")).toHaveValue("Too late");
+    expect(screen.getByLabelText("Link")).toHaveValue("https://example.com/too-late");
+    expect(screen.queryByText("Version 2: Too late")).not.toBeInTheDocument();
   });
 });

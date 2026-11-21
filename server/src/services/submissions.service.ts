@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { getPrisma } from "../prisma.js";
 import { AuthenticatedUser } from "../middleware/auth.js";
 import { HttpError, notFound } from "../utils/httpError.js";
-import { calculateDaysLate, validateSubmissionInput } from "../utils/submissionValidation.js";
+import { calculateDaysLate, isWithinLateWindow, validateSubmissionInput } from "../utils/submissionValidation.js";
 import { scopeFilter } from "./teams.service.js";
 import { feedbackInclude, toFeedbackDto } from "./feedback.service.js";
 
@@ -80,9 +80,16 @@ export async function createSubmission(user: AuthenticatedUser, milestoneId: num
       throw new HttpError(409, "VERSION_LIMIT_REACHED", "Maximum of 3 versions reached for this milestone");
     }
 
-    const nextVersion = existingCount + 1;
+    // BR-05 rev. (CHG-03): checked after the version limit, against the deadline read under the row lock,
+    // so a deadline extended by F-05 (BR-13) moves the window. The same `now` is used for daysLate.
     const now = new Date();
-    const daysLate = calculateDaysLate(now, new Date(locked.deadline));
+    const deadline = new Date(locked.deadline);
+    if (!isWithinLateWindow(now, deadline)) {
+      throw new HttpError(409, "SUBMISSION_WINDOW_CLOSED", "Late submissions are accepted up to 7 days after the deadline");
+    }
+
+    const nextVersion = existingCount + 1;
+    const daysLate = calculateDaysLate(now, deadline);
 
     const created = await tx.submission.create({
       data: {
