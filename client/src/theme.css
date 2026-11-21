@@ -165,6 +165,31 @@ a:hover {
   color: var(--color-success);
 }
 
+.badge-primary {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+/* F-07: revision history toolbar and badge group */
+.history-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.history-link-row {
+  margin: 12px 0 0;
+}
+
+.history-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
 /* --- Lists --- */
 
 .plain-list {

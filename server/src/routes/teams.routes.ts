@@ -10,7 +10,7 @@ import {
   listTeams,
   updateMilestone,
 } from "../services/teams.service.js";
-import { createSubmission, getSubmission, listSubmissions } from "../services/submissions.service.js";
+import { createSubmission, getRevisionHistory, getSubmission, listSubmissions } from "../services/submissions.service.js";
 import { createFeedback } from "../services/feedback.service.js";
 import { getGrade, releaseGrade, saveGrade } from "../services/grades.service.js";
 
@@ -71,6 +71,11 @@ milestonesRouter.post("/:milestoneId/grade/release", requireRole("SUPERVISOR"), 
 
 milestonesRouter.get("/:milestoneId/submissions", handle(async (req, res) => {
   res.json({ submissions: await listSubmissions(req.user!, parseId(req.params.milestoneId)) });
+}));
+
+// F-07 (FR-15): full milestone revision history with per-version feedback.
+milestonesRouter.get("/:milestoneId/history", handle(async (req, res) => {
+  res.json({ history: await getRevisionHistory(req.user!, parseId(req.params.milestoneId), req.query.order) });
 }));
 
 milestonesRouter.post("/:milestoneId/submissions", requireRole("STUDENT"), handle(async (req, res) => {

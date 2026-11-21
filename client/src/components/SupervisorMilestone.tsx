@@ -117,9 +117,14 @@ export const SupervisorMilestone: React.FC = () => {
             {isEditing ? (
               <MilestoneEditForm milestone={milestone} onSave={saveMilestone} onCancel={() => setIsEditing(false)} />
             ) : (
-              <button type="button" className="btn btn-secondary" onClick={() => setIsEditing(true)}>
-                Edit milestone
-              </button>
+              <div className="history-toolbar">
+                <button type="button" className="btn btn-secondary" onClick={() => setIsEditing(true)}>
+                  Edit milestone
+                </button>
+                <Link to={`/supervisor/milestones/${milestone.id}/history`} className="btn btn-secondary">
+                  View revision history
+                </Link>
+              </div>
             )}
           </section>
 
