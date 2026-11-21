@@ -12,6 +12,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.6 | 2026-11-21 | ILoveSiesta | §3.1 supervisor milestone detail can edit/extend the milestone; §4 error `409 DEADLINE_NOT_EXTENDED`; §4.1 Sprint 2 endpoint `PATCH /api/milestones/:milestoneId`; §5 edit/extend row is 403 for students (F-05, #62) |
 | 0.7 | 2026-11-21 | ILoveSiesta | Lab 7 change request #59 (CHG-03): §1.3 late rule includes the 7-day window, checked in the same locked transaction after the version limit; §4 error `409 SUBMISSION_WINDOW_CLOSED` and order of the two 409 rules. No change to architecture, data model, endpoints, roles, configuration or deployment |
 | 0.8 | 2026-11-21 | ILoveSiesta | F-06 (#63): §3.1 supervisor team detail can create a milestone for several assigned teams; §4.2 endpoint `POST /api/milestones` (all-or-nothing, one transaction); §5 row for the multi-team create |
+| 0.9 | 2026-11-21 | phet526 | F-07 (#64): §3.1 dedicated Revision history screen (`/student/milestones/:id/history`, `/supervisor/milestones/:id/history`); §4.2 endpoint `GET /api/milestones/:milestoneId/history`; §5 row for viewing revision history |
 
 Requirement IDs (FR/BR/NFR/D) refer to `docs/srs.md`. Feature contracts in `docs/sprints/sprint-N/` give the
 exact endpoint request/response shapes; this document defines the shared structure and conventions they follow.
@@ -151,6 +152,7 @@ flowchart TD
 | My teams | Supervisor | Assigned teams with members | F-02 |
 | Supervisor team detail | Supervisor | Milestone list; create-milestone form, optionally for several assigned teams at once | F-02, F-06 |
 | Supervisor milestone detail | Supervisor | Versions with late badge; add feedback to a version; edit the milestone and extend its deadline | F-03, F-04, F-05 |
+| Revision history | All | Dedicated read-only revision history per milestone: version ordering (`desc`/`asc`), `Latest` badge, submitter/time, late status, and per-version feedback with author and time | F-07 |
 
 A header on every signed-in page shows the user's name, role and a **Log out** button. Visiting a page for the
 other role redirects to the user's own home.
@@ -222,6 +224,7 @@ Exact request/response shapes are defined in each feature contract.
 |---|---|---|---|
 | PATCH | `/api/milestones/:milestoneId` | Supervisor, assigned (student 403) | F-05 |
 | POST | `/api/milestones` | Supervisor, assigned to every listed team (student 403; any unassigned/unknown team → 404, nothing stored) | F-06 |
+| GET | `/api/milestones/:milestoneId/history` | Any, in scope (`?order=desc\|asc`, default `desc`; out-of-scope → 404) | F-07 |
 
 ## 5. Roles and permissions
 
@@ -237,6 +240,7 @@ Out-of-scope reads return 404; operations the role may never perform return 403.
 | Create the same milestone for several teams | ❌ 403 | Assigned teams only (all listed teams must be assigned) | 2 |
 | Submit / resubmit work | Own team | ❌ 403 | 1 |
 | View submissions and versions | Own team | Assigned teams | 1 |
+| View milestone revision history | Own team | Assigned teams | 2 |
 | Record feedback | ❌ 403 | Assigned teams | 1 |
 | View feedback | Own team | Assigned teams | 1 |
 | Edit / extend milestone | ❌ 403 | Assigned teams | 2 |
