@@ -11,6 +11,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.5 | 2026-11-12 | ILoveSiesta | §7 variables for the container (`NODE_ENV`, `CLIENT_DIST_DIR`, `TEST_DATABASE_URL`; seed requires `SEED_DEMO_PASSWORD`); §8 Lab 5 design: migrations in a separate job, deploy on merge to `main` without a manual step, `/api/ready` — change CHG-02 in `docs/traceability.md` §5 (#18) |
 | 0.6 | 2026-11-21 | ILoveSiesta | §3.1 supervisor milestone detail can edit/extend the milestone; §4 error `409 DEADLINE_NOT_EXTENDED`; §4.1 Sprint 2 endpoint `PATCH /api/milestones/:milestoneId`; §5 edit/extend row is 403 for students (F-05, #62) |
 | 0.7 | 2026-11-21 | ILoveSiesta | Lab 7 change request #59 (CHG-03): §1.3 late rule includes the 7-day window, checked in the same locked transaction after the version limit; §4 error `409 SUBMISSION_WINDOW_CLOSED` and order of the two 409 rules. No change to architecture, data model, endpoints, roles, configuration or deployment |
+| 0.8 | 2026-11-21 | ILoveSiesta | F-06 (#63): §3.1 supervisor team detail can create a milestone for several assigned teams; §4.2 endpoint `POST /api/milestones` (all-or-nothing, one transaction); §5 row for the multi-team create |
 
 Requirement IDs (FR/BR/NFR/D) refer to `docs/srs.md`. Feature contracts in `docs/sprints/sprint-N/` give the
 exact endpoint request/response shapes; this document defines the shared structure and conventions they follow.
@@ -148,7 +149,7 @@ flowchart TD
 | My team | Student | Team name, members, supervisors; milestone list by deadline | F-02 |
 | Student milestone detail | Student | Submit / resubmit form; list of versions with late badge and days late; feedback on each version | F-03, F-04 |
 | My teams | Supervisor | Assigned teams with members | F-02 |
-| Supervisor team detail | Supervisor | Milestone list; create-milestone form | F-02 |
+| Supervisor team detail | Supervisor | Milestone list; create-milestone form, optionally for several assigned teams at once | F-02, F-06 |
 | Supervisor milestone detail | Supervisor | Versions with late badge; add feedback to a version; edit the milestone and extend its deadline | F-03, F-04, F-05 |
 
 A header on every signed-in page shows the user's name, role and a **Log out** button. Visiting a page for the
@@ -220,6 +221,7 @@ Exact request/response shapes are defined in each feature contract.
 | Method | Path | Role | Feature |
 |---|---|---|---|
 | PATCH | `/api/milestones/:milestoneId` | Supervisor, assigned (student 403) | F-05 |
+| POST | `/api/milestones` | Supervisor, assigned to every listed team (student 403; any unassigned/unknown team → 404, nothing stored) | F-06 |
 
 ## 5. Roles and permissions
 
@@ -232,6 +234,7 @@ Out-of-scope reads return 404; operations the role may never perform return 403.
 | View team, members, supervisors | Own team | Assigned teams | 1 |
 | View milestones | Own team | Assigned teams | 1 |
 | Create milestone | ❌ 403 | Assigned teams | 1 |
+| Create the same milestone for several teams | ❌ 403 | Assigned teams only (all listed teams must be assigned) | 2 |
 | Submit / resubmit work | Own team | ❌ 403 | 1 |
 | View submissions and versions | Own team | Assigned teams | 1 |
 | Record feedback | ❌ 403 | Assigned teams | 1 |
