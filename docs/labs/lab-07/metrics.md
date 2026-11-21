@@ -3,20 +3,21 @@
 | Version | Date | Author(s) | Change |
 |---|---|---|---|
 | 0.1 | 2026-11-22 | phet526 | Snapshot of five dated engineering metrics at `v0.2.0` (`7c3a970`, `cpms-00009-w5t`), source reconciliation tables, and ≤ 100-word interpretation (`#70`) |
+| 0.2 | 2026-11-22 | phet526 | Address PR `#86` review: set snapshot to `2026-11-22 00:01 ICT` (`17:01 UTC`), reconcile `M-05` human vs Dependabot CI runs, and ground §3 risk in `M-03` (`#70`) |
 
 - **Repository scope:** `ILoveSiesta/Course-Project-Management-System` only (`https://github.com/ILoveSiesta/Course-Project-Management-System`)
-- **Snapshot timestamp:** `2026-11-22 00:05 ICT` (`2026-11-21 17:05 UTC`), immediately after PR `#82` merged into `sprint-3` (`4767ef5`)
+- **Snapshot timestamp:** `2026-11-22 00:01 ICT` (`2026-11-21 17:01 UTC`), immediately after PR `#82` merged into `sprint-3` (`4767ef5`, `17:00:37Z`) and before Sprint 3 feature issue `#83` (`17:04:21Z`)
 - **Deployed production release in scope:** tag `v0.2.0` (`main` @ `7c3a970`, PR `#80`), Cloud Run revision `cpms-00009-w5t`, `Deploy demo` run `44915248527`
 
 ## 1. Engineering Metrics Summary
 
 | ID | Metric | Definition | Observation Window / Snapshot | Value (Numerator / Denominator) | Evidence / Source |
 |---|---|---|---|---|---|
-| `M-01` | Completed Issues | Repository issues reaching `CLOSED` state out of all issues opened (`#1`–`#81`) | `2026-11-04` – `2026-11-22 00:05 ICT` | **29 / 30 (96.7%)**; `1` open (`#70`) | §2.1 below (`gh issue list --state all`) |
-| `M-02` | Merged Pull Requests | Human feature/docs/release PRs merged into target branches (plus raw PR ratio including Dependabot `#26`–`#38`) | `2026-11-04` – `2026-11-22 00:05 ICT` | **38 / 39 human PRs merged (97.4%)**; `0` open; raw `38 / 52 (73.1%)` | §2.2 below (`gh pr list --state all`) |
+| `M-01` | Completed Issues | Repository issues reaching `CLOSED` state out of all issues opened (`#1`–`#81`) | `2026-11-04` – `2026-11-22 00:01 ICT` | **29 / 30 (96.7%)**; `1` open (`#70`) | §2.1 below (`gh issue list --state all`) |
+| `M-02` | Merged Pull Requests | Human feature/docs/release PRs merged into target branches (plus raw PR ratio including Dependabot `#26`–`#38`) | `2026-11-04` – `2026-11-22 00:01 ICT` | **38 / 39 human PRs merged (97.4%)**; `0` open; raw `38 / 52 (73.1%)` | §2.2 below (`gh pr list --state all`) |
 | `M-03` | Automated Test Pass Rate (`v0.2.0`) | Combined automated test cases passing (`server` + `client` + `e2e` + `deploy/tests`) on `7c3a970` | Snapshot on release commit `7c3a970` (`2026-11-21 21:41 ICT`) | **179 / 179 passed (100.0%)**, `0` failed, `0` skipped (`128` server + `30` client + `4` E2E + `17` deploy) | `Deploy demo` run `44915248527` (job `136879353497`); CI run `44914888918` |
-| `M-04` | UAT Defect Resolution Rate | Received CPMS UAT issues triaged, resolved (`Not-defect` test update or released code fix), retested `PASS`, and closed | `2026-11-18` – `2026-11-22 00:05 ICT` | **2 / 2 resolved (100.0%)**; accepted defects fixed **1 / 1 (100.0%)**; **0** open (`0` Critical, `0` Major, `0` Minor) | `docs/labs/lab-06/uat-findings.md` §1 (`#52`, `#54`); `#59` post-deploy comments |
-| `M-05` | CI & Deploy Workflow Outcomes | Successful runs of `Deploy demo` and `CI & Docker Build` out of total runs per workflow | `2026-11-12` – `2026-11-22 00:05 ICT` | **`Deploy demo`:** **7 / 7 (100.0%)**<br>**`CI & Docker Build`:** **51 / 56 (91.1%)**, `5` failed (all non-gate human runs: **51 / 51 (100.0%)**) | §2.3 below (`gh run list --limit 100`, `69` total runs) |
+| `M-04` | UAT Defect Resolution Rate | Received CPMS UAT issues triaged, resolved (`Not-defect` test update or released code fix), retested `PASS`, and closed | `2026-11-18` – `2026-11-22 00:01 ICT` | **2 / 2 resolved (100.0%)**; accepted defects fixed **1 / 1 (100.0%)**; **0** open (`0` Critical, `0` Major, `0` Minor) | `docs/labs/lab-06/uat-findings.md` §1 (`#52`, `#54`); `#59` post-deploy comments |
+| `M-05` | CI & Deploy Workflow Outcomes | Successful runs of `Deploy demo` and `CI & Docker Build` out of total runs per workflow | `2026-11-12` – `2026-11-22 00:01 ICT` | **`Deploy demo`:** **7 / 7 (100.0%)**<br>**`CI & Docker Build`:** **51 / 56 (91.1%)**, `5` failed = **43 human** (`42 / 43 = 97.7%`; non-gate **42 / 42 = 100.0%**, `1` intentional gate fail `#40`) + **13 Dependabot** (`9 / 13 = 69.2%`, `4` failed `#26, #35, #36, #37`) | §2.3 below (`gh run list --limit 100`, `69` total runs) |
 
 ## 2. Compact Source List (Self-Contained Reconciliation)
 
@@ -47,6 +48,8 @@ All values in `M-01`, `M-02`, and `M-05` reconcile directly from the tables belo
 
 ### 2.3 Key CI & Deploy Workflow Runs (`69` total runs: `56` `CI & Docker Build`, `7` `Deploy demo`, `6` `Dependabot Updates`)
 
+Breakdown of `56` `CI & Docker Build` runs (`<= 2026-11-21 17:01 UTC`): **43 human runs** (`42` success + `1` intentional failure `#40`, `42 / 43 = 97.7%`; non-gate human `42 / 42 = 100.0%`) + **13 Dependabot runs** (`9` success + `4` failures `#26, #35, #36, #37`, `9 / 13 = 69.2%`) = **`51 / 56 (91.1%)`**.
+
 | Run ID | Workflow | Target / Branch | Date (UTC) | Conclusion | Purpose / Exception |
 |---|---|---|---|---|---|
 | `44927347197` | `CI & Docker Build` | `ci/sprint-3-setup` (`#82`) | `2026-11-21` | `success` | Sprint 3 setup (`3f67757`, `deploy/tests` 17 OK) |
@@ -60,6 +63,6 @@ All values in `M-01`, `M-02`, and `M-05` reconcile directly from the tables belo
 | `43453823467` | `CI & Docker Build` | `test/prove-gate` (`#40`) | `2026-11-13` | `failure` | Intentional merge-gate proof (1 of 5 CI failures) |
 | `43249258353`, `43249312327`, `43249332951`, `43249338577` | `CI & Docker Build` | `dependabot/*` (`#26, #35, #36, #37`) | `2026-11-12` | `failure` (`4/4`) | Unscoped npm major bumps before `#41` scoped Dependabot |
 
-## 3. Interpretation (79 words)
+## 3. Interpretation (78 words)
 
-Delivery reliability is high: 29/30 issues closed, 38/39 human PRs merged, all 7 deployments succeeded, and 179/179 automated checks passed on `v0.2.0` (`7c3a970`). The concrete risk observed in Lab 7 is environment drift: local Docker Desktop outages blocked DB/E2E runs on `#75`/`#77`, and testing `> 7 d` rejections live required TA-approved manual SQL setup (`Milestone.id = 22`) because `BR-04` blocks past deadlines. Action: `phet526` keeps Docker active locally and re-verifies `id = 22` on `v0.3.0` (`Sprint 3`, 29 Nov).
+Delivery metrics look strong (`M-01` `29/30`, `M-02` `38/39`, `M-04` `2/2`, `M-05` `7/7` deploys and `42/42` non-gate human CI runs), yet `M-03` highlights a coverage risk: only `4/179` (`2.2%`) checks are Playwright browser E2E specs, covering Sprint 1 and `#54` only. Sprint 2 (`F-05`–`F-09`) relies on Vitest unit/API/component tests without live browser flows while Sprint 3 adds more UI. Action: `ILoveSiesta` adds Sprint 2+3 E2E specs before `v1.0.0` (13 Dec); `phet526` re-verifies `Milestone.id = 22` on `v0.3.0` (29 Nov).
