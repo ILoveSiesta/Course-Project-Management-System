@@ -131,3 +131,25 @@ export function validateMilestoneUpdate(body: unknown): MilestoneUpdate {
   }
   return update;
 }
+
+export type MilestoneStatus =
+  | "Not submitted"
+  | "Overdue"
+  | "Submitted"
+  | "Submitted late"
+  | "Reviewed";
+
+// F-09 (FR-20, BR-12): derived status evaluated in priority order at request time; first match wins.
+// Overdue covers both the 7-day late window and after it closes (CHG-03 / Issue #67 Option A).
+export function deriveMilestoneStatus(input: {
+  deadline: Date;
+  now: Date;
+  latestSubmission: { daysLate: number; feedbackCount: number } | null;
+}): MilestoneStatus {
+  const { deadline, now, latestSubmission } = input;
+  if (latestSubmission) {
+    if (latestSubmission.feedbackCount > 0) return "Reviewed";
+    return latestSubmission.daysLate > 0 ? "Submitted late" : "Submitted";
+  }
+  return now.getTime() > deadline.getTime() ? "Overdue" : "Not submitted";
+}
