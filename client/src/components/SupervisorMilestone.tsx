@@ -114,20 +114,18 @@ export const SupervisorMilestone: React.FC = () => {
               Due: <span>{formatDeadline(milestone.deadline)}</span>
             </div>
             {milestone.description && <p className="milestone-description">{milestone.description}</p>}
-            <div className="history-toolbar">
-              {isEditing ? (
-                <MilestoneEditForm milestone={milestone} onSave={saveMilestone} onCancel={() => setIsEditing(false)} />
-              ) : (
-                <>
-                  <button type="button" className="btn btn-secondary" onClick={() => setIsEditing(true)}>
-                    Edit milestone
-                  </button>
-                  <Link to={`/supervisor/milestones/${milestone.id}/history`} className="btn btn-secondary">
-                    View revision history
-                  </Link>
-                </>
-              )}
-            </div>
+            {isEditing ? (
+              <MilestoneEditForm milestone={milestone} onSave={saveMilestone} onCancel={() => setIsEditing(false)} />
+            ) : (
+              <div className="history-toolbar">
+                <button type="button" className="btn btn-secondary" onClick={() => setIsEditing(true)}>
+                  Edit milestone
+                </button>
+                <Link to={`/supervisor/milestones/${milestone.id}/history`} className="btn btn-secondary">
+                  View revision history
+                </Link>
+              </div>
+            )}
           </section>
 
           {gradeState && token && (
