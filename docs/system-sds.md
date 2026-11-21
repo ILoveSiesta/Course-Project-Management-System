@@ -15,6 +15,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.9 | 2026-11-21 | ILoveSiesta | F-08 (#66): §2.1/§2.2 `Grade` entity and `Milestone.gradesReleasedAt` (migration `f08_grades`); §2.3 grades no longer planned; §3.1 grade card on both milestone detail screens; §4 errors `NOTHING_TO_GRADE`, `GRADE_RELEASED`, `NO_GRADE`; §4.2 grade endpoints; §5 grade rows (student 403) |
 | 0.10 | 2026-11-21 | phet526 | F-07 (#64): §3.1 dedicated Revision history screen (`/student/milestones/:id/history`, `/supervisor/milestones/:id/history`); §4.2 endpoint `GET /api/milestones/:milestoneId/history`; §5 row for viewing revision history |
 | 0.11 | 2026-11-21 | phet526 | F-09 (#67): §3.1 student My team and supervisor team detail show derived status badges on milestone lists; §4.2 milestone endpoints include derived `status` without storing it |
+| 0.12 | 2026-11-22 | ILoveSiesta | Sprint 3 contracts (#84): §4.3 planned endpoints and screens of F-10, F-11, F-12; §5 the progress board is for both roles while the summary report and submission filters are supervisor-only (FR-22, FR-23) |
 
 Requirement IDs (FR/BR/NFR/D) refer to `docs/srs.md`. Feature contracts in `docs/sprints/sprint-N/` give the
 exact endpoint request/response shapes; this document defines the shared structure and conventions they follow.
@@ -240,6 +241,18 @@ Exact request/response shapes are defined in each feature contract.
 | GET | `/api/milestones/:milestoneId/history` | Any, in scope (`?order=desc\|asc`, default `desc`; out-of-scope → 404) | F-07 |
 | Milestone endpoints (list, detail, create, edit) | — | Every serialized `Milestone` includes server-derived `status` (BR-12, never stored) | F-09 |
 
+### 4.3 Sprint 3 endpoints (planned, contracts in `docs/sprints/sprint-3/`)
+
+Read-only endpoints; no schema change. Status comes from the F-09 helper with one `now` per request.
+
+| Method | Path | Role | Feature | Screen |
+|---|---|---|---|---|
+| GET | `/api/board` | Any, scoped (student: own team; supervisor: assigned teams) | F-10 | `/student/board`, `/supervisor/board` |
+| GET | `/api/reports/summary` | Supervisor, assigned teams (student 403) | F-11 | `/supervisor/report` |
+| GET | `/api/submissions?teamId=&milestoneId=&status=` | Supervisor, assigned teams (student 403; invalid filter 400 `INVALID_FILTER`; out-of-scope team/milestone 404) | F-12 | `/supervisor/submissions` |
+
+Team management endpoints (F-13) are specified in its own contract (#83).
+
 ## 5. Roles and permissions
 
 "Own team" = the team the student belongs to. "Assigned" = a team the supervisor has a `SupervisorAssignment` for.
@@ -260,7 +273,8 @@ Out-of-scope reads return 404; operations the role may never perform return 403.
 | Edit / extend milestone | ❌ 403 | Assigned teams | 2 |
 | Record / change / release grade | ❌ 403 | Assigned teams | 2 |
 | View grade | Own team, after release | Assigned teams | 2 |
-| Progress board, reports, filters | Own team | Assigned teams | 3 |
+| Progress board | Own team | Assigned teams | 3 |
+| Summary report, submission filters | ❌ 403 | Assigned teams | 3 |
 | Manage teams and members | ❌ | Teams they supervise (D-06) | 3 |
 
 ## 6. Authentication and session lifecycle

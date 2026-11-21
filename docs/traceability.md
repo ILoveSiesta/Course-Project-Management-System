@@ -24,6 +24,7 @@
 | 2.0 | 2026-11-21 | ILoveSiesta | F-08 AC/tests and results on the feature branch (commit `249bc1a`, #66): FR-18, FR-19, BR-11; F-08 rows added to BR-01, BR-02, BR-03 |
 | 2.1 | 2026-11-21 | phet526 | F-07 AC/tests and results on the feature branch (commit `9751f0f`, #64): FR-15; F-07 rows added to BR-01, BR-02, BR-06, BR-09, NFR-02, NFR-03 (renumbered from 1.10 after F-08 PR #76 took 2.0) |
 | 2.2 | 2026-11-21 | phet526 | F-09 AC/tests and results on the feature branch (commit `31949c8`, #67): FR-20, BR-12; F-09 access tests added to NFR-02, NFR-03 (renumbered after F-08 PR #76 took 2.0 and F-07 PR #75 took 2.1) |
+| 2.3 | 2026-11-22 | ILoveSiesta | Sprint 3 contracts F-10, F-11, F-12 (#84): planned AC and test IDs for FR-21, FR-22, FR-23, NFR-10 (measurement plan in the F-11 contract) and NFR-11; all PLANNED (contracts only, implementation after Deliverable 2) |
 
 Feature and responsibility IDs refer to `docs/features.md`.
 
@@ -59,9 +60,9 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | FR-18 Record grade | F-08 | 2 | AC-08-01, AC-08-02, AC-08-07, AC-08-08 | TEST-08-01, TEST-08-02, TEST-08-07, TEST-08-08, TEST-08-09 | `server/tests/api/grades.api.test.ts`; `server/tests/unit/grade-validation.test.ts`; `client/tests/Grades.test.tsx` | PASS | `249bc1a` |
 | FR-19 Release grades | F-08 | 2 | AC-08-03, AC-08-04, AC-08-05, AC-08-08, AC-08-09 | TEST-08-03, TEST-08-04, TEST-08-05, TEST-08-09, TEST-08-10, TEST-08-11 | `server/tests/api/grades.api.test.ts`; `client/tests/Grades.test.tsx` | PASS | `249bc1a` |
 | FR-20 Team–milestone status | F-09 | 2 | AC-09-01, AC-09-02, AC-09-03, AC-09-04, AC-09-05, AC-09-07 | TEST-09-01, TEST-09-02, TEST-09-03, TEST-09-04, TEST-09-06, TEST-09-07, TEST-09-08 | `server/tests/api/milestone-status.api.test.ts`; `server/tests/unit/milestone-status.test.ts`; `client/tests/MilestoneStatus.test.tsx` | PASS | `31949c8` |
-| FR-21 Progress board | F-10 | 3 | Sprint 3 contract | — | — | PLANNED | — |
-| FR-22 Summary report | F-11 | 3 | Sprint 3 contract | — | — | PLANNED | — |
-| FR-23 Filter submissions | F-12 | 3 | Sprint 3 contract | — | — | PLANNED | — |
+| FR-21 Progress board | F-10 | 3 | AC-10-01, AC-10-02, AC-10-03, AC-10-04, AC-10-05, AC-10-06 | TEST-10-01, TEST-10-02, TEST-10-03, TEST-10-04, TEST-10-05, TEST-10-06, TEST-10-07 | — (planned: `server/tests/api/board.api.test.ts`; `client/tests/ProgressBoard.test.tsx`) | PLANNED | — |
+| FR-22 Summary report | F-11 | 3 | AC-11-01, AC-11-02, AC-11-03, AC-11-04, AC-11-05, AC-11-06 | TEST-11-01, TEST-11-02, TEST-11-03, TEST-11-04, TEST-11-05, TEST-11-06, TEST-11-07 | — (planned: `server/tests/api/summary-report.api.test.ts`; `client/tests/SummaryReport.test.tsx`) | PLANNED | — |
+| FR-23 Filter submissions | F-12 | 3 | AC-12-01, AC-12-02, AC-12-03, AC-12-04, AC-12-05, AC-12-06, AC-12-07 | TEST-12-01, TEST-12-02, TEST-12-03, TEST-12-04, TEST-12-05, TEST-12-06, TEST-12-07 | — (planned: `server/tests/api/submission-filter.api.test.ts`; `client/tests/SubmissionFilter.test.tsx`) | PLANNED | — |
 
 ## 2. Business rules
 
@@ -97,8 +98,8 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | NFR-07 Reproducible setup | SR-04 | 1 | README-only fresh setup | Teammate run before release (manual check, #6) | Manual: phet526 followed the README on their own machine (install, env setup, `npm run build`, `npm test`, `npm run test:e2e`), recorded in the PR #16 review | PASS (manual) | `559bc29` |
 | NFR-08 Durable data on GCP | SR-03 | 2 | Data survives restart/redeploy | Post-deployment check (Lab 5) | — | PLANNED | — |
 | NFR-09 CI quality gate | SR-03 | 2 | Failing check blocks merge | CI run evidence (Lab 5) | — | PLANNED | — |
-| NFR-10 Response time | SR-05 (with F-11) | 3 | p95 ≤ 500 ms on seeded dataset | Sprint 3 smoke test | — | PLANNED | — |
-| NFR-11 Responsive UI | SR-06 | 3 | 375 px and 1280 px | Sprint 3 Playwright viewports | — | PLANNED | — |
+| NFR-10 Response time | SR-05 (with F-11) | 3 | AC-11-08: p95 ≤ 500 ms for `/api/reports/summary`, `/api/board`, `/api/submissions`, `/api/teams/:id/milestones` on 20 teams × 10 milestones × 3 versions (F-11 contract §2.4) | TEST-11-09 | — (planned: `server/tests/perf/nfr10.perf.test.ts`, `npm run test:perf --prefix server`) | PLANNED | — |
+| NFR-11 Responsive UI | SR-06 | 3 | 375 px and 1280 px; new Sprint 3 screens: AC-10-07, AC-11-07, AC-12-08 | TEST-10-08, TEST-11-08, TEST-12-08 (existing screens: Sprint 3 Playwright viewport suite, planned) | — (planned: `e2e/sprint3-board-report.spec.ts`) | PLANNED | — |
 | NFR-12 Understandable rejections | SR-02 | 1 (extended each sprint) | Reason shown for every rejection | TEST-02-15 (milestone validation); TEST-03-16 (version limit); TEST-04-12 (feedback validation); TEST-E2E-02 (#6) | `client/tests/Milestones.test.tsx`; `client/tests/Submissions.test.tsx`; `client/tests/Feedback.test.tsx`; `e2e/sprint1-rejection-journey.spec.ts` | PASS | `5936f32` |
 
 ## 4. Coverage gaps
@@ -118,6 +119,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 - BR-05 was revised by CHG-03 (Lab 7, #59). The v0.1 rule's PASS results stay recorded; the revised rule (AC-03-04 rev., AC-03-14..AC-03-18) failed on the pre-change code at RED `f5deaf7` and passes on GREEN `8259688` (feature branch; accepted release and deployed revision recorded at the release). Impact analysis: `docs/labs/lab-07/change-impact.md`.
 - NFR-05 is partly verified (404 and F-01 validation/auth error shapes). 5xx cases come with later features.
 - F-13 / FR-07 (team management) is planned for Sprint 3 as decided in D-06.
+- F-10, F-11 and F-12 have contracts with AC and STS IDs (#84, contracts v0.1 in `docs/sprints/sprint-3/`); they are implemented after Deliverable 2, so their FR-21, FR-22, FR-23, NFR-10 and NFR-11 rows stay PLANNED. Their 401/403/404 tests (TEST-10-04, TEST-11-05, TEST-12-05, TEST-12-06) are added to NFR-02 and NFR-03 when they pass.
 
 ## 5. Approved changes
 
