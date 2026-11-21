@@ -9,6 +9,7 @@
 | 0.1 | 2026-11-04 | phet526 | Initial contract for F-01 (Issue #2) |
 | 0.2 | 2026-11-04 | phet526 | Implemented and verified against initial STS tests |
 | 0.3 | 2026-11-04 | phet526 | Addressed PR review: env validation without fallback, test DB auto-seed, test role guard independently, added expired token & schema constraint tests, client routing via react-router-dom |
+| 0.4 | 2026-11-21 | phet526 | Added `TEST-01-14` for `AC-01-10` (seed idempotency) and §8.1 follow-up checklist (#65) |
 
 ## 1. Linked requirements
 
@@ -131,6 +132,7 @@ Models added to `server/prisma/schema.prisma` with migration `f01_auth_teams`:
 | `TEST-01-10b`| AC-01-07 | API | Supervisor token | Call route with `requireRole('SUPERVISOR')` | Status 200, status: ok | `server/tests/api/auth.api.test.ts` › role guard allows supervisor |
 | `TEST-01-11` | AC-01-08 | Integration | Database seeded | Check stored password hashes for seeded users | 100% bcrypt hashes with cost ≥ 10 | `server/tests/api/auth.api.test.ts` › passwords are never stored in plaintext |
 | `TEST-01-12` | AC-01-09 | Integration | Seeded database | Insert duplicate email, team name, student membership, supervisor assignment | Rejection by unique constraints | `server/tests/api/auth.api.test.ts` › unique constraints enforced |
+| `TEST-01-14` | AC-01-10 | Integration | Test database with `SEED_DEMO_PASSWORD` set | Execute `seed()` twice consecutively and inspect users, teams, memberships, assignments, and login | Both runs succeed without error; counts and record IDs stay identical (`8` users, `3` teams, `6` memberships, `4` assignments, no duplicates); seeded login still succeeds | `server/tests/api/auth.api.test.ts` › TEST-01-14 |
 | `TEST-01-13` | AC-01-11 | UI | Client rendered at /login | Fill student credentials and submit | Redirects to /student, renders dashboard & user info | `client/tests/Auth.test.tsx` › student login & redirect |
 | `TEST-01-13b`| AC-01-11 | UI | Client rendered at /login | Fill supervisor credentials and submit | Redirects to /supervisor, renders dashboard | `client/tests/Auth.test.tsx` › supervisor login & redirect |
 | `TEST-01-13c`| AC-01-11 | UI | Client authenticated | Click "Log out" button | Clears session token, redirects to /login | `client/tests/Auth.test.tsx` › logout clears session |
@@ -142,3 +144,10 @@ Models added to `server/prisma/schema.prisma` with migration `f01_auth_teams`:
 - [x] TDD red → green evidence for rule work (failing commit: `020907e`, passing commit: `3bf1b61`, review fix commit: `d24f2c0`)
 - [ ] PR reviewed by teammate and merged into sprint staging (PR #8)
 - [x] Docs updated
+
+### 8.1 Follow-up verification — AC-01-10 (#65)
+
+- [x] STS test ID `TEST-01-14` added for `AC-01-10` in §7
+- [x] Automated integration test `TEST-01-14` added in `server/tests/api/auth.api.test.ts` (seed already uses idempotent upserts; no `seed.ts` change required)
+- [ ] Executed against PostgreSQL (`npm run build`, `npm test`, `npm run test:e2e`, `deploy/tests`) and CI green on `test/ac-01-10-seed-idempotency`
+- [ ] PR reviewed and merged into `sprint-2`
