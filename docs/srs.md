@@ -13,6 +13,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.7 | 2026-11-21 | ILoveSiesta | Lab 7 change request #59 (CHG-03, approved by TA Kantapat Suwannahong 2026-11-21): BR-05 and D-01 revised — late submissions accepted for at most 7 × 24 h after the deadline, later ones rejected; FR-12 and BR-13 refer to the window. Old rule (v0.6): late submissions accepted with no time limit |
 | 0.8 | 2026-11-21 | ILoveSiesta | BR-11 detailed for Sprint 2 (F-08, #66; decisions G1–G7 agreed in #66): integer score 0–100, one grade per milestone linked to a version of that milestone, changeable until release, release per milestone and irreversible, nothing to grade without a submission |
 | 0.9 | 2026-11-21 | phet526 | BR-12 detailed for Sprint 2 (F-09, #67): 5-status precedence, `now ≤ deadline` boundary, latest-version resubmission rule, Overdue covering closed 7-day window (CHG-03), and BR-13 extension effect |
+| 0.10 | 2026-11-22 | phet526 | FR-07 and BR-14 detailed for Sprint 3 (F-13, #83): supervisors create teams (assigned automatically) and add/remove student members; membership deletion keeps `Submission.submittedById` unchanged and revokes the removed student's access to the old team |
 
 ## 1. Stakeholder problem and context
 
@@ -78,7 +79,7 @@ Sprint = the sprint planned to implement the requirement (see `docs/sprints/plan
 |---|---|---|---|
 | FR-05 | A student can view their own team: name, members and assigned supervisors. | Student | 1 |
 | FR-06 | A supervisor can list the teams assigned to them with their members. | Supervisor | 1 |
-| FR-07 | A supervisor can manage teams they supervise (create a team, add or remove members). Details to be specified in Sprint 3 (D-06). | Supervisor | 3 |
+| FR-07 | A supervisor can create a team (becoming an assigned supervisor of it), add unassigned students to an assigned team, and remove members from an assigned team; deleting teams or changing other supervisors' assignments is out of scope (D-04, D-06). | Supervisor | 3 |
 
 ### 4.3 Milestones
 
@@ -133,7 +134,7 @@ Sprint = the sprint planned to implement the requirement (see `docs/sprints/plan
 | BR-11 | Students see a grade only after the supervisor releases the milestone's grades (D-03); before release the API returns no score to students. A grade is an integer from 0 to 100; a milestone has at most one grade, linked to one submission version of that milestone, and cannot be recorded while the milestone has no submission. An assigned supervisor may change the grade until it is released; release is per milestone, requires a grade, and cannot be undone or repeated, after which the grade is locked. | FR-18, FR-19 | 2 |
 | BR-12 | Each team–milestone has a derived status evaluated at request time in order (first match wins): **Reviewed** (latest version has ≥ 1 feedback), **Submitted late** (latest version `daysLate > 0`, no feedback), **Submitted** (latest version `daysLate = 0`, no feedback), **Overdue** (no submission and `now > deadline`, covering both the 7-day late window and after it closes per BR-05 rev. / CHG-03), **Not submitted** (no submission and `now ≤ deadline`). Resubmitting after feedback moves status back to Submitted / Submitted late; extending a deadline under BR-13 to `≥ now` can move Overdue back to Not submitted. Grades (BR-11) are shown separately. | FR-20–FR-22 | 2 |
 | BR-13 | A milestone deadline can only be extended, not moved earlier: a new deadline must be later than or equal to the stored one, otherwise the whole change is rejected and nothing is stored. A deadline that has passed may be extended. Versions already submitted keep the days late stored at submission time (BR-05); submissions after the change use the new deadline, including the 7-day late window of BR-05 (an extension can reopen a closed window). | FR-10 | 2 |
-| BR-14 | Team membership changes keep the original submitter on existing submissions. | FR-07 | 3 |
+| BR-14 | Removing or moving a member deletes only their team membership and keeps the original submitter (`submittedById`) unchanged on existing submissions. The old team keeps all earlier milestones, submissions, feedback and grades; the removed student immediately loses access to the old team's records (`BR-01`) and may be added to another team (`BR-10`). | FR-07 | 3 |
 
 ## 6. Non-Functional Requirements (NFR)
 
