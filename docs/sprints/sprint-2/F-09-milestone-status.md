@@ -7,6 +7,7 @@
 | Version | Date | Author(s) | Change |
 |---|---|---|---|
 | 0.1 | 2026-11-21 | phet526 | Initial contract for F-09 (issue #67), incorporating the team decision on BR-05 rev. / CHG-03 |
+| 0.2 | 2026-11-21 | phet526 | Definition of Done filled with executed RED/GREEN and regression results (#67) |
 
 ## 1. Linked requirements
 
@@ -113,8 +114,8 @@ No schema change and no migration. Uses existing `Milestone.deadline`, `Submissi
 
 ## 8. Definition of Done and evidence
 
-- [ ] All AC-09-01..AC-09-07 implemented
-- [ ] All STS tests executed and passing on a fresh test database (`npm run build`, `npm test`, `npm run test:e2e`, `python -m unittest discover -s deploy/tests`, CI `test-and-docker`)
-- [ ] TDD red → green evidence recorded (failing `test(F-09)` commit → passing `feat(F-09)` commit; existing Sprint 1/2 tests unchanged)
-- [ ] SRS (`BR-12`, v0.8), System SDS (`docs/system-sds.md`), `docs/traceability.md`, `docs/features.md`, and `docs/ai-use.md` updated
+- [x] All AC-09-01..AC-09-07 implemented
+- [x] All STS tests executed and passing on a fresh test database — on `31949c8`: `npm run build` OK; `npm test` server **114 passed** (16 files; F-09: 5 API + 1 unit), client **25 passed** (8 files; F-09: 2), 0 failed, 0 skipped; `npm run test:e2e` **4 passed**; `python -m unittest discover -s deploy/tests` **17 OK**
+- [x] TDD red → green evidence recorded — contract `62522ec` → RED `f9eab65` (build OK; server **6 failed / 108 passed**: `TEST-09-01..05` returned `status: undefined`, `TEST-09-06` `deriveMilestoneStatus is not a function`; client **2 failed / 23 passed**: `TEST-09-07/08` status badges missing) → GREEN `31949c8` (all pass; existing Sprint 1/2 tests unchanged)
+- [x] SRS (`BR-12`, v0.8), System SDS (`docs/system-sds.md` v0.9), `docs/traceability.md` (v1.10), `docs/features.md` (v1.4), and `docs/ai-use.md` updated
 - [ ] PR reviewed by ILoveSiesta (approve before merge) and merged into `sprint-2`
