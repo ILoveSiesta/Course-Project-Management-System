@@ -12,6 +12,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.6 | 2026-11-21 | ILoveSiesta | §3.1 supervisor milestone detail can edit/extend the milestone; §4 error `409 DEADLINE_NOT_EXTENDED`; §4.1 Sprint 2 endpoint `PATCH /api/milestones/:milestoneId`; §5 edit/extend row is 403 for students (F-05, #62) |
 | 0.7 | 2026-11-21 | ILoveSiesta | Lab 7 change request #59 (CHG-03): §1.3 late rule includes the 7-day window, checked in the same locked transaction after the version limit; §4 error `409 SUBMISSION_WINDOW_CLOSED` and order of the two 409 rules. No change to architecture, data model, endpoints, roles, configuration or deployment |
 | 0.8 | 2026-11-21 | ILoveSiesta | F-06 (#63): §3.1 supervisor team detail can create a milestone for several assigned teams; §4.2 endpoint `POST /api/milestones` (all-or-nothing, one transaction); §5 row for the multi-team create |
+| 0.9 | 2026-11-21 | phet526 | F-09 (#67): §3.1 student My team and supervisor team detail show derived status badges on milestone lists; §4.2 milestone endpoints include derived `status` without storing it |
 
 Requirement IDs (FR/BR/NFR/D) refer to `docs/srs.md`. Feature contracts in `docs/sprints/sprint-N/` give the
 exact endpoint request/response shapes; this document defines the shared structure and conventions they follow.
@@ -146,10 +147,10 @@ flowchart TD
 | Screen | Role | Purpose | Feature |
 |---|---|---|---|
 | Login | All | E-mail + password; on success go to the role's home | F-01 |
-| My team | Student | Team name, members, supervisors; milestone list by deadline | F-02 |
+| My team | Student | Team name, members, supervisors; milestone list by deadline with derived status badge | F-02, F-09 |
 | Student milestone detail | Student | Submit / resubmit form; list of versions with late badge and days late; feedback on each version | F-03, F-04 |
 | My teams | Supervisor | Assigned teams with members | F-02 |
-| Supervisor team detail | Supervisor | Milestone list; create-milestone form, optionally for several assigned teams at once | F-02, F-06 |
+| Supervisor team detail | Supervisor | Milestone list with derived status badge; create-milestone form, optionally for several assigned teams at once | F-02, F-06, F-09 |
 | Supervisor milestone detail | Supervisor | Versions with late badge; add feedback to a version; edit the milestone and extend its deadline | F-03, F-04, F-05 |
 
 A header on every signed-in page shows the user's name, role and a **Log out** button. Visiting a page for the
@@ -222,6 +223,7 @@ Exact request/response shapes are defined in each feature contract.
 |---|---|---|---|
 | PATCH | `/api/milestones/:milestoneId` | Supervisor, assigned (student 403) | F-05 |
 | POST | `/api/milestones` | Supervisor, assigned to every listed team (student 403; any unassigned/unknown team → 404, nothing stored) | F-06 |
+| Milestone endpoints (list, detail, create, edit) | — | Every serialized `Milestone` includes server-derived `status` (BR-12, never stored) | F-09 |
 
 ## 5. Roles and permissions
 

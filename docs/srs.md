@@ -11,6 +11,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.5 | 2026-11-06 | ILoveSiesta | D-06 status: Agreed (no TA confirmation needed: the brief asks the team to clarify membership and supervision scope, and supervisor-managed teams in Sprint 3 cover "manage teams") |
 | 0.6 | 2026-11-21 | ILoveSiesta | BR-13 detailed for Sprint 2 (F-05, #62): equal deadline allowed, earlier rejected, past deadlines may be extended, stored days late of existing versions unchanged |
 | 0.7 | 2026-11-21 | ILoveSiesta | Lab 7 change request #59 (CHG-03, approved by TA Kantapat Suwannahong 2026-11-21): BR-05 and D-01 revised — late submissions accepted for at most 7 × 24 h after the deadline, later ones rejected; FR-12 and BR-13 refer to the window. Old rule (v0.6): late submissions accepted with no time limit |
+| 0.8 | 2026-11-21 | phet526 | BR-12 detailed for Sprint 2 (F-09, #67): 5-status precedence, `now ≤ deadline` boundary, latest-version resubmission rule, Overdue covering closed 7-day window (CHG-03), and BR-13 extension effect |
 
 ## 1. Stakeholder problem and context
 
@@ -129,7 +130,7 @@ Sprint = the sprint planned to implement the requirement (see `docs/sprints/plan
 | BR-09 | Feedback requires a comment of 1–5000 characters, belongs to exactly one submission version and cannot be edited or deleted. A later resubmission does not move, change or remove feedback on earlier versions. | FR-16, FR-17, FR-15 | 1 |
 | BR-10 | A student belongs to at most one team (D-05). | FR-05, FR-07 | 1 (seed), 3 (team management) |
 | BR-11 | Students see a grade only after the supervisor releases the milestone's grades (D-03). Grade scale and change rules to be specified in Sprint 2. | FR-18, FR-19 | 2 |
-| BR-12 | Each team–milestone has a derived status (e.g. Not submitted, Overdue, Submitted, Submitted late, Reviewed). Exact rules to be specified in Sprint 2. | FR-20–FR-22 | 2 |
+| BR-12 | Each team–milestone has a derived status evaluated at request time in order (first match wins): **Reviewed** (latest version has ≥ 1 feedback), **Submitted late** (latest version `daysLate > 0`, no feedback), **Submitted** (latest version `daysLate = 0`, no feedback), **Overdue** (no submission and `now > deadline`, covering both the 7-day late window and after it closes per BR-05 rev. / CHG-03), **Not submitted** (no submission and `now ≤ deadline`). Resubmitting after feedback moves status back to Submitted / Submitted late; extending a deadline under BR-13 to `≥ now` can move Overdue back to Not submitted. Grades (BR-11) are shown separately. | FR-20–FR-22 | 2 |
 | BR-13 | A milestone deadline can only be extended, not moved earlier: a new deadline must be later than or equal to the stored one, otherwise the whole change is rejected and nothing is stored. A deadline that has passed may be extended. Versions already submitted keep the days late stored at submission time (BR-05); submissions after the change use the new deadline, including the 7-day late window of BR-05 (an extension can reopen a closed window). | FR-10 | 2 |
 | BR-14 | Team membership changes keep the original submitter on existing submissions. | FR-07 | 3 |
 
