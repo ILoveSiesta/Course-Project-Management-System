@@ -9,6 +9,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.3 | 2026-11-05 | ILoveSiesta | §3.2: shared visual style (`client/src/theme.css`) brought into Sprint 1 — change CHG-01 in `docs/traceability.md` §5 |
 | 0.4 | 2026-11-06 | ILoveSiesta | §5: team management row no longer waits for TA confirmation (D-06 Agreed) |
 | 0.5 | 2026-11-12 | ILoveSiesta | §7 variables for the container (`NODE_ENV`, `CLIENT_DIST_DIR`, `TEST_DATABASE_URL`; seed requires `SEED_DEMO_PASSWORD`); §8 Lab 5 design: migrations in a separate job, deploy on merge to `main` without a manual step, `/api/ready` — change CHG-02 in `docs/traceability.md` §5 (#18) |
+| 0.6 | 2026-11-21 | ILoveSiesta | §3.1 supervisor milestone detail can edit/extend the milestone; §4 error `409 DEADLINE_NOT_EXTENDED`; §4.1 Sprint 2 endpoint `PATCH /api/milestones/:milestoneId`; §5 edit/extend row is 403 for students (F-05, #62) |
 
 Requirement IDs (FR/BR/NFR/D) refer to `docs/srs.md`. Feature contracts in `docs/sprints/sprint-N/` give the
 exact endpoint request/response shapes; this document defines the shared structure and conventions they follow.
@@ -147,7 +148,7 @@ flowchart TD
 | Student milestone detail | Student | Submit / resubmit form; list of versions with late badge and days late; feedback on each version | F-03, F-04 |
 | My teams | Supervisor | Assigned teams with members | F-02 |
 | Supervisor team detail | Supervisor | Milestone list; create-milestone form | F-02 |
-| Supervisor milestone detail | Supervisor | Versions with late badge; add feedback to a version | F-03, F-04 |
+| Supervisor milestone detail | Supervisor | Versions with late badge; add feedback to a version; edit the milestone and extend its deadline | F-03, F-04, F-05 |
 
 A header on every signed-in page shows the user's name, role and a **Log out** button. Visiting a page for the
 other role redirects to the user's own home.
@@ -186,6 +187,7 @@ other role redirects to the user's own home.
 | 403 | `FORBIDDEN` | The user's role may not call this operation |
 | 404 | `NOT_FOUND` | Record does not exist **or** is outside the user's scope (no disclosure) |
 | 409 | `VERSION_LIMIT_REACHED` | 4th submission for a milestone (BR-07) |
+| 409 | `DEADLINE_NOT_EXTENDED` | Milestone edit with a deadline earlier than the stored one (BR-13) |
 | 500 | `INTERNAL_ERROR` | Unexpected error; details only in server logs (NFR-05) |
 
 **Check order** for every protected request: authenticate (401) → role (403) → record scope (404) → validation
@@ -211,6 +213,12 @@ Exact request/response shapes are defined in each feature contract.
 | GET | `/api/submissions/:submissionId` | Any, in scope (includes feedback) | F-03, F-04 |
 | POST | `/api/submissions/:submissionId/feedback` | Supervisor, assigned | F-04 |
 
+### 4.2 Sprint 2 endpoints
+
+| Method | Path | Role | Feature |
+|---|---|---|---|
+| PATCH | `/api/milestones/:milestoneId` | Supervisor, assigned (student 403) | F-05 |
+
 ## 5. Roles and permissions
 
 "Own team" = the team the student belongs to. "Assigned" = a team the supervisor has a `SupervisorAssignment` for.
@@ -226,7 +234,7 @@ Out-of-scope reads return 404; operations the role may never perform return 403.
 | View submissions and versions | Own team | Assigned teams | 1 |
 | Record feedback | ❌ 403 | Assigned teams | 1 |
 | View feedback | Own team | Assigned teams | 1 |
-| Edit / extend milestone | ❌ | Assigned teams | 2 |
+| Edit / extend milestone | ❌ 403 | Assigned teams | 2 |
 | Record / release grade | ❌ | Assigned teams | 2 |
 | View grade | Own team, after release | Assigned teams | 2 |
 | Progress board, reports, filters | Own team | Assigned teams | 3 |
