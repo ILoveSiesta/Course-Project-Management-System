@@ -7,6 +7,7 @@
 | Version | Date | Author(s) | Change |
 |---|---|---|---|
 | 0.1 | 2026-11-21 | ILoveSiesta | Initial contract for F-05 (issue #62) |
+| 0.2 | 2026-11-21 | ILoveSiesta | Definition of Done filled with executed results; no behaviour change |
 
 ## 1. Linked requirements
 
@@ -108,8 +109,8 @@ No schema change and no migration: `Milestone.title`, `description` and `deadlin
 
 ## 8. Definition of Done and evidence
 
-- [ ] All AC-05-01..AC-05-09 implemented
-- [ ] All STS tests executed and passing on a fresh test database; build, `npm test`, `npm run test:e2e`, `deploy/tests` pass; CI `test-and-docker` green
-- [ ] TDD red → green recorded with real fail/pass counts and commits
-- [ ] SRS BR-13 (v0.6), System SDS §4 / §4.1 / §5 (v0.6), `docs/traceability.md`, `docs/features.md` updated
+- [x] All AC-05-01..AC-05-09 implemented
+- [x] All STS tests executed and passing on a fresh test database — on `fdfdff4`: `npm run build` OK; `npm test` server 96 passed (F-05: 7 API + 5 unit), client 19 passed (F-05: 2), 0 failed, 0 skipped; `npm run test:e2e` 4 passed; `python -m unittest discover -s deploy/tests` 17 OK. CI `test-and-docker`: recorded on the PR
+- [x] TDD red → green: failing tests `931814a` (F-05 files only: server 12 failed — 7 API with 404 because the route did not exist, 5 unit with `validateMilestoneUpdate is not a function`; client 2 failed — no "Edit milestone" button) → implementation `fdfdff4` (all pass). TEST-05-06 was corrected before the test commit: its first version set the deadline exactly 2 days back, so the late version counted 3 days (BR-05 rounds up) and failed for the wrong reason
+- [x] SRS BR-13 (v0.6), System SDS §3.1 / §4 / §4.2 / §5 (v0.6), `docs/traceability.md` (v1.5), `docs/features.md` (v1.0) updated
 - [ ] PR reviewed by phet526 (approve before merge) and merged into `sprint-2`
