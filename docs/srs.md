@@ -10,6 +10,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.4 | 2026-11-04 | phet526 | Decisions D-01..D-09 status updated to Agreed (D-06 confirm with TA) per PR #7 review agreement |
 | 0.5 | 2026-11-06 | ILoveSiesta | D-06 status: Agreed (no TA confirmation needed: the brief asks the team to clarify membership and supervision scope, and supervisor-managed teams in Sprint 3 cover "manage teams") |
 | 0.6 | 2026-11-21 | ILoveSiesta | BR-13 detailed for Sprint 2 (F-05, #62): equal deadline allowed, earlier rejected, past deadlines may be extended, stored days late of existing versions unchanged |
+| 0.7 | 2026-11-21 | ILoveSiesta | Lab 7 change request #59 (CHG-03, approved by TA Kantapat Suwannahong 2026-11-21): BR-05 and D-01 revised — late submissions accepted for at most 7 × 24 h after the deadline, later ones rejected; FR-12 and BR-13 refer to the window. Old rule (v0.6): late submissions accepted with no time limit |
 
 ## 1. Stakeholder problem and context
 
@@ -90,7 +91,7 @@ Sprint = the sprint planned to implement the requirement (see `docs/sprints/plan
 
 | ID | Requirement | Actor | Sprint |
 |---|---|---|---|
-| FR-12 | A student can submit work for a milestone of their own team with a title, description and link. | Student | 1 |
+| FR-12 | A student can submit work for a milestone of their own team with a title, description and link, up to 7 days after the deadline (BR-05). | Student | 1 (late window: Lab 7, CHG-03) |
 | FR-13 | A student can view the persisted submission(s) of their team for a milestone; a supervisor can view submissions of assigned teams. Each submission shows whether it was late and by how many days (BR-05). | All | 1 |
 | FR-14 | A student can resubmit; each submission is stored as a new version and earlier versions are kept. | Student | 1 |
 | FR-15 | Users can view the full revision history of a team's milestone (all versions with their feedback). | All | 2 |
@@ -121,7 +122,7 @@ Sprint = the sprint planned to implement the requirement (see `docs/sprints/plan
 | BR-02 | A supervisor can read or act on a team's records only if they are assigned to that team. | FR-06, FR-08–FR-11, FR-13, FR-16, FR-18, FR-19 | 1 |
 | BR-03 | Only supervisors can create or change milestones, feedback, grades and teams. A student calling these operations is rejected (403) and nothing is stored. | FR-07, FR-08, FR-10, FR-11, FR-16, FR-18, FR-19 | 1 |
 | BR-04 | A milestone requires a title (1–120 characters) and a deadline that is later than the current server time when the milestone is created. Description is optional (≤ 2000 characters). | FR-08, FR-11 | 1 |
-| BR-05 | Submissions are accepted after the deadline but marked **late** (D-01). Each version stores `daysLate = ceil((submittedAt − deadline) / 24 h)`, using server time: 0 when submitted at or before the deadline, 1 when up to 24 h late (even 1 second late counts as 1 day), 2 when more than 24 h and up to 48 h late, and so on. Days are 24-hour periods counted from the deadline, not calendar days. | FR-12, FR-13, FR-14 | 1 |
+| BR-05 | Submissions are accepted after the deadline and marked **late** for at most **7 days**: a submission is accepted when `submittedAt ≤ deadline + 7 × 24 h` (server time, inclusive); a later submission is rejected and nothing is stored (D-01, rev. 0.7). Each accepted version stores `daysLate = ceil((submittedAt − deadline) / 24 h)`: 0 when submitted at or before the deadline, 1 when up to 24 h late (even 1 second late counts as 1 day), 2 when more than 24 h and up to 48 h late, and so on up to 7. Days are 24-hour periods counted from the deadline, not calendar days. The window is measured from the milestone's deadline at the moment of submission, so a deadline extended under BR-13 moves the window with it; there is no other override. Versions stored before this rule (including any with `daysLate` > 7) are kept and shown unchanged. | FR-12, FR-13, FR-14 | 1 (7-day window: Lab 7, CHG-03) |
 | BR-06 | Each accepted submission of a team for a milestone gets version = previous version + 1, starting at 1. Versions are never overwritten or deleted. Two simultaneous submissions never receive the same version number. | FR-12, FR-14 | 1 |
 | BR-07 | A team can have at most 3 submission versions per milestone, whether on time or late. A 4th submission is rejected and nothing is stored (D-02). | FR-14 | 1 |
 | BR-08 | A submission requires a title (1–120 characters) and an absolute `http` or `https` link (≤ 2048 characters). Description is optional (≤ 2000 characters). | FR-12, FR-14 | 1 |
@@ -129,7 +130,7 @@ Sprint = the sprint planned to implement the requirement (see `docs/sprints/plan
 | BR-10 | A student belongs to at most one team (D-05). | FR-05, FR-07 | 1 (seed), 3 (team management) |
 | BR-11 | Students see a grade only after the supervisor releases the milestone's grades (D-03). Grade scale and change rules to be specified in Sprint 2. | FR-18, FR-19 | 2 |
 | BR-12 | Each team–milestone has a derived status (e.g. Not submitted, Overdue, Submitted, Submitted late, Reviewed). Exact rules to be specified in Sprint 2. | FR-20–FR-22 | 2 |
-| BR-13 | A milestone deadline can only be extended, not moved earlier: a new deadline must be later than or equal to the stored one, otherwise the whole change is rejected and nothing is stored. A deadline that has passed may be extended. Versions already submitted keep the days late stored at submission time (BR-05); submissions after the change use the new deadline. | FR-10 | 2 |
+| BR-13 | A milestone deadline can only be extended, not moved earlier: a new deadline must be later than or equal to the stored one, otherwise the whole change is rejected and nothing is stored. A deadline that has passed may be extended. Versions already submitted keep the days late stored at submission time (BR-05); submissions after the change use the new deadline, including the 7-day late window of BR-05 (an extension can reopen a closed window). | FR-10 | 2 |
 | BR-14 | Team membership changes keep the original submitter on existing submissions. | FR-07 | 3 |
 
 ## 6. Non-Functional Requirements (NFR)
@@ -166,7 +167,7 @@ Status: **Proposed** = drafted, awaiting review; **Agreed** = accepted by both s
 
 | ID | Question | Decision / resolution | Status | Date |
 |---|---|---|---|---|
-| D-01 | Can a team submit after the milestone deadline? | Yes. Late submissions are accepted, marked late and record days late, rounded up to whole 24-hour periods (BR-05). Sprint 1. | Agreed | 2026-11-04 |
+| D-01 | Can a team submit after the milestone deadline? | Yes, for at most 7 days (7 × 24 h) after the deadline. Late submissions are accepted, marked late and record days late, rounded up to whole 24-hour periods; after the window they are rejected (BR-05). Sprint 1 decision (no limit, 2026-11-04) revised by Lab 7 change request #59 / CHG-03 so supervisors have a fixed point after which a milestone's submissions are final. | Agreed (revised; approved by TA) | 2026-11-04; revised 2026-11-21 |
 | D-02 | How many revisions are allowed per milestone? | Up to 3 versions per team per milestone, on time or late (BR-06, BR-07). | Agreed | 2026-11-04 |
 | D-03 | When may students see feedback and grades? | Feedback is visible to the team as soon as it is recorded. Grades are hidden until the supervisor releases them for the milestone (BR-11). | Agreed | 2026-11-04 |
 | D-04 | Can a team have more than one supervisor? | Yes. A team has one or more assigned supervisors; any of them may act on the team (BR-02). | Agreed | 2026-11-04 |

@@ -10,6 +10,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.4 | 2026-11-06 | ILoveSiesta | §5: team management row no longer waits for TA confirmation (D-06 Agreed) |
 | 0.5 | 2026-11-12 | ILoveSiesta | §7 variables for the container (`NODE_ENV`, `CLIENT_DIST_DIR`, `TEST_DATABASE_URL`; seed requires `SEED_DEMO_PASSWORD`); §8 Lab 5 design: migrations in a separate job, deploy on merge to `main` without a manual step, `/api/ready` — change CHG-02 in `docs/traceability.md` §5 (#18) |
 | 0.6 | 2026-11-21 | ILoveSiesta | §3.1 supervisor milestone detail can edit/extend the milestone; §4 error `409 DEADLINE_NOT_EXTENDED`; §4.1 Sprint 2 endpoint `PATCH /api/milestones/:milestoneId`; §5 edit/extend row is 403 for students (F-05, #62) |
+| 0.7 | 2026-11-21 | ILoveSiesta | Lab 7 change request #59 (CHG-03): §1.3 late rule includes the 7-day window, checked in the same locked transaction after the version limit; §4 error `409 SUBMISSION_WINDOW_CLOSED` and order of the two 409 rules. No change to architecture, data model, endpoints, roles, configuration or deployment |
 
 Requirement IDs (FR/BR/NFR/D) refer to `docs/srs.md`. Feature contracts in `docs/sprints/sprint-N/` give the
 exact endpoint request/response shapes; this document defines the shared structure and conventions they follow.
@@ -60,7 +61,7 @@ server/src/
 | Record scope: own team / assigned team (BR-01, BR-02) | Service, by resolving the record's team and checking membership/assignment for `req.user` | — |
 | Field validation (BR-04, BR-08) | Service (shared validators in `utils/`) | DB column lengths / not-null |
 | Version numbering and limit (BR-06, BR-07) | Service, inside a transaction that locks the milestone row | Unique (`milestoneId`, `version`) |
-| Late calculation (BR-05) | Service at insert time, using server time | Check `daysLate >= 0` |
+| Late calculation and 7-day late window (BR-05, rev. CHG-03) | Service at insert time, using server time and the deadline read in the locked transaction; window checked after the version limit (pure helpers in `utils/submissionValidation.ts`) | Check `daysLate >= 0` (no upper-bound constraint: rows stored before CHG-03 may exceed 7) |
 | One team per student (BR-10) | Seed (Sprint 1), service (Sprint 3) | Unique `TeamMembership.studentId` |
 | Feedback immutability (BR-09) | No update/delete endpoints exist | — |
 
@@ -188,6 +189,7 @@ other role redirects to the user's own home.
 | 404 | `NOT_FOUND` | Record does not exist **or** is outside the user's scope (no disclosure) |
 | 409 | `VERSION_LIMIT_REACHED` | 4th submission for a milestone (BR-07) |
 | 409 | `DEADLINE_NOT_EXTENDED` | Milestone edit with a deadline earlier than the stored one (BR-13) |
+| 409 | `SUBMISSION_WINDOW_CLOSED` | Submission later than `deadline + 7 × 24 h` (BR-05, CHG-03); checked after `VERSION_LIMIT_REACHED` |
 | 500 | `INTERNAL_ERROR` | Unexpected error; details only in server logs (NFR-05) |
 
 **Check order** for every protected request: authenticate (401) → role (403) → record scope (404) → validation
