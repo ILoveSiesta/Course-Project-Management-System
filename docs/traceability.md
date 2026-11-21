@@ -18,8 +18,8 @@
 | 1.4 | 2026-11-12 | ILoveSiesta | Approved change CHG-02 (Lab 5 deployment design) (#18) |
 | 1.5 | 2026-11-21 | ILoveSiesta | F-05 AC/tests and results on the feature branch (commit `fdfdff4`, #62): FR-10, BR-13; F-05 rows added to BR-02, BR-03, BR-04 |
 | 1.6 | 2026-11-21 | ILoveSiesta | Approved change CHG-03 (Lab 7 change request #59, BR-05 7-day late window): BR-05 and FR-12 rows list the revised and new AC/tests as PLANNED; earlier PASS kept for the v0.1 rule; coverage gap added |
-| 1.8 | 2026-11-21 | ILoveSiesta | F-06 AC/tests and results on the feature branch (commit `997b7d1`, #63): FR-11; F-06 rows added to BR-02, BR-03, BR-04 |
 | 1.7 | 2026-11-21 | ILoveSiesta | CHG-03 rows: RED `f5deaf7` → GREEN `8259688` on the feature branch (#59); revised BR-05 and FR-12 window rows PASS on `8259688` (accepted release recorded at the release) |
+| 1.8 | 2026-11-21 | ILoveSiesta | F-06 AC/tests and results on the feature branch (commit `997b7d1`, #63): FR-11; F-06 rows added to BR-02, BR-03, BR-04 |
 
 Feature and responsibility IDs refer to `docs/features.md`.
 
