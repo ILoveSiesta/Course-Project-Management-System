@@ -5,8 +5,10 @@ import {
   ApiError,
   Milestone,
   MilestoneUpdate,
+  GradeState,
   Submission,
   createFeedbackApi,
+  getGradeApi,
   getMilestoneApi,
   getMilestoneSubmissionsApi,
   updateMilestoneApi,
@@ -14,6 +16,7 @@ import {
 import { formatDeadline } from "../format.js";
 import { SubmissionList } from "./SubmissionList.js";
 import { MilestoneEditForm } from "./MilestoneEditForm.js";
+import { SupervisorGradeCard } from "./GradeCard.js";
 
 export const SupervisorMilestone: React.FC = () => {
   const { token, logout } = useAuth();
@@ -24,6 +27,7 @@ export const SupervisorMilestone: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [gradeState, setGradeState] = useState<GradeState | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -50,6 +54,13 @@ export const SupervisorMilestone: React.FC = () => {
         if (active) setIsLoading(false);
       }
     })();
+
+    // F-08: the grade is loaded on its own; if it fails, the rest of the page still works.
+    getGradeApi(token, milestoneId)
+      .then((state) => {
+        if (active) setGradeState(state);
+      })
+      .catch(() => undefined);
 
     return () => {
       active = false;
@@ -118,6 +129,17 @@ export const SupervisorMilestone: React.FC = () => {
               )}
             </div>
           </section>
+
+          {gradeState && token && (
+            <SupervisorGradeCard
+              token={token}
+              milestoneId={milestoneId}
+              submissions={submissions}
+              state={gradeState}
+              onChange={setGradeState}
+              onUnauthorized={logout}
+            />
+          )}
 
           <SubmissionList submissions={submissions} onAddFeedback={addFeedback} />
         </>

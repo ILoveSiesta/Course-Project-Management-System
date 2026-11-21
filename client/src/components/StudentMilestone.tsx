@@ -3,15 +3,18 @@ import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
 import {
   ApiError,
+  GradeState,
   Milestone,
   Submission,
   createSubmissionApi,
+  getGradeApi,
   getMilestoneApi,
   getMilestoneSubmissionsApi,
 } from "../api.js";
 import { formatDeadline } from "../format.js";
 import { isLateWindowClosed } from "../submissionWindow.js";
 import { SubmissionList } from "./SubmissionList.js";
+import { StudentGradeCard } from "./GradeCard.js";
 
 const FIELD_MESSAGES: Record<string, string> = {
   REQUIRED: "Required",
@@ -40,6 +43,7 @@ export const StudentMilestone: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [gradeState, setGradeState] = useState<GradeState | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -66,6 +70,13 @@ export const StudentMilestone: React.FC = () => {
         if (active) setIsLoading(false);
       }
     })();
+
+    // F-08: the grade is loaded on its own; if it fails, the rest of the page still works.
+    getGradeApi(token, milestoneId)
+      .then((state) => {
+        if (active) setGradeState(state);
+      })
+      .catch(() => undefined);
 
     return () => {
       active = false;
@@ -133,6 +144,8 @@ export const StudentMilestone: React.FC = () => {
               </Link>
             </p>
           </section>
+
+          {gradeState && <StudentGradeCard state={gradeState} />}
 
           <SubmissionList submissions={submissions} />
 

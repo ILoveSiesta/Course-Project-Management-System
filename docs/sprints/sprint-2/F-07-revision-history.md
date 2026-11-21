@@ -165,5 +165,5 @@ No schema change and no migration. The query reads existing `Milestone`, `Team`,
 - [x] All AC-07-01..AC-07-07 implemented
 - [x] All STS tests executed and passing on a fresh test database — on `9751f0f`: `npm run build` OK; `npm test` server **114 passed** (16 files; F-07: 5 API + 1 unit), client **25 passed** (8 files; F-07: 2), 0 failed, 0 skipped; `npm run test:e2e` **4 passed**; `python -m unittest discover -s deploy/tests` **17 OK**
 - [x] TDD red → green evidence recorded — contract `7b80e0c` → RED `38f7515` (build OK; server **6 failed / 108 passed**: `TEST-07-01..05` returned `404` because `GET /api/milestones/:milestoneId/history` did not exist yet, `TEST-07-06` `parseHistoryOrder is not a function`; client **2 failed / 23 passed**: `TEST-07-07/08` route/screen missing) → GREEN `9751f0f` (all pass; existing Sprint 1 tests unchanged)
-- [x] System SDS (`docs/system-sds.md` v0.9), `docs/traceability.md` (v1.10), `docs/features.md` (v1.4), and `docs/ai-use.md` updated
+- [x] System SDS (`docs/system-sds.md` v0.10), `docs/traceability.md` (v2.1), `docs/features.md` (v1.5), and `docs/ai-use.md` updated
 - [ ] PR reviewed by ILoveSiesta (approve before merge) and merged into `sprint-2`

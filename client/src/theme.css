@@ -249,6 +249,7 @@ a:hover {
 }
 
 .form-field input,
+.form-field select,
 .form-field textarea {
   width: 100%;
   padding: 9px 11px;

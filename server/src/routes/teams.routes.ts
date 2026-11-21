@@ -12,6 +12,7 @@ import {
 } from "../services/teams.service.js";
 import { createSubmission, getRevisionHistory, getSubmission, listSubmissions } from "../services/submissions.service.js";
 import { createFeedback } from "../services/feedback.service.js";
+import { getGrade, releaseGrade, saveGrade } from "../services/grades.service.js";
 
 type Handler = (req: Request, res: Response) => Promise<void>;
 
@@ -53,6 +54,19 @@ milestonesRouter.get("/:milestoneId", handle(async (req, res) => {
 // F-05: edit title/description, extend deadline (BR-13).
 milestonesRouter.patch("/:milestoneId", requireRole("SUPERVISOR"), handle(async (req, res) => {
   res.json({ milestone: await updateMilestone(req.user!, parseId(req.params.milestoneId), req.body) });
+}));
+
+// F-08: grade per milestone; students see it only after release (BR-11).
+milestonesRouter.get("/:milestoneId/grade", handle(async (req, res) => {
+  res.json(await getGrade(req.user!, parseId(req.params.milestoneId)));
+}));
+
+milestonesRouter.put("/:milestoneId/grade", requireRole("SUPERVISOR"), handle(async (req, res) => {
+  res.json(await saveGrade(req.user!, parseId(req.params.milestoneId), req.body));
+}));
+
+milestonesRouter.post("/:milestoneId/grade/release", requireRole("SUPERVISOR"), handle(async (req, res) => {
+  res.json(await releaseGrade(req.user!, parseId(req.params.milestoneId)));
 }));
 
 milestonesRouter.get("/:milestoneId/submissions", handle(async (req, res) => {

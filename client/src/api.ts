@@ -236,6 +236,47 @@ export async function createSubmissionApi(
   return data.submission;
 }
 
+// --- F-08: grade per milestone ---
+
+export interface GradeState {
+  grade: {
+    score: number;
+    version: number;
+    submissionId: number;
+    gradedBy: { id: number; name: string };
+    gradedAt: string;
+  } | null;
+  released: boolean;
+  releasedAt: string | null;
+}
+
+function toGradeState(data: Partial<GradeState>): GradeState {
+  return { grade: data.grade ?? null, released: data.released === true, releasedAt: data.releasedAt ?? null };
+}
+
+export async function getGradeApi(token: string, milestoneId: number): Promise<GradeState> {
+  return toGradeState(await apiRequest<Partial<GradeState>>(token, `/milestones/${milestoneId}/grade`));
+}
+
+export async function saveGradeApi(
+  token: string,
+  milestoneId: number,
+  input: { score?: number; version: number }
+): Promise<GradeState> {
+  const data = await apiRequest<Partial<GradeState>>(token, `/milestones/${milestoneId}/grade`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+  return toGradeState(data);
+}
+
+export async function releaseGradeApi(token: string, milestoneId: number): Promise<GradeState> {
+  const data = await apiRequest<Partial<GradeState>>(token, `/milestones/${milestoneId}/grade/release`, {
+    method: "POST",
+  });
+  return toGradeState(data);
+}
+
 export async function createFeedbackApi(token: string, submissionId: number, comment: string): Promise<Feedback> {
   const data = await apiRequest<{ feedback: Feedback }>(token, `/submissions/${submissionId}/feedback`, {
     method: "POST",
