@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { getPrisma } from "../prisma.js";
 import { AuthenticatedUser } from "../middleware/auth.js";
 import { HttpError, notFound } from "../utils/httpError.js";
-import { validateMilestoneInput, validateMilestoneUpdate } from "../utils/validation.js";
+import { validateMilestoneInput, validateMilestoneUpdate, validateTeamIds } from "../utils/validation.js";
 
 const personSelect = { id: true, name: true, email: true } as const;
 
@@ -90,6 +90,24 @@ export async function createMilestone(user: AuthenticatedUser, teamId: number, b
     include: milestoneInclude,
   });
   return toMilestoneDto(milestone);
+}
+
+// F-06 (FR-11): the same milestone for several assigned teams, all or nothing. Role is checked by
+// requireRole("SUPERVISOR"). The team list is read first (400), then every team must be in scope (404, no
+// disclosure of which one failed), then the milestone fields (400). All rows are created in one transaction.
+export async function createMilestoneForTeams(user: AuthenticatedUser, body: unknown) {
+  const teamIds = validateTeamIds(body);
+  const inScope = await getPrisma().team.count({ where: { id: { in: teamIds }, ...scopeFilter(user) } });
+  if (inScope !== teamIds.length) throw notFound();
+
+  const input = validateMilestoneInput(body, new Date());
+  const prisma = getPrisma();
+  const created = await prisma.$transaction(
+    teamIds.map((teamId) =>
+      prisma.milestone.create({ data: { ...input, teamId, createdById: user.id }, include: milestoneInclude })
+    )
+  );
+  return created.map(toMilestoneDto);
 }
 
 export async function getMilestone(user: AuthenticatedUser, milestoneId: number) {

@@ -1,7 +1,15 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { parseId } from "../utils/httpError.js";
-import { createMilestone, getMilestone, getTeam, listMilestones, listTeams, updateMilestone } from "../services/teams.service.js";
+import {
+  createMilestone,
+  createMilestoneForTeams,
+  getMilestone,
+  getTeam,
+  listMilestones,
+  listTeams,
+  updateMilestone,
+} from "../services/teams.service.js";
 import { createSubmission, getSubmission, listSubmissions } from "../services/submissions.service.js";
 import { createFeedback } from "../services/feedback.service.js";
 
@@ -32,6 +40,11 @@ teamsRouter.post("/:teamId/milestones", requireRole("SUPERVISOR"), handle(async 
 
 export const milestonesRouter = Router();
 milestonesRouter.use(authenticate);
+
+// F-06: the same milestone for several assigned teams in one request (all or nothing).
+milestonesRouter.post("/", requireRole("SUPERVISOR"), handle(async (req, res) => {
+  res.status(201).json({ milestones: await createMilestoneForTeams(req.user!, req.body) });
+}));
 
 milestonesRouter.get("/:milestoneId", handle(async (req, res) => {
   res.json({ milestone: await getMilestone(req.user!, parseId(req.params.milestoneId)) });
