@@ -4,9 +4,11 @@ import { AuthenticatedUser } from "../middleware/auth.js";
 import { HttpError, notFound } from "../utils/httpError.js";
 import {
   deriveMilestoneStatus,
+  validateAddMemberInput,
   validateMilestoneInput,
   validateMilestoneUpdate,
   validateTeamIds,
+  validateTeamName,
 } from "../utils/validation.js";
 
 const personSelect = { id: true, name: true, email: true } as const;
@@ -167,4 +169,91 @@ export async function updateMilestone(user: AuthenticatedUser, milestoneId: numb
 
   const milestone = await getPrisma().milestone.findUniqueOrThrow({ where: { id: milestoneId }, include: milestoneInclude });
   return toMilestoneDto(milestone);
+}
+
+const isUniqueViolation = (err: unknown): boolean =>
+  err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
+
+const teamNameExistsError = () =>
+  new HttpError(409, "TEAM_NAME_EXISTS", "A team with this name already exists");
+
+const studentAlreadyInTeamError = () =>
+  new HttpError(409, "STUDENT_ALREADY_IN_TEAM", "Student already belongs to a team");
+
+// F-13 (FR-07): supervisor creates a team and automatically becomes an assigned supervisor (D-04, D-06).
+export async function createTeam(user: AuthenticatedUser, body: unknown) {
+  const name = validateTeamName(body);
+  const prisma = getPrisma();
+
+  const existing = await prisma.team.findFirst({
+    where: { name: { equals: name, mode: "insensitive" } },
+    select: { id: true },
+  });
+  if (existing) throw teamNameExistsError();
+
+  try {
+    const team = await prisma.team.create({
+      data: {
+        name,
+        supervisorAssignments: { create: { supervisorId: user.id } },
+      },
+      include: teamInclude,
+    });
+    return toTeamDto(team);
+  } catch (err) {
+    if (isUniqueViolation(err)) throw teamNameExistsError();
+    throw err;
+  }
+}
+
+// F-13: list unassigned students for the supervisor picker without disclosing other teams' data.
+export async function listAvailableStudents() {
+  return getPrisma().user.findMany({
+    where: { role: "STUDENT", memberships: { none: {} } },
+    select: personSelect,
+    orderBy: { name: "asc" },
+  });
+}
+
+// F-13 (FR-07, BR-10): scope (404) -> validation (400) -> user lookup (404 / 400 non-student) -> unique membership (409).
+export async function addTeamMember(user: AuthenticatedUser, teamId: number, body: unknown) {
+  await findTeamInScope(user, teamId);
+  const studentId = validateAddMemberInput(body);
+  const prisma = getPrisma();
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id: studentId },
+    select: { id: true, role: true },
+  });
+  if (!targetUser) throw new HttpError(404, "NOT_FOUND", "Student not found");
+  if (targetUser.role !== "STUDENT") {
+    throw new HttpError(400, "VALIDATION_ERROR", "Only students can be added to a team", {
+      studentId: "NOT_A_STUDENT",
+    });
+  }
+
+  const existingMembership = await prisma.teamMembership.findUnique({
+    where: { studentId },
+    select: { id: true },
+  });
+  if (existingMembership) throw studentAlreadyInTeamError();
+
+  try {
+    await prisma.teamMembership.create({ data: { teamId, studentId } });
+  } catch (err) {
+    if (isUniqueViolation(err)) throw studentAlreadyInTeamError();
+    throw err;
+  }
+
+  return toTeamDto(await findTeamInScope(user, teamId));
+}
+
+// F-13 (FR-07, BR-14): deletes only TeamMembership; earlier submissions retain original submittedById.
+export async function removeTeamMember(user: AuthenticatedUser, teamId: number, studentId: number) {
+  await findTeamInScope(user, teamId);
+  const { count } = await getPrisma().teamMembership.deleteMany({
+    where: { teamId, studentId },
+  });
+  if (count === 0) throw notFound();
+  return toTeamDto(await findTeamInScope(user, teamId));
 }

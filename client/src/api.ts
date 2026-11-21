@@ -146,6 +146,36 @@ export async function getTeamApi(token: string, teamId: number): Promise<Team> {
   return data.team;
 }
 
+// --- F-13: supervisor team creation and member management ---
+
+export async function createTeamApi(token: string, name: string): Promise<Team> {
+  const data = await apiRequest<{ team: Team }>(token, "/teams", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+  return data.team;
+}
+
+export async function getAvailableStudentsApi(token: string): Promise<Person[]> {
+  const data = await apiRequest<{ students?: Person[] }>(token, "/teams/available-students");
+  return data.students ?? [];
+}
+
+export async function addTeamMemberApi(token: string, teamId: number, studentId: number): Promise<Team> {
+  const data = await apiRequest<{ team: Team }>(token, `/teams/${teamId}/members`, {
+    method: "POST",
+    body: JSON.stringify({ studentId }),
+  });
+  return data.team;
+}
+
+export async function removeTeamMemberApi(token: string, teamId: number, studentId: number): Promise<Team> {
+  const data = await apiRequest<{ team: Team }>(token, `/teams/${teamId}/members/${studentId}`, {
+    method: "DELETE",
+  });
+  return data.team;
+}
+
 export async function getTeamMilestonesApi(token: string, teamId: number): Promise<Milestone[]> {
   const data = await apiRequest<{ milestones?: Milestone[] }>(token, `/teams/${teamId}/milestones`);
   return data.milestones ?? [];

@@ -2,12 +2,16 @@ import { Router, Request, Response, NextFunction } from "express";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { parseId } from "../utils/httpError.js";
 import {
+  addTeamMember,
   createMilestone,
   createMilestoneForTeams,
+  createTeam,
   getMilestone,
   getTeam,
+  listAvailableStudents,
   listMilestones,
   listTeams,
+  removeTeamMember,
   updateMilestone,
 } from "../services/teams.service.js";
 import { createSubmission, getRevisionHistory, getSubmission, listSubmissions } from "../services/submissions.service.js";
@@ -26,8 +30,25 @@ teamsRouter.get("/", handle(async (req, res) => {
   res.json({ teams: await listTeams(req.user!) });
 }));
 
+// F-13: register static /available-students before /:teamId so it is not parsed as a numeric ID.
+teamsRouter.post("/", requireRole("SUPERVISOR"), handle(async (req, res) => {
+  res.status(201).json({ team: await createTeam(req.user!, req.body) });
+}));
+
+teamsRouter.get("/available-students", requireRole("SUPERVISOR"), handle(async (_req, res) => {
+  res.json({ students: await listAvailableStudents() });
+}));
+
 teamsRouter.get("/:teamId", handle(async (req, res) => {
   res.json({ team: await getTeam(req.user!, parseId(req.params.teamId)) });
+}));
+
+teamsRouter.post("/:teamId/members", requireRole("SUPERVISOR"), handle(async (req, res) => {
+  res.status(201).json({ team: await addTeamMember(req.user!, parseId(req.params.teamId), req.body) });
+}));
+
+teamsRouter.delete("/:teamId/members/:studentId", requireRole("SUPERVISOR"), handle(async (req, res) => {
+  res.json({ team: await removeTeamMember(req.user!, parseId(req.params.teamId), parseId(req.params.studentId)) });
 }));
 
 teamsRouter.get("/:teamId/milestones", handle(async (req, res) => {

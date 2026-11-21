@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Milestone, MilestoneStatus, Team } from "../api.js";
+import { Milestone, MilestoneStatus, Person, Team } from "../api.js";
 import { formatDeadline } from "../format.js";
 
 const STATUS_BADGE_CLASS: Record<MilestoneStatus, string> = {
@@ -11,16 +11,46 @@ const STATUS_BADGE_CLASS: Record<MilestoneStatus, string> = {
   Reviewed: "badge badge-success",
 };
 
-export const TeamSummary: React.FC<{ team: Team }> = ({ team }) => (
+interface TeamSummaryProps {
+  team: Team;
+  onRemoveMember?: (member: Person) => void;
+  removingMemberId?: number | null;
+  children?: React.ReactNode;
+}
+
+export const TeamSummary: React.FC<TeamSummaryProps> = ({
+  team,
+  onRemoveMember,
+  removingMemberId = null,
+  children,
+}) => (
   <section className="card">
     <h3>{team.name}</h3>
     <p className="muted">Supervisors: {team.supervisors.map((s) => s.name).join(", ") || "None"}</p>
     <div className="section-label">Members</div>
-    <ul className="plain-list people-list">
-      {team.members.map((m) => (
-        <li key={m.id}>{`${m.name} (${m.email})`}</li>
-      ))}
-    </ul>
+    {team.members.length === 0 ? (
+      <p className="empty-state">No members yet.</p>
+    ) : (
+      <ul className="plain-list people-list">
+        {team.members.map((m) => (
+          <li key={m.id} className={onRemoveMember ? "member-row" : undefined}>
+            <span className="member-info">{`${m.name} (${m.email})`}</span>
+            {onRemoveMember && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                aria-label={`Remove ${m.name}`}
+                disabled={removingMemberId === m.id}
+                onClick={() => onRemoveMember(m)}
+              >
+                {removingMemberId === m.id ? "Removing…" : "Remove"}
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+    )}
+    {children}
   </section>
 );
 

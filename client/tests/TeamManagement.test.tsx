@@ -139,7 +139,8 @@ describe("F-13 Team management UI", () => {
     // 201 adds member and updates list
     fireEvent.change(select, { target: { value: "9" } });
     fireEvent.click(screen.getByRole("button", { name: "Add member" }));
-    expect(await screen.findByText(/Free Student \(free@cpms.test\)/)).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Remove Free Student" })).toBeInTheDocument();
+    expect(screen.getByText("Free Student (free@cpms.test)")).toBeInTheDocument();
 
     // 200 removes Student Two
     fireEvent.click(screen.getByRole("button", { name: "Remove Student Two" }));

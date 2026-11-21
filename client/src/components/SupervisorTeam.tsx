@@ -4,12 +4,16 @@ import { useAuth } from "../context/AuthContext.js";
 import {
   ApiError,
   Milestone,
+  Person,
   Team,
+  addTeamMemberApi,
   createMilestoneApi,
   createMilestoneForTeamsApi,
+  getAvailableStudentsApi,
   getTeamApi,
   getTeamMilestonesApi,
   getTeamsApi,
+  removeTeamMemberApi,
 } from "../api.js";
 import { MilestoneList, TeamSummary } from "./TeamDetails.js";
 import { milestoneFieldMessage as fieldMessage } from "../milestoneFields.js";
@@ -36,6 +40,14 @@ export const SupervisorTeam: React.FC = () => {
   const [assignedTeams, setAssignedTeams] = useState<Team[]>([]);
   const [otherTeamIds, setOtherTeamIds] = useState<number[]>([]);
   const [createdFor, setCreatedFor] = useState<string | null>(null);
+
+  // F-13: unassigned student picker and member add/remove state.
+  const [availableStudents, setAvailableStudents] = useState<Person[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [memberError, setMemberError] = useState<string | null>(null);
+  const [memberStatus, setMemberStatus] = useState<string | null>(null);
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [removingMemberId, setRemovingMemberId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -68,10 +80,65 @@ export const SupervisorTeam: React.FC = () => {
       })
       .catch(() => undefined);
 
+    getAvailableStudentsApi(token)
+      .then((students) => {
+        if (active) setAvailableStudents(students);
+      })
+      .catch(() => undefined);
+
     return () => {
       active = false;
     };
   }, [token, teamId]); // logout is recreated each render; it is only called on 401
+
+  const refreshAvailableStudents = () => {
+    if (!token) return;
+    getAvailableStudentsApi(token)
+      .then((students) => setAvailableStudents(students))
+      .catch(() => undefined);
+  };
+
+  const handleAddMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !selectedStudentId) return;
+    setMemberError(null);
+    setMemberStatus(null);
+    setIsAddingMember(true);
+
+    const picked = availableStudents.find((s) => s.id === Number(selectedStudentId));
+    try {
+      const updated = await addTeamMemberApi(token, teamId, Number(selectedStudentId));
+      setTeam(updated);
+      setSelectedStudentId("");
+      setMemberStatus(picked ? `Added ${picked.name} to the team.` : "Added student to the team.");
+      refreshAvailableStudents();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return logout();
+      setMemberError(err instanceof Error ? err.message : "Could not add member");
+      if (err instanceof ApiError && err.status === 409) refreshAvailableStudents();
+    } finally {
+      setIsAddingMember(false);
+    }
+  };
+
+  const handleRemoveMember = async (member: Person) => {
+    if (!token) return;
+    setMemberError(null);
+    setMemberStatus(null);
+    setRemovingMemberId(member.id);
+
+    try {
+      const updated = await removeTeamMemberApi(token, teamId, member.id);
+      setTeam(updated);
+      setMemberStatus(`Removed ${member.name} from the team.`);
+      refreshAvailableStudents();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return logout();
+      setMemberError(err instanceof Error ? err.message : "Could not remove member");
+    } finally {
+      setRemovingMemberId(null);
+    }
+  };
 
   const toggleTeam = (id: number) =>
     setOtherTeamIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
@@ -127,7 +194,42 @@ export const SupervisorTeam: React.FC = () => {
       {loadError && <p role="alert" className="alert">{loadError}</p>}
       {team && (
         <>
-          <TeamSummary team={team} />
+          <TeamSummary team={team} onRemoveMember={handleRemoveMember} removingMemberId={removingMemberId}>
+            {memberError && <p role="alert" className="alert">{memberError}</p>}
+            {memberStatus && <p role="status" className="status-notice">{memberStatus}</p>}
+            <form onSubmit={handleAddMember} className="inline-form" noValidate>
+              <div className="form-field">
+                <label htmlFor="add-member-student">Student</label>
+                <select
+                  id="add-member-student"
+                  aria-label="Student"
+                  value={selectedStudentId}
+                  disabled={availableStudents.length === 0 || isAddingMember}
+                  onChange={(e) => setSelectedStudentId(e.target.value)}
+                >
+                  {availableStudents.length === 0 ? (
+                    <option value="">No unassigned students available</option>
+                  ) : (
+                    <>
+                      <option value="">Select a student…</option>
+                      {availableStudents.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {`${s.name} (${s.email})`}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+              </div>
+              <button
+                type="submit"
+                className="btn"
+                disabled={availableStudents.length === 0 || !selectedStudentId || isAddingMember}
+              >
+                {isAddingMember ? "Adding…" : "Add member"}
+              </button>
+            </form>
+          </TeamSummary>
 
           <section className="card">
             <h3>Milestones</h3>
