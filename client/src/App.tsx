@@ -9,6 +9,7 @@ import { SupervisorHome } from "./components/SupervisorHome.js";
 import { SupervisorTeam } from "./components/SupervisorTeam.js";
 import { StudentMilestone } from "./components/StudentMilestone.js";
 import { SupervisorMilestone } from "./components/SupervisorMilestone.js";
+import { RevisionHistory } from "./components/RevisionHistory.js";
 import { ProtectedRoute } from "./components/ProtectedRoute.js";
 
 export function AppRoutes() {
@@ -48,6 +49,14 @@ export function AppRoutes() {
             }
           />
           <Route
+            path="/student/milestones/:milestoneId/history"
+            element={
+              <ProtectedRoute allowedRole="STUDENT">
+                <RevisionHistory role="STUDENT" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/supervisor"
             element={
               <ProtectedRoute allowedRole="SUPERVISOR">
@@ -68,6 +77,14 @@ export function AppRoutes() {
             element={
               <ProtectedRoute allowedRole="SUPERVISOR">
                 <SupervisorMilestone />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/supervisor/milestones/:milestoneId/history"
+            element={
+              <ProtectedRoute allowedRole="SUPERVISOR">
+                <RevisionHistory role="SUPERVISOR" />
               </ProtectedRoute>
             }
           />

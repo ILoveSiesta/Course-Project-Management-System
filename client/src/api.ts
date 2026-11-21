@@ -196,6 +196,42 @@ export async function getMilestoneSubmissionsApi(token: string, milestoneId: num
   return data.submissions ?? [];
 }
 
+// F-07 (FR-15): dedicated milestone revision history with server-computed metadata and sort order.
+export type HistoryOrder = "desc" | "asc";
+
+export interface RevisionHistoryItem extends Submission {
+  isLatest: boolean;
+  isLate: boolean;
+  feedbackCount: number;
+  feedback: Feedback[];
+}
+
+export interface MilestoneRevisionHistory {
+  milestone: {
+    id: number;
+    teamId: number;
+    teamName: string;
+    title: string;
+    description: string | null;
+    deadline: string;
+  };
+  totalVersions: number;
+  latestVersion: number | null;
+  revisions: RevisionHistoryItem[];
+}
+
+export async function getMilestoneHistoryApi(
+  token: string,
+  milestoneId: number,
+  order: HistoryOrder = "desc"
+): Promise<MilestoneRevisionHistory> {
+  const data = await apiRequest<{ history: MilestoneRevisionHistory }>(
+    token,
+    `/milestones/${milestoneId}/history?order=${order}`
+  );
+  return data.history;
+}
+
 export async function createSubmissionApi(
   token: string,
   milestoneId: number,

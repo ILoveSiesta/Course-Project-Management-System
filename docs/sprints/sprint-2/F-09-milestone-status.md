@@ -117,5 +117,5 @@ No schema change and no migration. Uses existing `Milestone.deadline`, `Submissi
 - [x] All AC-09-01..AC-09-07 implemented
 - [x] All STS tests executed and passing on a fresh test database — on `31949c8`: `npm run build` OK; `npm test` server **114 passed** (16 files; F-09: 5 API + 1 unit), client **25 passed** (8 files; F-09: 2), 0 failed, 0 skipped; `npm run test:e2e` **4 passed**; `python -m unittest discover -s deploy/tests` **17 OK**
 - [x] TDD red → green evidence recorded — contract `62522ec` → RED `f9eab65` (build OK; server **6 failed / 108 passed**: `TEST-09-01..05` returned `status: undefined`, `TEST-09-06` `deriveMilestoneStatus is not a function`; client **2 failed / 23 passed**: `TEST-09-07/08` status badges missing) → GREEN `31949c8` (all pass; existing Sprint 1/2 tests unchanged)
-- [x] SRS (`BR-12`, v0.9), System SDS (`docs/system-sds.md` v0.10), `docs/traceability.md` (v2.1), `docs/features.md` (v1.5), and `docs/ai-use.md` updated
+- [x] SRS (`BR-12`, v0.9), System SDS (`docs/system-sds.md` v0.11), `docs/traceability.md` (v2.2), `docs/features.md` (v1.6), and `docs/ai-use.md` updated
 - [ ] PR reviewed by ILoveSiesta (approve before merge) and merged into `sprint-2`

@@ -84,3 +84,79 @@ export function validateSubmissionInput(body: unknown): SubmissionInput {
 
   return { title, description, link };
 }
+
+export type HistoryOrder = "desc" | "asc";
+
+export interface HistoryMilestoneSummary {
+  id: number;
+  teamId: number;
+  teamName: string;
+  title: string;
+  description: string | null;
+  deadline: string;
+}
+
+export interface HistoryFeedbackItem {
+  id: number;
+  submissionId: number;
+  comment: string;
+  createdAt: string;
+  author: { id: number; name: string };
+}
+
+export interface HistorySubmissionInput {
+  id: number;
+  milestoneId: number;
+  version: number;
+  title: string;
+  description: string | null;
+  link: string;
+  submittedAt: string;
+  daysLate: number;
+  submittedBy: { id: number; name: string };
+  feedback: HistoryFeedbackItem[];
+}
+
+export interface RevisionHistoryItem extends HistorySubmissionInput {
+  isLatest: boolean;
+  isLate: boolean;
+  feedbackCount: number;
+}
+
+export interface MilestoneRevisionHistory {
+  milestone: HistoryMilestoneSummary;
+  totalVersions: number;
+  latestVersion: number | null;
+  revisions: RevisionHistoryItem[];
+}
+
+// F-07 (FR-15): validates the sort order query parameter (?order=desc|asc, default desc).
+export function parseHistoryOrder(raw: unknown): HistoryOrder {
+  if (raw === undefined) return "desc";
+  if (raw === "desc" || raw === "asc") return raw;
+  throw new HttpError(400, "VALIDATION_ERROR", "Invalid sort order", { order: "INVALID_ORDER" });
+}
+
+// F-07 (FR-15): builds revision metadata (totalVersions, latestVersion, isLatest, isLate, feedbackCount).
+export function buildRevisionHistory(
+  milestone: HistoryMilestoneSummary,
+  submissions: HistorySubmissionInput[],
+  order: HistoryOrder
+): MilestoneRevisionHistory {
+  const totalVersions = submissions.length;
+  const latestVersion =
+    totalVersions === 0 ? null : submissions.reduce((max, s) => Math.max(max, s.version), 0);
+
+  const sorted = [...submissions].sort((a, b) =>
+    order === "asc" ? a.version - b.version : b.version - a.version
+  );
+
+  const revisions: RevisionHistoryItem[] = sorted.map((s) => ({
+    ...s,
+    isLatest: latestVersion !== null && s.version === latestVersion,
+    isLate: s.daysLate > 0,
+    feedbackCount: s.feedback.length,
+  }));
+
+  return { milestone, totalVersions, latestVersion, revisions };
+}
