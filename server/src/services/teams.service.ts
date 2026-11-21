@@ -1,8 +1,8 @@
 import { Prisma } from "@prisma/client";
 import { getPrisma } from "../prisma.js";
 import { AuthenticatedUser } from "../middleware/auth.js";
-import { notFound } from "../utils/httpError.js";
-import { validateMilestoneInput } from "../utils/validation.js";
+import { HttpError, notFound } from "../utils/httpError.js";
+import { validateMilestoneInput, validateMilestoneUpdate } from "../utils/validation.js";
 
 const personSelect = { id: true, name: true, email: true } as const;
 
@@ -98,5 +98,28 @@ export async function getMilestone(user: AuthenticatedUser, milestoneId: number)
     include: milestoneInclude,
   });
   if (!milestone) throw notFound();
+  return toMilestoneDto(milestone);
+}
+
+// F-05 (FR-10, BR-13). Role is checked by requireRole("SUPERVISOR"); scope (404) before validation (400)
+// before the business rule (409). The deadline rule sits in the same UPDATE statement, so concurrent edits
+// can never move the deadline earlier than one already accepted, and a rejected request changes nothing.
+export async function updateMilestone(user: AuthenticatedUser, milestoneId: number, body: unknown) {
+  const existing = await getPrisma().milestone.findFirst({
+    where: { id: milestoneId, team: scopeFilter(user) },
+    select: { id: true },
+  });
+  if (!existing) throw notFound();
+
+  const update = validateMilestoneUpdate(body);
+  const where: Prisma.MilestoneWhereInput = { id: milestoneId };
+  if (update.deadline) where.deadline = { lte: update.deadline };
+
+  const { count } = await getPrisma().milestone.updateMany({ where, data: update });
+  if (count === 0) {
+    throw new HttpError(409, "DEADLINE_NOT_EXTENDED", "The deadline can only be extended, not moved earlier");
+  }
+
+  const milestone = await getPrisma().milestone.findUniqueOrThrow({ where: { id: milestoneId }, include: milestoneInclude });
   return toMilestoneDto(milestone);
 }

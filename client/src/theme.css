@@ -292,6 +292,13 @@ a:hover {
   width: 100%;
 }
 
+/* Buttons side by side under a form (e.g. Save changes / Cancel, F-05) */
+.form-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 /* --- Messages --- */
 
 .alert {
