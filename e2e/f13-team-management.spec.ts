@@ -1,7 +1,63 @@
-import { test, expect } from "@playwright/test";
-import { loginAs, logout, toLocalDatetimeInputValue } from "./helpers.js";
+import { APIRequestContext, test, expect } from "@playwright/test";
+import { DEMO_PASSWORD, loginAs, logout, toLocalDatetimeInputValue } from "./helpers.js";
+
+interface PersonDto {
+  id: number;
+  name: string;
+  email: string;
+}
+
+interface TeamDto {
+  id: number;
+  name: string;
+  members: PersonDto[];
+}
+
+// Idempotently ensure student2@cpms.test belongs to Team Alpha before/after the test so the spec
+// stays repeatable on both fresh CI databases and reused local databases.
+async function ensureStudentTwoInAlpha(request: APIRequestContext) {
+  const loginRes = await request.post("/api/auth/login", {
+    data: { email: "supervisor1@cpms.test", password: DEMO_PASSWORD },
+  });
+  if (!loginRes.ok()) return;
+  const { token } = (await loginRes.json()) as { token: string };
+  const headers = { Authorization: `Bearer ${token}` };
+
+  const teamsRes = await request.get("/api/teams", { headers });
+  if (!teamsRes.ok()) return;
+  const { teams } = (await teamsRes.json()) as { teams: TeamDto[] };
+  const alpha = teams.find((t) => t.name === "Team Alpha");
+  if (!alpha || alpha.members.some((m) => m.email === "student2@cpms.test")) return;
+
+  let student2Id: number | undefined;
+  const currentTeam = teams.find((t) => t.members.some((m) => m.email === "student2@cpms.test"));
+  if (currentTeam) {
+    student2Id = currentTeam.members.find((m) => m.email === "student2@cpms.test")?.id;
+    if (student2Id !== undefined) {
+      await request.delete(`/api/teams/${currentTeam.id}/members/${student2Id}`, { headers });
+    }
+  } else {
+    const availRes = await request.get("/api/teams/available-students", { headers });
+    if (availRes.ok()) {
+      const { students } = (await availRes.json()) as { students: PersonDto[] };
+      student2Id = students.find((s) => s.email === "student2@cpms.test")?.id;
+    }
+  }
+
+  if (student2Id !== undefined) {
+    await request.post(`/api/teams/${alpha.id}/members`, { headers, data: { studentId: student2Id } });
+  }
+}
 
 test.describe("F-13 Team Management Journey (TEST-13-15)", () => {
+  test.beforeEach(async ({ request }) => {
+    await ensureStudentTwoInAlpha(request);
+  });
+
+  test.afterEach(async ({ request }) => {
+    await ensureStudentTwoInAlpha(request);
+  });
+
   test("supervisor creates a team, moves a submitting member, and BR-14 preserves original submitter while revoking old team access", async ({
     page,
   }) => {
@@ -10,10 +66,11 @@ test.describe("F-13 Team Management Journey (TEST-13-15)", () => {
     const alphaMilestoneTitle = `F13 BR14 Alpha ${timestamp}`;
     const newTeamMilestoneTitle = `F13 New Team Work ${timestamp}`;
     const deadlineValue = toLocalDatetimeInputValue(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+    const studentTwoMemberRow = page.locator(".member-info", { hasText: "Student Two (student2@cpms.test)" });
 
     // 1. Supervisor creates a milestone on Team Alpha and Student Two submits on it
     await loginAs(page, "supervisor1@cpms.test");
-    await page.locator(".card").filter({ hasText: "Team Alpha" }).getByRole("link", { name: "Open team" }).click();
+    await page.locator(".card-grid .card").filter({ hasText: "Team Alpha" }).getByRole("link", { name: "Open team" }).click();
     await page.getByLabel("Title").fill(alphaMilestoneTitle);
     await page.getByLabel("Deadline").fill(deadlineValue);
     await page.getByRole("button", { name: "Create milestone" }).click();
@@ -53,10 +110,10 @@ test.describe("F-13 Team Management Journey (TEST-13-15)", () => {
     const optionValue = await picker.locator("option", { hasText: "Student Two" }).getAttribute("value");
     await picker.selectOption(optionValue!);
     await page.getByRole("button", { name: "Add member" }).click();
-    await expect(page.getByText(/Student Two \(student2@cpms\.test\)/)).toBeVisible();
+    await expect(studentTwoMemberRow).toBeVisible();
 
     await page.reload();
-    await expect(page.getByText(/Student Two \(student2@cpms\.test\)/)).toBeVisible();
+    await expect(studentTwoMemberRow).toBeVisible();
 
     // New team accepts milestones (F-02)
     await page.getByLabel("Title").fill(newTeamMilestoneTitle);
@@ -77,7 +134,7 @@ test.describe("F-13 Team Management Journey (TEST-13-15)", () => {
     await expect(page.getByText("Milestone not found or not allowed")).toBeVisible();
     await logout(page);
 
-    // 5. Restore Student Two back into Team Alpha so shared E2E DB keeps seeded Alpha members
+    // 5. Restore Student Two back into Team Alpha via UI (also guarded by afterEach cleanup)
     await loginAs(page, "supervisor1@cpms.test");
     await page.locator(".card-grid .card").filter({ hasText: newTeamName }).getByRole("link", { name: "Open team" }).click();
     await page.getByRole("button", { name: "Remove Student Two" }).click();
@@ -90,6 +147,6 @@ test.describe("F-13 Team Management Journey (TEST-13-15)", () => {
     const restoreVal = await alphaPicker.locator("option", { hasText: "Student Two" }).getAttribute("value");
     await alphaPicker.selectOption(restoreVal!);
     await page.getByRole("button", { name: "Add member" }).click();
-    await expect(page.getByText(/Student Two \(student2@cpms\.test\)/)).toBeVisible();
+    await expect(studentTwoMemberRow).toBeVisible();
   });
 });
