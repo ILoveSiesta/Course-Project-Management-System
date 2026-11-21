@@ -8,6 +8,7 @@
 |---|---|---|---|
 | 0.1 | 2026-11-21 | ILoveSiesta | Initial contract for F-05 (issue #62) |
 | 0.2 | 2026-11-21 | ILoveSiesta | Definition of Done filled with executed results; no behaviour change |
+| 0.3 | 2026-11-21 | ILoveSiesta | §2 note on the BR-05 7-day late window (CHG-03, Lab 7 #59): an extension also moves the window; no F-05 behaviour, code or test change (covered by TEST-03-22 in F-03 v0.2) |
 
 ## 1. Linked requirements
 
@@ -29,6 +30,7 @@
   - **BR-13 (extend only):** a new deadline must be **later than or equal to** the stored deadline. An earlier deadline, even by 1 ms, is rejected with `409 DEADLINE_NOT_EXTENDED` and **nothing in the request is stored** (also not the title or description sent with it). The same deadline is accepted (no change).
   - A deadline that has already passed may be extended, including to another past time (used to reopen work for a team); the creation rule "deadline later than now" (BR-04) applies only when a milestone is created.
   - **BR-13 (effect on existing versions):** `daysLate` of versions already submitted stays as stored, because it was calculated against the deadline in force at submission time (BR-05). Submissions made after the change use the new deadline. No stored submission is recalculated.
+  - **Interaction with the BR-05 late window (v0.3 note, CHG-03):** late submissions are accepted up to `deadline + 7 × 24 h`, measured from the deadline in force at submission time. Extending a deadline therefore also moves the window and can reopen a closed one; this is the intended way for a supervisor to give a team more time, not an override. F-05 behaviour and code do not change; the case is tested in F-03 (TEST-03-22).
 - **Integrity:** the deadline rule is enforced in the same database statement that writes the change (conditional update `WHERE id = :id AND deadline <= :newDeadline`), so two concurrent edits can never leave the deadline earlier than one that was already accepted.
 - **Access and check order** (SDS §4–§5): authenticate (401) → role (403) → record scope (404) → validation (400) → business rule (409).
   - Supervisor: milestones of teams with a `SupervisorAssignment` (D-04: any assigned supervisor).
