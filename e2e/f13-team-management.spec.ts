@@ -48,7 +48,7 @@ test.describe("F-13 Team Management Journey (TEST-13-15)", () => {
     await page.locator(".card-grid .card").filter({ hasText: newTeamName }).getByRole("link", { name: "Open team" }).click();
     await expect(page.getByRole("heading", { name: newTeamName })).toBeVisible();
 
-    const picker = page.getByLabel("Student");
+    const picker = page.getByLabel("Student", { exact: true });
     await expect(picker.locator("option", { hasText: "Student Two" })).toBeAttached();
     const optionValue = await picker.locator("option", { hasText: "Student Two" }).getAttribute("value");
     await picker.selectOption(optionValue!);
@@ -85,7 +85,7 @@ test.describe("F-13 Team Management Journey (TEST-13-15)", () => {
 
     await page.getByRole("link", { name: "← My teams" }).click();
     await page.locator(".card-grid .card").filter({ hasText: "Team Alpha" }).getByRole("link", { name: "Open team" }).click();
-    const alphaPicker = page.getByLabel("Student");
+    const alphaPicker = page.getByLabel("Student", { exact: true });
     await expect(alphaPicker.locator("option", { hasText: "Student Two" })).toBeAttached();
     const restoreVal = await alphaPicker.locator("option", { hasText: "Student Two" }).getAttribute("value");
     await alphaPicker.selectOption(restoreVal!);
