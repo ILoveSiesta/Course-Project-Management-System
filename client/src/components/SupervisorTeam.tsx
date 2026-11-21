@@ -3,19 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
 import { ApiError, Milestone, Team, createMilestoneApi, getTeamApi, getTeamMilestonesApi } from "../api.js";
 import { MilestoneList, TeamSummary } from "./TeamDetails.js";
+import { milestoneFieldMessage as fieldMessage } from "../milestoneFields.js";
 
-const FIELD_MESSAGES: Record<string, string> = {
-  REQUIRED: "Required",
-  INVALID_DATE: "Invalid date",
-  MUST_BE_FUTURE: "Deadline must be in the future",
-  INVALID_TYPE: "Invalid value",
-};
-const MAX_LENGTH: Record<string, number> = { title: 120, description: 2000 };
-
-function fieldMessage(field: string, code: string): string {
-  if (code === "TOO_LONG") return `Too long (max ${MAX_LENGTH[field]} characters)`;
-  return FIELD_MESSAGES[code] ?? code;
-}
 
 const byDeadline = (a: Milestone, b: Milestone) => a.deadline.localeCompare(b.deadline) || a.id - b.id;
 

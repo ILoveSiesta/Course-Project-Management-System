@@ -156,6 +156,21 @@ export async function getMilestoneApi(token: string, milestoneId: number): Promi
   return data.milestone;
 }
 
+// F-05: partial update; only the fields present are changed.
+export interface MilestoneUpdate {
+  title?: string;
+  description?: string | null;
+  deadline?: string;
+}
+
+export async function updateMilestoneApi(token: string, milestoneId: number, update: MilestoneUpdate): Promise<Milestone> {
+  const data = await apiRequest<{ milestone: Milestone }>(token, `/milestones/${milestoneId}`, {
+    method: "PATCH",
+    body: JSON.stringify(update),
+  });
+  return data.milestone;
+}
+
 export async function getMilestoneSubmissionsApi(token: string, milestoneId: number): Promise<Submission[]> {
   const data = await apiRequest<{ submissions?: Submission[] }>(token, `/milestones/${milestoneId}/submissions`);
   return data.submissions ?? [];

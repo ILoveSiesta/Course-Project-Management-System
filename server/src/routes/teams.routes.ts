@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { parseId } from "../utils/httpError.js";
-import { createMilestone, getMilestone, getTeam, listMilestones, listTeams } from "../services/teams.service.js";
+import { createMilestone, getMilestone, getTeam, listMilestones, listTeams, updateMilestone } from "../services/teams.service.js";
 import { createSubmission, getSubmission, listSubmissions } from "../services/submissions.service.js";
 import { createFeedback } from "../services/feedback.service.js";
 
@@ -35,6 +35,11 @@ milestonesRouter.use(authenticate);
 
 milestonesRouter.get("/:milestoneId", handle(async (req, res) => {
   res.json({ milestone: await getMilestone(req.user!, parseId(req.params.milestoneId)) });
+}));
+
+// F-05: edit title/description, extend deadline (BR-13).
+milestonesRouter.patch("/:milestoneId", requireRole("SUPERVISOR"), handle(async (req, res) => {
+  res.json({ milestone: await updateMilestone(req.user!, parseId(req.params.milestoneId), req.body) });
 }));
 
 milestonesRouter.get("/:milestoneId/submissions", handle(async (req, res) => {
