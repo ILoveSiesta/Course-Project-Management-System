@@ -35,17 +35,17 @@ test.describe("F-13 Team Management Journey (TEST-13-15)", () => {
     await loginAs(page, "supervisor1@cpms.test");
     await page.getByLabel("Team name").fill(newTeamName);
     await page.getByRole("button", { name: "Create team" }).click();
-    await expect(page.locator(".card").filter({ hasText: newTeamName })).toBeVisible();
+    await expect(page.locator(".card-grid .card").filter({ hasText: newTeamName })).toBeVisible();
     await page.reload();
-    await expect(page.locator(".card").filter({ hasText: newTeamName })).toBeVisible();
+    await expect(page.locator(".card-grid .card").filter({ hasText: newTeamName })).toBeVisible();
 
     // 3. Remove Student Two from Team Alpha and add to the new team (remove + add move)
-    await page.locator(".card").filter({ hasText: "Team Alpha" }).getByRole("link", { name: "Open team" }).click();
+    await page.locator(".card-grid .card").filter({ hasText: "Team Alpha" }).getByRole("link", { name: "Open team" }).click();
     await page.getByRole("button", { name: "Remove Student Two" }).click();
     await expect(page.getByRole("button", { name: "Remove Student Two" })).not.toBeVisible();
 
     await page.getByRole("link", { name: "← My teams" }).click();
-    await page.locator(".card").filter({ hasText: newTeamName }).getByRole("link", { name: "Open team" }).click();
+    await page.locator(".card-grid .card").filter({ hasText: newTeamName }).getByRole("link", { name: "Open team" }).click();
     await expect(page.getByRole("heading", { name: newTeamName })).toBeVisible();
 
     const picker = page.getByLabel("Student");
@@ -79,12 +79,12 @@ test.describe("F-13 Team Management Journey (TEST-13-15)", () => {
 
     // 5. Restore Student Two back into Team Alpha so shared E2E DB keeps seeded Alpha members
     await loginAs(page, "supervisor1@cpms.test");
-    await page.locator(".card").filter({ hasText: newTeamName }).getByRole("link", { name: "Open team" }).click();
+    await page.locator(".card-grid .card").filter({ hasText: newTeamName }).getByRole("link", { name: "Open team" }).click();
     await page.getByRole("button", { name: "Remove Student Two" }).click();
     await expect(page.getByRole("button", { name: "Remove Student Two" })).not.toBeVisible();
 
     await page.getByRole("link", { name: "← My teams" }).click();
-    await page.locator(".card").filter({ hasText: "Team Alpha" }).getByRole("link", { name: "Open team" }).click();
+    await page.locator(".card-grid .card").filter({ hasText: "Team Alpha" }).getByRole("link", { name: "Open team" }).click();
     const alphaPicker = page.getByLabel("Student");
     await expect(alphaPicker.locator("option", { hasText: "Student Two" })).toBeAttached();
     const restoreVal = await alphaPicker.locator("option", { hasText: "Student Two" }).getAttribute("value");
