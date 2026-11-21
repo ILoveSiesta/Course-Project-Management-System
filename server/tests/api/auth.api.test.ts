@@ -257,4 +257,54 @@ describe("F-01 Authentication and Team Data API", () => {
       ).rejects.toThrow();
     });
   });
+
+  describe("Seed idempotency (AC-01-10)", () => {
+    it("TEST-01-14: running seed twice produces identical teams, users, memberships and assignments with no duplicates", async () => {
+      const prisma = getPrisma();
+
+      async function snapshotSeedState() {
+        const [users, teams, memberships, assignments] = await Promise.all([
+          prisma.user.findMany({
+            orderBy: { email: "asc" },
+            select: { id: true, email: true, name: true, role: true },
+          }),
+          prisma.team.findMany({
+            orderBy: { name: "asc" },
+            select: { id: true, name: true },
+          }),
+          prisma.teamMembership.findMany({
+            orderBy: [{ teamId: "asc" }, { studentId: "asc" }],
+            select: { id: true, teamId: true, studentId: true },
+          }),
+          prisma.supervisorAssignment.findMany({
+            orderBy: [{ teamId: "asc" }, { supervisorId: "asc" }],
+            select: { id: true, teamId: true, supervisorId: true },
+          }),
+        ]);
+        return { users, teams, memberships, assignments };
+      }
+
+      await seed();
+      const firstRun = await snapshotSeedState();
+
+      expect(firstRun.users).toHaveLength(8);
+      expect(firstRun.teams.map((t) => t.name)).toEqual([
+        "Team Alpha",
+        "Team Beta",
+        "Team Gamma",
+      ]);
+      expect(firstRun.memberships).toHaveLength(6);
+      expect(firstRun.assignments).toHaveLength(4);
+
+      await expect(seed()).resolves.toBeUndefined();
+      const secondRun = await snapshotSeedState();
+
+      expect(secondRun).toEqual(firstRun);
+
+      const loginAfterReseed = await request(app)
+        .post("/api/auth/login")
+        .send({ email: "student1@cpms.test", password: DEMO_PASSWORD });
+      expect(loginAfterReseed.status).toBe(200);
+    });
+  });
 });

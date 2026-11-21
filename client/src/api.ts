@@ -56,6 +56,13 @@ export interface Team {
   supervisors: Person[];
 }
 
+export type MilestoneStatus =
+  | "Not submitted"
+  | "Overdue"
+  | "Submitted"
+  | "Submitted late"
+  | "Reviewed";
+
 export interface Milestone {
   id: number;
   teamId: number;
@@ -64,6 +71,7 @@ export interface Milestone {
   deadline: string;
   createdAt: string;
   createdBy: { id: number; name: string };
+  status?: MilestoneStatus;
 }
 
 export interface MilestoneDraft {
@@ -151,14 +159,77 @@ export async function createMilestoneApi(token: string, teamId: number, draft: M
   return data.milestone;
 }
 
+// F-06: the same milestone for several assigned teams; one milestone per team is returned.
+export async function createMilestoneForTeamsApi(
+  token: string,
+  draft: MilestoneDraft & { teamIds: number[] }
+): Promise<Milestone[]> {
+  const data = await apiRequest<{ milestones: Milestone[] }>(token, "/milestones", {
+    method: "POST",
+    body: JSON.stringify(draft),
+  });
+  return data.milestones;
+}
+
 export async function getMilestoneApi(token: string, milestoneId: number): Promise<Milestone> {
   const data = await apiRequest<{ milestone: Milestone }>(token, `/milestones/${milestoneId}`);
+  return data.milestone;
+}
+
+// F-05: partial update; only the fields present are changed.
+export interface MilestoneUpdate {
+  title?: string;
+  description?: string | null;
+  deadline?: string;
+}
+
+export async function updateMilestoneApi(token: string, milestoneId: number, update: MilestoneUpdate): Promise<Milestone> {
+  const data = await apiRequest<{ milestone: Milestone }>(token, `/milestones/${milestoneId}`, {
+    method: "PATCH",
+    body: JSON.stringify(update),
+  });
   return data.milestone;
 }
 
 export async function getMilestoneSubmissionsApi(token: string, milestoneId: number): Promise<Submission[]> {
   const data = await apiRequest<{ submissions?: Submission[] }>(token, `/milestones/${milestoneId}/submissions`);
   return data.submissions ?? [];
+}
+
+// F-07 (FR-15): dedicated milestone revision history with server-computed metadata and sort order.
+export type HistoryOrder = "desc" | "asc";
+
+export interface RevisionHistoryItem extends Submission {
+  isLatest: boolean;
+  isLate: boolean;
+  feedbackCount: number;
+  feedback: Feedback[];
+}
+
+export interface MilestoneRevisionHistory {
+  milestone: {
+    id: number;
+    teamId: number;
+    teamName: string;
+    title: string;
+    description: string | null;
+    deadline: string;
+  };
+  totalVersions: number;
+  latestVersion: number | null;
+  revisions: RevisionHistoryItem[];
+}
+
+export async function getMilestoneHistoryApi(
+  token: string,
+  milestoneId: number,
+  order: HistoryOrder = "desc"
+): Promise<MilestoneRevisionHistory> {
+  const data = await apiRequest<{ history: MilestoneRevisionHistory }>(
+    token,
+    `/milestones/${milestoneId}/history?order=${order}`
+  );
+  return data.history;
 }
 
 export async function createSubmissionApi(
@@ -171,6 +242,47 @@ export async function createSubmissionApi(
     body: JSON.stringify(draft),
   });
   return data.submission;
+}
+
+// --- F-08: grade per milestone ---
+
+export interface GradeState {
+  grade: {
+    score: number;
+    version: number;
+    submissionId: number;
+    gradedBy: { id: number; name: string };
+    gradedAt: string;
+  } | null;
+  released: boolean;
+  releasedAt: string | null;
+}
+
+function toGradeState(data: Partial<GradeState>): GradeState {
+  return { grade: data.grade ?? null, released: data.released === true, releasedAt: data.releasedAt ?? null };
+}
+
+export async function getGradeApi(token: string, milestoneId: number): Promise<GradeState> {
+  return toGradeState(await apiRequest<Partial<GradeState>>(token, `/milestones/${milestoneId}/grade`));
+}
+
+export async function saveGradeApi(
+  token: string,
+  milestoneId: number,
+  input: { score?: number; version: number }
+): Promise<GradeState> {
+  const data = await apiRequest<Partial<GradeState>>(token, `/milestones/${milestoneId}/grade`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+  return toGradeState(data);
+}
+
+export async function releaseGradeApi(token: string, milestoneId: number): Promise<GradeState> {
+  const data = await apiRequest<Partial<GradeState>>(token, `/milestones/${milestoneId}/grade/release`, {
+    method: "POST",
+  });
+  return toGradeState(data);
 }
 
 export async function createFeedbackApi(token: string, submissionId: number, comment: string): Promise<Feedback> {

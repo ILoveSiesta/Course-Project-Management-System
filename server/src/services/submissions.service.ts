@@ -2,7 +2,13 @@ import { Prisma } from "@prisma/client";
 import { getPrisma } from "../prisma.js";
 import { AuthenticatedUser } from "../middleware/auth.js";
 import { HttpError, notFound } from "../utils/httpError.js";
-import { calculateDaysLate, validateSubmissionInput } from "../utils/submissionValidation.js";
+import {
+  buildRevisionHistory,
+  calculateDaysLate,
+  isWithinLateWindow,
+  parseHistoryOrder,
+  validateSubmissionInput,
+} from "../utils/submissionValidation.js";
 import { scopeFilter } from "./teams.service.js";
 import { feedbackInclude, toFeedbackDto } from "./feedback.service.js";
 
@@ -80,9 +86,16 @@ export async function createSubmission(user: AuthenticatedUser, milestoneId: num
       throw new HttpError(409, "VERSION_LIMIT_REACHED", "Maximum of 3 versions reached for this milestone");
     }
 
-    const nextVersion = existingCount + 1;
+    // BR-05 rev. (CHG-03): checked after the version limit, against the deadline read under the row lock,
+    // so a deadline extended by F-05 (BR-13) moves the window. The same `now` is used for daysLate.
     const now = new Date();
-    const daysLate = calculateDaysLate(now, new Date(locked.deadline));
+    const deadline = new Date(locked.deadline);
+    if (!isWithinLateWindow(now, deadline)) {
+      throw new HttpError(409, "SUBMISSION_WINDOW_CLOSED", "Late submissions are accepted up to 7 days after the deadline");
+    }
+
+    const nextVersion = existingCount + 1;
+    const daysLate = calculateDaysLate(now, deadline);
 
     const created = await tx.submission.create({
       data: {
@@ -113,4 +126,31 @@ export async function getSubmission(user: AuthenticatedUser, submissionId: numbe
 
   if (!submission) throw notFound();
   return toSubmissionDto(submission);
+}
+
+// F-07 (FR-15): dedicated read-only revision history in one query (scope checked before query validation).
+export async function getRevisionHistory(user: AuthenticatedUser, milestoneId: number, rawOrder: unknown) {
+  const milestone = await getPrisma().milestone.findFirst({
+    where: { id: milestoneId, team: scopeFilter(user) },
+    include: {
+      team: { select: { name: true } },
+      submissions: {
+        include: submissionInclude,
+        orderBy: { version: "asc" },
+      },
+    },
+  });
+  if (!milestone) throw notFound();
+
+  const order = parseHistoryOrder(rawOrder);
+  const milestoneSummary = {
+    id: milestone.id,
+    teamId: milestone.teamId,
+    teamName: milestone.team.name,
+    title: milestone.title,
+    description: milestone.description,
+    deadline: milestone.deadline.toISOString(),
+  };
+
+  return buildRevisionHistory(milestoneSummary, milestone.submissions.map(toSubmissionDto), order);
 }

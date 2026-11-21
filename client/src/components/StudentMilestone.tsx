@@ -3,14 +3,18 @@ import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
 import {
   ApiError,
+  GradeState,
   Milestone,
   Submission,
   createSubmissionApi,
+  getGradeApi,
   getMilestoneApi,
   getMilestoneSubmissionsApi,
 } from "../api.js";
 import { formatDeadline } from "../format.js";
+import { isLateWindowClosed } from "../submissionWindow.js";
 import { SubmissionList } from "./SubmissionList.js";
+import { StudentGradeCard } from "./GradeCard.js";
 
 const FIELD_MESSAGES: Record<string, string> = {
   REQUIRED: "Required",
@@ -39,6 +43,7 @@ export const StudentMilestone: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [gradeState, setGradeState] = useState<GradeState | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -66,6 +71,13 @@ export const StudentMilestone: React.FC = () => {
       }
     })();
 
+    // F-08: the grade is loaded on its own; if it fails, the rest of the page still works.
+    getGradeApi(token, milestoneId)
+      .then((state) => {
+        if (active) setGradeState(state);
+      })
+      .catch(() => undefined);
+
     return () => {
       active = false;
     };
@@ -92,7 +104,10 @@ export const StudentMilestone: React.FC = () => {
       if (err instanceof ApiError && err.status === 401) return logout();
       if (err instanceof ApiError && err.code === "VALIDATION_ERROR") {
         setFieldErrors(err.details);
-      } else if (err instanceof ApiError && err.code === "VERSION_LIMIT_REACHED") {
+      } else if (
+        err instanceof ApiError &&
+        (err.code === "VERSION_LIMIT_REACHED" || err.code === "SUBMISSION_WINDOW_CLOSED")
+      ) {
         setFormError(err.message);
       } else {
         setFormError(err instanceof Error ? err.message : "Could not submit work");
@@ -123,7 +138,14 @@ export const StudentMilestone: React.FC = () => {
               Due: <span>{formatDeadline(milestone.deadline)}</span>
             </div>
             {milestone.description && <p className="milestone-description">{milestone.description}</p>}
+            <p className="history-link-row">
+              <Link to={`/student/milestones/${milestone.id}/history`} className="btn btn-secondary">
+                View revision history
+              </Link>
+            </p>
           </section>
+
+          {gradeState && <StudentGradeCard state={gradeState} />}
 
           <SubmissionList submissions={submissions} />
 
@@ -131,6 +153,8 @@ export const StudentMilestone: React.FC = () => {
             <h3>{submissions.length > 0 ? "Resubmit work" : "Submit work"}</h3>
             {submissions.length >= 3 ? (
               <p className="alert">Maximum of 3 versions reached for this milestone.</p>
+            ) : isLateWindowClosed(milestone.deadline) ? (
+              <p className="alert">Late submissions are accepted up to 7 days after the deadline.</p>
             ) : (
               <>
                 {formError && <p role="alert" className="alert">{formError}</p>}

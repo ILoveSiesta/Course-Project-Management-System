@@ -9,6 +9,12 @@ Course Project Management System — CPE334 Theme 6
 | 0.3 | 2026-11-05 | ILoveSiesta | §3.2: shared visual style (`client/src/theme.css`) brought into Sprint 1 — change CHG-01 in `docs/traceability.md` §5 |
 | 0.4 | 2026-11-06 | ILoveSiesta | §5: team management row no longer waits for TA confirmation (D-06 Agreed) |
 | 0.5 | 2026-11-12 | ILoveSiesta | §7 variables for the container (`NODE_ENV`, `CLIENT_DIST_DIR`, `TEST_DATABASE_URL`; seed requires `SEED_DEMO_PASSWORD`); §8 Lab 5 design: migrations in a separate job, deploy on merge to `main` without a manual step, `/api/ready` — change CHG-02 in `docs/traceability.md` §5 (#18) |
+| 0.6 | 2026-11-21 | ILoveSiesta | §3.1 supervisor milestone detail can edit/extend the milestone; §4 error `409 DEADLINE_NOT_EXTENDED`; §4.1 Sprint 2 endpoint `PATCH /api/milestones/:milestoneId`; §5 edit/extend row is 403 for students (F-05, #62) |
+| 0.7 | 2026-11-21 | ILoveSiesta | Lab 7 change request #59 (CHG-03): §1.3 late rule includes the 7-day window, checked in the same locked transaction after the version limit; §4 error `409 SUBMISSION_WINDOW_CLOSED` and order of the two 409 rules. No change to architecture, data model, endpoints, roles, configuration or deployment |
+| 0.8 | 2026-11-21 | ILoveSiesta | F-06 (#63): §3.1 supervisor team detail can create a milestone for several assigned teams; §4.2 endpoint `POST /api/milestones` (all-or-nothing, one transaction); §5 row for the multi-team create |
+| 0.9 | 2026-11-21 | ILoveSiesta | F-08 (#66): §2.1/§2.2 `Grade` entity and `Milestone.gradesReleasedAt` (migration `f08_grades`); §2.3 grades no longer planned; §3.1 grade card on both milestone detail screens; §4 errors `NOTHING_TO_GRADE`, `GRADE_RELEASED`, `NO_GRADE`; §4.2 grade endpoints; §5 grade rows (student 403) |
+| 0.10 | 2026-11-21 | phet526 | F-07 (#64): §3.1 dedicated Revision history screen (`/student/milestones/:id/history`, `/supervisor/milestones/:id/history`); §4.2 endpoint `GET /api/milestones/:milestoneId/history`; §5 row for viewing revision history |
+| 0.11 | 2026-11-21 | phet526 | F-09 (#67): §3.1 student My team and supervisor team detail show derived status badges on milestone lists; §4.2 milestone endpoints include derived `status` without storing it |
 
 Requirement IDs (FR/BR/NFR/D) refer to `docs/srs.md`. Feature contracts in `docs/sprints/sprint-N/` give the
 exact endpoint request/response shapes; this document defines the shared structure and conventions they follow.
@@ -59,7 +65,7 @@ server/src/
 | Record scope: own team / assigned team (BR-01, BR-02) | Service, by resolving the record's team and checking membership/assignment for `req.user` | — |
 | Field validation (BR-04, BR-08) | Service (shared validators in `utils/`) | DB column lengths / not-null |
 | Version numbering and limit (BR-06, BR-07) | Service, inside a transaction that locks the milestone row | Unique (`milestoneId`, `version`) |
-| Late calculation (BR-05) | Service at insert time, using server time | Check `daysLate >= 0` |
+| Late calculation and 7-day late window (BR-05, rev. CHG-03) | Service at insert time, using server time and the deadline read in the locked transaction; window checked after the version limit (pure helpers in `utils/submissionValidation.ts`) | Check `daysLate >= 0` (no upper-bound constraint: rows stored before CHG-03 may exceed 7) |
 | One team per student (BR-10) | Seed (Sprint 1), service (Sprint 3) | Unique `TeamMembership.studentId` |
 | Feedback immutability (BR-09) | No update/delete endpoints exist | — |
 
@@ -82,6 +88,9 @@ erDiagram
   User ||--o{ Submission : "submitted by"
   Submission ||--o{ Feedback : has
   User ||--o{ Feedback : "written by"
+  Milestone ||--o| Grade : "graded (Sprint 2)"
+  Submission ||--o{ Grade : "graded version"
+  User ||--o{ Grade : "graded by"
 ```
 
 `RevokedToken` stands alone (keyed by token ID) and supports logout (section 6).
@@ -100,6 +109,8 @@ All `id` columns are auto-increment integers. All timestamps are `timestamptz` s
 | **Milestone** | `id`, `teamId` → Team, `title` (≤ 120), `description` (≤ 2000, nullable), `deadline`, `createdById` → User, `createdAt` | index (`teamId`, `deadline`); deadline in the future at creation (BR-04, service) | F-02 |
 | **Submission** | `id`, `milestoneId` → Milestone, `submittedById` → User, `version`, `title` (≤ 120), `description` (≤ 2000, nullable), `link` (≤ 2048), `submittedAt`, `daysLate` | unique (`milestoneId`, `version`); `version` 1..3 (BR-06, BR-07); `daysLate >= 0` (BR-05); never updated or deleted | F-03 |
 | **Feedback** | `id`, `submissionId` → Submission, `authorId` → User, `comment` (1–5000), `createdAt` | append-only, no update/delete (BR-09); several entries per submission allowed (D-08) | F-04 |
+| **Grade** | `id`, `milestoneId` → Milestone, `submissionId` → Submission, `score`, `gradedById` → User, `createdAt`, `updatedAt` | `milestoneId` unique (one grade per milestone); submission must belong to the same milestone (service); `score` 0–100 (DB check); updated until release, then locked (BR-11) | F-08 |
+| **Milestone** (F-08 column) | `gradesReleasedAt` (nullable) | set once on release; never cleared (BR-11) | F-08 |
 
 **Ownership links.** A record's team decides who may see it: Milestone → `teamId`; Submission → its milestone's
 team; Feedback → its submission's milestone's team. A milestone belongs to exactly one team, so a submission
@@ -109,7 +120,7 @@ Foreign keys use `ON DELETE RESTRICT`: no Sprint 1 operation deletes teams, mile
 
 ### 2.3 Planned additions (Sprint 2–3, direction only)
 
-- Grades and grade release (FR-18, FR-19): a grade per team–milestone and a release marker on the milestone. Exact fields in the Sprint 2 contract.
+- ~~Grades and grade release (FR-18, FR-19)~~ — added by F-08 (§2.2).
 - Team–milestone status (FR-20, BR-12) is **derived** from existing data, not stored.
 - Team management (FR-07, Sprint 3) reuses `Team`, `TeamMembership` and `SupervisorAssignment`.
 
@@ -143,11 +154,12 @@ flowchart TD
 | Screen | Role | Purpose | Feature |
 |---|---|---|---|
 | Login | All | E-mail + password; on success go to the role's home | F-01 |
-| My team | Student | Team name, members, supervisors; milestone list by deadline | F-02 |
-| Student milestone detail | Student | Submit / resubmit form; list of versions with late badge and days late; feedback on each version | F-03, F-04 |
+| My team | Student | Team name, members, supervisors; milestone list by deadline with derived status badge | F-02, F-09 |
+| Student milestone detail | Student | Submit / resubmit form; list of versions with late badge and days late; feedback on each version; grade after release | F-03, F-04, F-08 |
 | My teams | Supervisor | Assigned teams with members | F-02 |
-| Supervisor team detail | Supervisor | Milestone list; create-milestone form | F-02 |
-| Supervisor milestone detail | Supervisor | Versions with late badge; add feedback to a version | F-03, F-04 |
+| Supervisor team detail | Supervisor | Milestone list with derived status badge; create-milestone form, optionally for several assigned teams at once | F-02, F-06, F-09 |
+| Supervisor milestone detail | Supervisor | Versions with late badge; add feedback to a version; edit the milestone and extend its deadline; record, change and release the grade | F-03, F-04, F-05, F-08 |
+| Revision history | All | Dedicated read-only revision history per milestone: version ordering (`desc`/`asc`), `Latest` badge, submitter/time, late status, and per-version feedback with author and time | F-07 |
 
 A header on every signed-in page shows the user's name, role and a **Log out** button. Visiting a page for the
 other role redirects to the user's own home.
@@ -186,6 +198,11 @@ other role redirects to the user's own home.
 | 403 | `FORBIDDEN` | The user's role may not call this operation |
 | 404 | `NOT_FOUND` | Record does not exist **or** is outside the user's scope (no disclosure) |
 | 409 | `VERSION_LIMIT_REACHED` | 4th submission for a milestone (BR-07) |
+| 409 | `DEADLINE_NOT_EXTENDED` | Milestone edit with a deadline earlier than the stored one (BR-13) |
+| 409 | `NOTHING_TO_GRADE` | Grade for a milestone with no submission (BR-11) |
+| 409 | `GRADE_RELEASED` | Change or release after the milestone's grades were released (BR-11) |
+| 409 | `NO_GRADE` | Release without a grade (BR-11) |
+| 409 | `SUBMISSION_WINDOW_CLOSED` | Submission later than `deadline + 7 × 24 h` (BR-05, CHG-03); checked after `VERSION_LIMIT_REACHED` |
 | 500 | `INTERNAL_ERROR` | Unexpected error; details only in server logs (NFR-05) |
 
 **Check order** for every protected request: authenticate (401) → role (403) → record scope (404) → validation
@@ -211,6 +228,18 @@ Exact request/response shapes are defined in each feature contract.
 | GET | `/api/submissions/:submissionId` | Any, in scope (includes feedback) | F-03, F-04 |
 | POST | `/api/submissions/:submissionId/feedback` | Supervisor, assigned | F-04 |
 
+### 4.2 Sprint 2 endpoints
+
+| Method | Path | Role | Feature |
+|---|---|---|---|
+| PATCH | `/api/milestones/:milestoneId` | Supervisor, assigned (student 403) | F-05 |
+| GET | `/api/milestones/:milestoneId/grade` | Any, in scope (student: no score before release) | F-08 |
+| PUT | `/api/milestones/:milestoneId/grade` | Supervisor, assigned (student 403) | F-08 |
+| POST | `/api/milestones/:milestoneId/grade/release` | Supervisor, assigned (student 403) | F-08 |
+| POST | `/api/milestones` | Supervisor, assigned to every listed team (student 403; any unassigned/unknown team → 404, nothing stored) | F-06 |
+| GET | `/api/milestones/:milestoneId/history` | Any, in scope (`?order=desc\|asc`, default `desc`; out-of-scope → 404) | F-07 |
+| Milestone endpoints (list, detail, create, edit) | — | Every serialized `Milestone` includes server-derived `status` (BR-12, never stored) | F-09 |
+
 ## 5. Roles and permissions
 
 "Own team" = the team the student belongs to. "Assigned" = a team the supervisor has a `SupervisorAssignment` for.
@@ -222,12 +251,14 @@ Out-of-scope reads return 404; operations the role may never perform return 403.
 | View team, members, supervisors | Own team | Assigned teams | 1 |
 | View milestones | Own team | Assigned teams | 1 |
 | Create milestone | ❌ 403 | Assigned teams | 1 |
+| Create the same milestone for several teams | ❌ 403 | Assigned teams only (all listed teams must be assigned) | 2 |
 | Submit / resubmit work | Own team | ❌ 403 | 1 |
 | View submissions and versions | Own team | Assigned teams | 1 |
+| View milestone revision history | Own team | Assigned teams | 2 |
 | Record feedback | ❌ 403 | Assigned teams | 1 |
 | View feedback | Own team | Assigned teams | 1 |
-| Edit / extend milestone | ❌ | Assigned teams | 2 |
-| Record / release grade | ❌ | Assigned teams | 2 |
+| Edit / extend milestone | ❌ 403 | Assigned teams | 2 |
+| Record / change / release grade | ❌ 403 | Assigned teams | 2 |
 | View grade | Own team, after release | Assigned teams | 2 |
 | Progress board, reports, filters | Own team | Assigned teams | 3 |
 | Manage teams and members | ❌ | Teams they supervise (D-06) | 3 |

@@ -1,9 +1,18 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { parseId } from "../utils/httpError.js";
-import { createMilestone, getMilestone, getTeam, listMilestones, listTeams } from "../services/teams.service.js";
-import { createSubmission, getSubmission, listSubmissions } from "../services/submissions.service.js";
+import {
+  createMilestone,
+  createMilestoneForTeams,
+  getMilestone,
+  getTeam,
+  listMilestones,
+  listTeams,
+  updateMilestone,
+} from "../services/teams.service.js";
+import { createSubmission, getRevisionHistory, getSubmission, listSubmissions } from "../services/submissions.service.js";
 import { createFeedback } from "../services/feedback.service.js";
+import { getGrade, releaseGrade, saveGrade } from "../services/grades.service.js";
 
 type Handler = (req: Request, res: Response) => Promise<void>;
 
@@ -33,12 +42,40 @@ teamsRouter.post("/:teamId/milestones", requireRole("SUPERVISOR"), handle(async 
 export const milestonesRouter = Router();
 milestonesRouter.use(authenticate);
 
+// F-06: the same milestone for several assigned teams in one request (all or nothing).
+milestonesRouter.post("/", requireRole("SUPERVISOR"), handle(async (req, res) => {
+  res.status(201).json({ milestones: await createMilestoneForTeams(req.user!, req.body) });
+}));
+
 milestonesRouter.get("/:milestoneId", handle(async (req, res) => {
   res.json({ milestone: await getMilestone(req.user!, parseId(req.params.milestoneId)) });
 }));
 
+// F-05: edit title/description, extend deadline (BR-13).
+milestonesRouter.patch("/:milestoneId", requireRole("SUPERVISOR"), handle(async (req, res) => {
+  res.json({ milestone: await updateMilestone(req.user!, parseId(req.params.milestoneId), req.body) });
+}));
+
+// F-08: grade per milestone; students see it only after release (BR-11).
+milestonesRouter.get("/:milestoneId/grade", handle(async (req, res) => {
+  res.json(await getGrade(req.user!, parseId(req.params.milestoneId)));
+}));
+
+milestonesRouter.put("/:milestoneId/grade", requireRole("SUPERVISOR"), handle(async (req, res) => {
+  res.json(await saveGrade(req.user!, parseId(req.params.milestoneId), req.body));
+}));
+
+milestonesRouter.post("/:milestoneId/grade/release", requireRole("SUPERVISOR"), handle(async (req, res) => {
+  res.json(await releaseGrade(req.user!, parseId(req.params.milestoneId)));
+}));
+
 milestonesRouter.get("/:milestoneId/submissions", handle(async (req, res) => {
   res.json({ submissions: await listSubmissions(req.user!, parseId(req.params.milestoneId)) });
+}));
+
+// F-07 (FR-15): full milestone revision history with per-version feedback.
+milestonesRouter.get("/:milestoneId/history", handle(async (req, res) => {
+  res.json({ history: await getRevisionHistory(req.user!, parseId(req.params.milestoneId), req.query.order) });
 }));
 
 milestonesRouter.post("/:milestoneId/submissions", requireRole("STUDENT"), handle(async (req, res) => {

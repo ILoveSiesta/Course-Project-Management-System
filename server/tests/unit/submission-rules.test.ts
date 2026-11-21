@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { calculateDaysLate, validateSubmissionInput } from "../../src/utils/submissionValidation.js";
+import * as submissionRules from "../../src/utils/submissionValidation.js";
+
+// CR #59 / CHG-03 (F-03 contract v0.2). Looked up from the module object so that this file still
+// type-checks and the other tests still run before the helper exists; at RED this test fails at run time.
+const isWithinLateWindow = (submissionRules as Record<string, unknown>).isWithinLateWindow as (
+  submittedAt: Date,
+  deadline: Date
+) => boolean;
 
 describe("F-03 Submission Rules Unit Tests", () => {
   describe("BR-05: calculateDaysLate", () => {
@@ -108,6 +116,23 @@ describe("F-03 Submission Rules Unit Tests", () => {
           link: "https://example.com",
         })
       ).toThrowError();
+    });
+  });
+
+  describe("BR-05 rev. (CHG-03): 7-day late window", () => {
+    const deadline = new Date("2026-11-08T23:59:00.000Z");
+    const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+
+    it("TEST-03-18: accepts up to exactly deadline + 7 days and rejects 1 ms later", () => {
+      expect(isWithinLateWindow(new Date(deadline.getTime() - 1000), deadline)).toBe(true);
+      expect(isWithinLateWindow(deadline, deadline)).toBe(true);
+
+      const lastAccepted = new Date(deadline.getTime() + SEVEN_DAYS);
+      expect(isWithinLateWindow(lastAccepted, deadline)).toBe(true);
+      expect(calculateDaysLate(lastAccepted, deadline)).toBe(7);
+
+      expect(isWithinLateWindow(new Date(deadline.getTime() + SEVEN_DAYS + 1), deadline)).toBe(false);
+      expect(isWithinLateWindow(new Date(deadline.getTime() + 30 * 24 * 60 * 60 * 1000), deadline)).toBe(false);
     });
   });
 });

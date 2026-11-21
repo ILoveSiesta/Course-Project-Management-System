@@ -1,8 +1,13 @@
 import { Prisma } from "@prisma/client";
 import { getPrisma } from "../prisma.js";
 import { AuthenticatedUser } from "../middleware/auth.js";
-import { notFound } from "../utils/httpError.js";
-import { validateMilestoneInput } from "../utils/validation.js";
+import { HttpError, notFound } from "../utils/httpError.js";
+import {
+  deriveMilestoneStatus,
+  validateMilestoneInput,
+  validateMilestoneUpdate,
+  validateTeamIds,
+} from "../utils/validation.js";
 
 const personSelect = { id: true, name: true, email: true } as const;
 
@@ -13,6 +18,16 @@ const teamInclude = {
 
 const milestoneInclude = {
   createdBy: { select: { id: true, name: true } },
+  // F-09 (no N+1): load only the latest submission version and its feedback count.
+  submissions: {
+    orderBy: { version: "desc" },
+    take: 1,
+    select: {
+      version: true,
+      daysLate: true,
+      _count: { select: { feedback: true } },
+    },
+  },
 } satisfies Prisma.MilestoneInclude;
 
 type TeamWithPeople = Prisma.TeamGetPayload<{ include: typeof teamInclude }>;
@@ -29,7 +44,16 @@ function toTeamDto(team: TeamWithPeople) {
   };
 }
 
-function toMilestoneDto(m: MilestoneWithCreator) {
+function toMilestoneDto(m: MilestoneWithCreator, now: Date = new Date()) {
+  const latest = m.submissions[0];
+  const status = deriveMilestoneStatus({
+    deadline: m.deadline,
+    now,
+    latestSubmission: latest
+      ? { daysLate: latest.daysLate, feedbackCount: latest._count.feedback }
+      : null,
+  });
+
   return {
     id: m.id,
     teamId: m.teamId,
@@ -38,6 +62,7 @@ function toMilestoneDto(m: MilestoneWithCreator) {
     deadline: m.deadline.toISOString(),
     createdAt: m.createdAt.toISOString(),
     createdBy: m.createdBy,
+    status,
   };
 }
 
@@ -78,7 +103,8 @@ export async function listMilestones(user: AuthenticatedUser, teamId: number) {
     include: milestoneInclude,
     orderBy: [{ deadline: "asc" }, { id: "asc" }],
   });
-  return milestones.map(toMilestoneDto);
+  const now = new Date();
+  return milestones.map((m) => toMilestoneDto(m, now));
 }
 
 // Role is checked by requireRole("SUPERVISOR") on the route; scope is checked here, before validation.
@@ -92,11 +118,53 @@ export async function createMilestone(user: AuthenticatedUser, teamId: number, b
   return toMilestoneDto(milestone);
 }
 
+// F-06 (FR-11): the same milestone for several assigned teams, all or nothing. Role is checked by
+// requireRole("SUPERVISOR"). The team list is read first (400), then every team must be in scope (404, no
+// disclosure of which one failed), then the milestone fields (400). All rows are created in one transaction.
+export async function createMilestoneForTeams(user: AuthenticatedUser, body: unknown) {
+  const teamIds = validateTeamIds(body);
+  const inScope = await getPrisma().team.count({ where: { id: { in: teamIds }, ...scopeFilter(user) } });
+  if (inScope !== teamIds.length) throw notFound();
+
+  const input = validateMilestoneInput(body, new Date());
+  const prisma = getPrisma();
+  const created = await prisma.$transaction(
+    teamIds.map((teamId) =>
+      prisma.milestone.create({ data: { ...input, teamId, createdById: user.id }, include: milestoneInclude })
+    )
+  );
+  const now = new Date();
+  return created.map((m) => toMilestoneDto(m, now));
+}
+
 export async function getMilestone(user: AuthenticatedUser, milestoneId: number) {
   const milestone = await getPrisma().milestone.findFirst({
     where: { id: milestoneId, team: scopeFilter(user) },
     include: milestoneInclude,
   });
   if (!milestone) throw notFound();
+  return toMilestoneDto(milestone);
+}
+
+// F-05 (FR-10, BR-13). Role is checked by requireRole("SUPERVISOR"); scope (404) before validation (400)
+// before the business rule (409). The deadline rule sits in the same UPDATE statement, so concurrent edits
+// can never move the deadline earlier than one already accepted, and a rejected request changes nothing.
+export async function updateMilestone(user: AuthenticatedUser, milestoneId: number, body: unknown) {
+  const existing = await getPrisma().milestone.findFirst({
+    where: { id: milestoneId, team: scopeFilter(user) },
+    select: { id: true },
+  });
+  if (!existing) throw notFound();
+
+  const update = validateMilestoneUpdate(body);
+  const where: Prisma.MilestoneWhereInput = { id: milestoneId };
+  if (update.deadline) where.deadline = { lte: update.deadline };
+
+  const { count } = await getPrisma().milestone.updateMany({ where, data: update });
+  if (count === 0) {
+    throw new HttpError(409, "DEADLINE_NOT_EXTENDED", "The deadline can only be extended, not moved earlier");
+  }
+
+  const milestone = await getPrisma().milestone.findUniqueOrThrow({ where: { id: milestoneId }, include: milestoneInclude });
   return toMilestoneDto(milestone);
 }

@@ -5,8 +5,10 @@
 | 0.1 | 2026-11-03 | | Document skeleton |
 | 0.2 | 2026-11-06 | ILoveSiesta | Sprint 1 contributions (issues #1–#6, #13, #15; PRs #7–#12, #14) |
 | 0.3 | 2026-11-14 | phet526 | Lab 5 contributions (issues #18–#22; PRs #23–#25, #39–#45, and final release) |
+| 0.4 | 2026-11-21 | ILoveSiesta | Lab 6 contributions as in the Lab 6 report §D.5 (issues #48, #49, #52, #54, #56; PRs #50, #51, #53, #55, #57, #58) (#60) |
+| 0.5 | 2026-11-21 | ILoveSiesta | Sprint 2 and Lab 7 contributions so far (issues #59, #60, #62–#68, #79; PRs #61, #69, #71–#78) (#79) |
 
-Sources: GitHub issues and PRs (author, reviewer, merged by) and `git log` on `sprint-1` (Sprint 1) and `lab5-staging` / `main` (Lab 5). Both students
+Sources: GitHub issues and PRs (author, reviewer, merged by) and `git log` on `sprint-1` (Sprint 1 and Lab 6) and `lab5-staging` / `main` (Lab 5). Both students
 worked on requirements/design, tests, implementation and review; issues alternated between
 them, and the student who did not write an issue reviewed its PR.
 
@@ -23,5 +25,30 @@ them, and the student who did not write an issue reviewed its PR.
 |---|---|---|---|---|
 | **ILoveSiesta** | #18 Cloud-ready app & Docker (PR #23)<br>#21 Merge gate & deploy pipeline (PR #41, #42, #43, #44, #45) | Dockerfile & compose (Node 24 alpine, root app); environment `demo`, ruleset `protect-main`, Deploy demo workflow (`deploy.yml`), single-manifest build fix (`--provenance=false --sbom=false`), visible version in footer | Merge gate proof with deliberate failing test (PR #40, C-02); Release 1 & Release 2 pipeline deployments (C-06, runs 43462038722 & 43470205241); tag `v0.1.1` | Reviewed & approved PR #24 (CI/deploy scripts), PR #39 (GCP/WIF), and PR #46 (final docs); merged PR #25 (Lab 5 release of #19 to main) |
 | **phet526** | #19 CI & deploy scripts (PR #24)<br>#20 GCP project & WIF (PR #39)<br>#22 Persistence, rollback & final docs | GitHub Actions CI (`ci-docker.yml`), CPMS deployment automation scripts (`deploy/` deploy, release, smoke, teardown), offline unit tests (`deploy/tests/*`); GCP project initialization (`cpe334-cpms`), Cloud SQL instance `cpms-pg`, Secret Manager secrets, WIF pool/provider; final `deployment.md` §7, pause/resume procedure | Live CI run evidence (C-01, run 43234818752); first Cloud Run deployment from Cloud Shell & C-04 live UI verification; data persistence verification across container restart, rollback to Release 1 and roll-forward to Release 2 (C-05, runs 43476893936 & 43477461502) | Reviewed & approved PR #23 (Docker), PR #41 (Deploy demo), PR #42 (Release 1 to main), PR #43 (Deploy proof), PR #44 (Release 2 to main), PR #45 (Release 2 docs); merged PRs with merge commits |
+
+## Lab 6 (cross-team UAT and defect management)
+
+| Work | ILoveSiesta | phet526 |
+|---|---|---|
+| Part A (Product Team) | #48 PR #50 (CI on `sprint-1`); #49 PR #51 wrote `uat-plan.md` v0.1–0.2 and the local dry-run; #56 PR #57 v0.4 | Reviewed and merged PR #50 and PR #51; dry-ran the 7 cases by hand on the public URL; sent the passwords to the partner team privately; v0.3 (PR #53) |
+| Part B (UAT Team) | Ran UAT-01..03 of YMOM and captured the screenshots; selected the screenshots and packaged the evidence sent to the partner team | Ran UAT-04..06 of YMOM; checked the YMOM contracts and ran UAT-ADD-01/02 |
+| Part C | Reviewed the triage and PR #53, PR #55; recorded the findings in both directions | Triaged #52 (not-defect) and #54 (accepted Minor); reported YMOM #60 and #59 |
+| Part D | Reviewed PR #55 (ran RED/GREEN, E2E, checked 1280/375 px) and merged it; RED/GREEN footer in PR #57; opened release PR #58, tag `v0.1.2`; retested YMOM #60/#59 | Wrote RED `044ea2a` and GREEN `d4590dc` (PR #55); reviewed and merged PR #57 and PR #58; checked Deploy demo and the URL after deployment |
+| Pair work | Decided the YMOM acceptance together before sending it; coordinated test times and deployment notices with the partner team; produced the Lab 6 report PDF | (same) |
+
+## Sprint 2 and Lab 7 (up to the `v0.2.0` release preparation)
+
+Source: GitHub issues #59–#68, #79 and PRs #61, #69, #71–#78 (author, reviewer, merged by) on `sprint-2`. Lab 7 metrics,
+release readiness and retrospective (#70, phet526) follow after the `v0.2.0` deployment.
+
+| Work | ILoveSiesta | phet526 |
+|---|---|---|
+| Setup | #60 PR #61: `sprint-2` staging, CI trigger, plan v0.6, Lab 6 documents brought in line with the Lab 6 report | Reviewed and merged PR #61 |
+| Requirements / design | F-05, F-06, F-08 contracts (BR-13 and BR-11 detailed in the SRS); agreed decisions G1–G7 for grades with phet526 in #66 | F-07, F-09 and AC-01-10 contracts (BR-12 detailed in the SRS); agreed the F-09 status options with ILoveSiesta in #67 (Option A) |
+| Tests and implementation (TDD) | F-05 (#62, PR #69), F-06 (#63, PR #73), F-08 (#66, PR #76): tests-only RED commit, then implementation | F-07 (#64, PR #75), F-09 (#67, PR #77): tests-only RED commit, then implementation; TEST-01-14 for AC-01-10 (#65, PR #74) |
+| Reviews | PR #74 (mutation check of TEST-01-14, approve, merge); PR #75 (request changes for the Edit milestone layout and the revision numbers, then approve, merge); PR #77 (RED re-run, long-title layout check at 1024/375 px, approve, merge) | Reviewed, approved and merged PR #69, #71, #72, #73, #76 |
+| Lab 7 change #59 (BR-05 7-day window) | Wrote the change request, sent it and the clarification to the TA, recorded the approval; contract revision and impact analysis (PR #71); RED → GREEN (PR #72) | Reviewed the contract revision before any code (PR #71) and the RED → GREEN PR (PR #72), and merged both |
+| Release | #79 (PR #78): footer `CPMS v0.2.0` RED → GREEN, Sprint 2 completion table (`docs/sprints/sprint-2/README.md`), regression on the release-prep commit; #68: release PR to `main` and deployment checks | Reviews PR #78 and the release PR to `main` |
+| Pair work | Planned the Sprint 2 split and the order of the parallel PRs; resolved revision-number conflicts between parallel PRs (the author who merged later renumbered) | (same) |
 
 AI assistance is declared in [`ai-use.md`](ai-use.md).

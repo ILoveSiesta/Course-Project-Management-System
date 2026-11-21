@@ -4,13 +4,19 @@ import { useAuth } from "../context/AuthContext.js";
 import {
   ApiError,
   Milestone,
+  MilestoneUpdate,
+  GradeState,
   Submission,
   createFeedbackApi,
+  getGradeApi,
   getMilestoneApi,
   getMilestoneSubmissionsApi,
+  updateMilestoneApi,
 } from "../api.js";
 import { formatDeadline } from "../format.js";
 import { SubmissionList } from "./SubmissionList.js";
+import { MilestoneEditForm } from "./MilestoneEditForm.js";
+import { SupervisorGradeCard } from "./GradeCard.js";
 
 export const SupervisorMilestone: React.FC = () => {
   const { token, logout } = useAuth();
@@ -20,6 +26,8 @@ export const SupervisorMilestone: React.FC = () => {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [gradeState, setGradeState] = useState<GradeState | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -47,6 +55,13 @@ export const SupervisorMilestone: React.FC = () => {
       }
     })();
 
+    // F-08: the grade is loaded on its own; if it fails, the rest of the page still works.
+    getGradeApi(token, milestoneId)
+      .then((state) => {
+        if (active) setGradeState(state);
+      })
+      .catch(() => undefined);
+
     return () => {
       active = false;
     };
@@ -62,6 +77,23 @@ export const SupervisorMilestone: React.FC = () => {
       );
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return logout();
+      throw err;
+    }
+  };
+
+  // F-05: saves the edit; errors are rethrown so the form can show them (401 logs out).
+  const saveMilestone = async (update: MilestoneUpdate) => {
+    if (!token) return undefined;
+    try {
+      const saved = await updateMilestoneApi(token, milestoneId, update);
+      setMilestone(saved);
+      setIsEditing(false);
+      return saved;
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        logout();
+        return undefined;
+      }
       throw err;
     }
   };
@@ -82,7 +114,30 @@ export const SupervisorMilestone: React.FC = () => {
               Due: <span>{formatDeadline(milestone.deadline)}</span>
             </div>
             {milestone.description && <p className="milestone-description">{milestone.description}</p>}
+            {isEditing ? (
+              <MilestoneEditForm milestone={milestone} onSave={saveMilestone} onCancel={() => setIsEditing(false)} />
+            ) : (
+              <div className="history-toolbar">
+                <button type="button" className="btn btn-secondary" onClick={() => setIsEditing(true)}>
+                  Edit milestone
+                </button>
+                <Link to={`/supervisor/milestones/${milestone.id}/history`} className="btn btn-secondary">
+                  View revision history
+                </Link>
+              </div>
+            )}
           </section>
+
+          {gradeState && token && (
+            <SupervisorGradeCard
+              token={token}
+              milestoneId={milestoneId}
+              submissions={submissions}
+              state={gradeState}
+              onChange={setGradeState}
+              onUnauthorized={logout}
+            />
+          )}
 
           <SubmissionList submissions={submissions} onAddFeedback={addFeedback} />
         </>
