@@ -8,6 +8,7 @@
 |---|---|---|---|
 | 0.1 | 2026-11-21 | ILoveSiesta | Initial contract for F-08 (issue #66); decisions G1–G7 agreed by both students in #66 |
 | 0.2 | 2026-11-21 | ILoveSiesta | AC-08-06 / TEST-08-06 corrected before the test commit: student3 is a student, so `PUT` and release are rejected by role (403) before the scope check; only its `GET` gives 404. Validation helper named `validateGradeInput` in `server/src/utils/validation.ts` |
+| 0.3 | 2026-11-21 | ILoveSiesta | Definition of Done filled with executed results; no behaviour change |
 
 ## 1. Linked requirements
 
@@ -139,8 +140,8 @@ Existing tests that render the milestone pages (`Submissions.test.tsx`, `Feedbac
 
 ## 8. Definition of Done and evidence
 
-- [ ] All AC-08-01..AC-08-09 implemented
-- [ ] Migration `f08_grades` applied on a fresh test database; all STS tests executed and passing (`npm run build`, `npm test`, `npm run test:e2e`, `python -m unittest discover -s deploy/tests`), counts recorded; CI `test-and-docker` green on the PR
-- [ ] TDD red → green: failing tests commit (tests only; negative cases carry a positive control) → implementation commit; counts recorded
-- [ ] SRS BR-11 (v0.8), System SDS (v0.9), `docs/traceability.md`, `docs/features.md` updated
+- [x] All AC-08-01..AC-08-09 implemented
+- [x] Migration `20261121092553_f08_grades` (with the hand-added `Grade_score_range` check) applied on a fresh test database by the test global setup; all STS tests executed and passing on `249bc1a`: `npm run build` OK; `npm test` server 116 passed (F-08: 7 API + 1 unit), client 26 passed (F-08: 3), 0 failed, 0 skipped; `npm run test:e2e` 4 passed (after `npx prisma migrate deploy` on the local dev database: the first E2E run failed 3 tests with "The column `Milestone.gradesReleasedAt` does not exist" because the dev database did not have the new migration yet); `python -m unittest discover -s deploy/tests` 17 OK. CI `test-and-docker`: recorded on the PR
+- [x] TDD red → green: failing tests `b616439` (tests only) on `517f3a4`: build OK; server 8 failed — 7 API with `404` because the grade routes did not exist (each negative case carries a positive control), 1 unit `validateGradeInput is not a function`; client 3 failed — no "Grade" region → implementation `249bc1a` (all pass). Contract v0.2 corrected AC-08-06 before the test commit (student3's `PUT`/release get 403 by role)
+- [x] SRS BR-11 (v0.8), System SDS (v0.9), `docs/traceability.md` (v2.0), `docs/features.md` (v1.4) updated
 - [ ] PR reviewed by phet526 (approve before merge) and merged into `sprint-2`
