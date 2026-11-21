@@ -149,5 +149,5 @@ Models added to `server/prisma/schema.prisma` with migration `f01_auth_teams`:
 
 - [x] STS test ID `TEST-01-14` added for `AC-01-10` in §7
 - [x] Automated integration test `TEST-01-14` added in `server/tests/api/auth.api.test.ts` (seed already uses idempotent upserts; no `seed.ts` change required)
-- [ ] Executed against PostgreSQL (`npm run build`, `npm test`, `npm run test:e2e`, `deploy/tests`) and CI green on `test/ac-01-10-seed-idempotency`
+- [x] Executed against PostgreSQL on `bbda76d`: `npm run build` OK, `npm test` (server **102 passed** across 12 files including `TEST-01-14`, client **21 passed** across 6 files), `npm run test:e2e` (**4 passed**), `python -m unittest discover -s deploy/tests` (**17 OK**); 0 failed, 0 skipped
 - [ ] PR reviewed and merged into `sprint-2`

@@ -19,6 +19,7 @@
 | 1.5 | 2026-11-21 | ILoveSiesta | F-05 AC/tests and results on the feature branch (commit `fdfdff4`, #62): FR-10, BR-13; F-05 rows added to BR-02, BR-03, BR-04 |
 | 1.6 | 2026-11-21 | ILoveSiesta | Approved change CHG-03 (Lab 7 change request #59, BR-05 7-day late window): BR-05 and FR-12 rows list the revised and new AC/tests as PLANNED; earlier PASS kept for the v0.1 rule; coverage gap added |
 | 1.7 | 2026-11-21 | ILoveSiesta | CHG-03 rows: RED `f5deaf7` → GREEN `8259688` on the feature branch (#59); revised BR-05 and FR-12 window rows PASS on `8259688` (accepted release recorded at the release) |
+| 1.8 | 2026-11-21 | phet526 | Added `AC-01-10` / `TEST-01-14` seed idempotency row under BR-10 (`PASS` on commit `bbda76d`) and closed the Sprint 1 missing STS test ID in §4 (#65) |
 
 Feature and responsibility IDs refer to `docs/features.md`.
 
@@ -73,6 +74,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | BR-08 Submission validation | F-03 | 1 | AC-03-09 | TEST-03-11, TEST-03-12 | `server/tests/api/submissions.api.test.ts`; `server/tests/unit/submission-rules.test.ts` | PASS | `65aaf05` |
 | BR-09 Feedback per version, append-only | F-04 (F-07 displays history) | 1 | AC-04-05, AC-04-06, AC-04-09 | TEST-04-05, TEST-04-06, TEST-04-09, TEST-04-10 | `server/tests/api/feedback.api.test.ts`; `server/tests/unit/feedback-validation.test.ts` | PASS | `35b29a7` |
 | BR-10 One team per student | F-01 (seed + DB constraint); F-13 (UI) | 1, 3 | AC-01-09 | TEST-01-12 | `server/tests/api/auth.api.test.ts` | PASS | `d24f2c0` |
+| BR-10 (seed, AC-01-10) Idempotent demo seed | F-01 | 1 (verified Sprint 2, #65) | AC-01-10 | TEST-01-14 | `server/tests/api/auth.api.test.ts` | PASS | `bbda76d` |
 | BR-11 Grade visibility after release | F-08 | 2 | Sprint 2 contract | — | — | PLANNED | — |
 | BR-12 Derived status | F-09 | 2 | Sprint 2 contract | — | — | PLANNED | — |
 | BR-13 Deadline only extended | F-05 | 2 | AC-05-02, AC-05-03, AC-05-06, AC-05-07 | TEST-05-02, TEST-05-03, TEST-05-06, TEST-05-07 | `server/tests/api/milestone-edit.api.test.ts` | PASS | `fdfdff4` |
@@ -98,7 +100,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 ## 4. Coverage gaps
 
 - No requirement is unallocated: all 23 FR, 14 BR and 12 NFR map to a feature or system responsibility and a sprint.
-- F-01 AC and tests are implemented and passing on commit `d24f2c0`.
+- F-01 AC and tests are implemented and passing on commit `d24f2c0`; follow-up `AC-01-10` (`TEST-01-14`, #65) passed on commit `bbda76d` (server 102 passed, client 21 passed, E2E 4 passed, `deploy/tests` 17 OK), removing the Sprint 1 missing-test limitation.
 - F-02 AC and tests are implemented and passing on commit `b97f30d` (server tests on the separate `cpms_test` database).
 - F-03 AC and tests are implemented and passing on commit `65aaf05`.
 - F-04 AC and tests are implemented and passing on commit `35b29a7`.
