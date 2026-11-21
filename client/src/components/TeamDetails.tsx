@@ -1,7 +1,15 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Milestone, Team } from "../api.js";
+import { Milestone, MilestoneStatus, Team } from "../api.js";
 import { formatDeadline } from "../format.js";
+
+const STATUS_BADGE_CLASS: Record<MilestoneStatus, string> = {
+  "Not submitted": "badge badge-neutral",
+  Overdue: "badge badge-danger",
+  Submitted: "badge",
+  "Submitted late": "badge badge-warning",
+  Reviewed: "badge badge-success",
+};
 
 export const TeamSummary: React.FC<{ team: Team }> = ({ team }) => (
   <section className="card">
@@ -26,8 +34,11 @@ export const MilestoneList: React.FC<{ milestones: Milestone[]; linkPrefix?: str
     <ul aria-label="Milestones" className="plain-list milestone-list">
       {milestones.map((m) => (
         <li key={m.id}>
-          <div className="milestone-title">
-            {linkPrefix ? <Link to={`${linkPrefix}/${m.id}`}>{m.title}</Link> : m.title}
+          <div className="milestone-header">
+            <div className="milestone-title">
+              {linkPrefix ? <Link to={`${linkPrefix}/${m.id}`}>{m.title}</Link> : m.title}
+            </div>
+            {m.status && <span className={STATUS_BADGE_CLASS[m.status]}>{m.status}</span>}
           </div>
           <div className="milestone-meta">
             Due: <span>{formatDeadline(m.deadline)}</span>

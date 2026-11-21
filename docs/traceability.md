@@ -23,6 +23,7 @@
 | 1.9 | 2026-11-21 | ILoveSiesta | F-06 AC/tests and results on the feature branch (commit `997b7d1`, #63): FR-11; F-06 rows added to BR-02, BR-03, BR-04 (numbered 1.9 after #65 / PR #74 took 1.8) |
 | 2.0 | 2026-11-21 | ILoveSiesta | F-08 AC/tests and results on the feature branch (commit `249bc1a`, #66): FR-18, FR-19, BR-11; F-08 rows added to BR-01, BR-02, BR-03 |
 | 2.1 | 2026-11-21 | phet526 | F-07 AC/tests and results on the feature branch (commit `9751f0f`, #64): FR-15; F-07 rows added to BR-01, BR-02, BR-06, BR-09, NFR-02, NFR-03 (renumbered from 1.10 after F-08 PR #76 took 2.0) |
+| 2.2 | 2026-11-21 | phet526 | F-09 AC/tests and results on the feature branch (commit `31949c8`, #67): FR-20, BR-12; F-09 access tests added to NFR-02, NFR-03 (renumbered after F-08 PR #76 took 2.0 and F-07 PR #75 took 2.1) |
 
 Feature and responsibility IDs refer to `docs/features.md`.
 
@@ -57,7 +58,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | FR-17 Students view feedback | F-04 | 1 | AC-04-07, AC-04-11 | TEST-04-07, TEST-04-13; TEST-E2E-01 (#6) | `server/tests/api/feedback.api.test.ts`; `client/tests/Feedback.test.tsx`; `e2e/sprint1-normal-journey.spec.ts` | PASS | `5936f32` |
 | FR-18 Record grade | F-08 | 2 | AC-08-01, AC-08-02, AC-08-07, AC-08-08 | TEST-08-01, TEST-08-02, TEST-08-07, TEST-08-08, TEST-08-09 | `server/tests/api/grades.api.test.ts`; `server/tests/unit/grade-validation.test.ts`; `client/tests/Grades.test.tsx` | PASS | `249bc1a` |
 | FR-19 Release grades | F-08 | 2 | AC-08-03, AC-08-04, AC-08-05, AC-08-08, AC-08-09 | TEST-08-03, TEST-08-04, TEST-08-05, TEST-08-09, TEST-08-10, TEST-08-11 | `server/tests/api/grades.api.test.ts`; `client/tests/Grades.test.tsx` | PASS | `249bc1a` |
-| FR-20 Team–milestone status | F-09 | 2 | Sprint 2 contract | — | — | PLANNED | — |
+| FR-20 Team–milestone status | F-09 | 2 | AC-09-01, AC-09-02, AC-09-03, AC-09-04, AC-09-05, AC-09-07 | TEST-09-01, TEST-09-02, TEST-09-03, TEST-09-04, TEST-09-06, TEST-09-07, TEST-09-08 | `server/tests/api/milestone-status.api.test.ts`; `server/tests/unit/milestone-status.test.ts`; `client/tests/MilestoneStatus.test.tsx` | PASS | `31949c8` |
 | FR-21 Progress board | F-10 | 3 | Sprint 3 contract | — | — | PLANNED | — |
 | FR-22 Summary report | F-11 | 3 | Sprint 3 contract | — | — | PLANNED | — |
 | FR-23 Filter submissions | F-12 | 3 | Sprint 3 contract | — | — | PLANNED | — |
@@ -79,7 +80,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | BR-10 One team per student | F-01 (seed + DB constraint); F-13 (UI) | 1, 3 | AC-01-09 | TEST-01-12 | `server/tests/api/auth.api.test.ts` | PASS | `d24f2c0` |
 | BR-10 (seed, AC-01-10) Idempotent demo seed | F-01 | 1 (verified Sprint 2, #65) | AC-01-10 | TEST-01-14 | `server/tests/api/auth.api.test.ts` | PASS | `bbda76d` |
 | BR-11 Grade visibility after release; scale and change rules | F-08 | 2 | AC-08-02, AC-08-03, AC-08-04, AC-08-05, AC-08-07 | TEST-08-02, TEST-08-03, TEST-08-04, TEST-08-05, TEST-08-07, TEST-08-08 | `server/tests/api/grades.api.test.ts`; `server/tests/unit/grade-validation.test.ts` | PASS | `249bc1a` |
-| BR-12 Derived status | F-09 | 2 | Sprint 2 contract | — | — | PLANNED | — |
+| BR-12 Derived status | F-09 | 2 | AC-09-01, AC-09-02, AC-09-03, AC-09-04 | TEST-09-01, TEST-09-02, TEST-09-03, TEST-09-06 | `server/tests/api/milestone-status.api.test.ts`; `server/tests/unit/milestone-status.test.ts` | PASS | `31949c8` |
 | BR-13 Deadline only extended | F-05 | 2 | AC-05-02, AC-05-03, AC-05-06, AC-05-07 | TEST-05-02, TEST-05-03, TEST-05-06, TEST-05-07 | `server/tests/api/milestone-edit.api.test.ts` | PASS | `fdfdff4` |
 | BR-14 Membership change keeps submitter | F-13 | 3 | Sprint 3 contract | — | — | PLANNED | — |
 
@@ -88,8 +89,8 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | Requirement | Feature / responsibility | Sprint | Target / verification | Planned test | Actual test | Result | Version |
 |---|---|---|---|---|---|---|---|
 | NFR-01 Hashed passwords | F-01 | 1 | 100% bcrypt hashes, cost ≥ 10 | TEST-01-11 | `server/tests/api/auth.api.test.ts` | PASS | `d24f2c0` |
-| NFR-02 401 on protected endpoints | SR-01 | 1 (extended each sprint) | Every protected endpoint, 4 token cases | TEST-01-07..08b, TEST-02-04, TEST-03-13, TEST-04-08, TEST-07-04 | `server/tests/api/auth.api.test.ts`; `server/tests/api/teams-milestones.api.test.ts`; `server/tests/api/submissions.api.test.ts`; `server/tests/api/feedback.api.test.ts`; `server/tests/api/revision-history.api.test.ts` | PASS (F-01..F-04, F-07 endpoints) | `9751f0f` |
-| NFR-03 Backend authorization | SR-01 | 1 (extended each sprint) | 403/404, no data | TEST-01-10, TEST-02-03, 06, 07, 10; TEST-03-08..10; TEST-04-03, TEST-04-04; TEST-07-04 | `server/tests/api/auth.api.test.ts`; `server/tests/api/teams-milestones.api.test.ts`; `server/tests/api/submissions.api.test.ts`; `server/tests/api/feedback.api.test.ts`; `server/tests/api/revision-history.api.test.ts` | PASS (F-01..F-04, F-07) | `9751f0f` |
+| NFR-02 401 on protected endpoints | SR-01 | 1 (extended each sprint) | Every protected endpoint, 4 token cases | TEST-01-07..08b, TEST-02-04, TEST-03-13, TEST-04-08, TEST-07-04, TEST-09-05 | `server/tests/api/auth.api.test.ts`; `server/tests/api/teams-milestones.api.test.ts`; `server/tests/api/submissions.api.test.ts`; `server/tests/api/feedback.api.test.ts`; `server/tests/api/revision-history.api.test.ts`; `server/tests/api/milestone-status.api.test.ts` | PASS (F-01..F-04, F-07, F-09 endpoints) | `9751f0f; 31949c8` |
+| NFR-03 Backend authorization | SR-01 | 1 (extended each sprint) | 403/404, no data | TEST-01-10, TEST-02-03, 06, 07, 10; TEST-03-08..10; TEST-04-03, TEST-04-04; TEST-07-04, TEST-09-05 | `server/tests/api/auth.api.test.ts`; `server/tests/api/teams-milestones.api.test.ts`; `server/tests/api/submissions.api.test.ts`; `server/tests/api/feedback.api.test.ts`; `server/tests/api/revision-history.api.test.ts`; `server/tests/api/milestone-status.api.test.ts` | PASS (F-01..F-04, F-07, F-09) | `9751f0f; 31949c8` |
 | NFR-04 Token expiry and logout | F-01 | 1 | ≤ 2 h; revoked after logout | TEST-01-09, TEST-01-08b | `server/tests/api/auth.api.test.ts` | PASS | `d24f2c0` |
 | NFR-05 Safe error shape | SR-02 | 1 | JSON shape, no internals | Skeleton test `server/tests/health.api.test.ts` (404 case); F-01–F-04 STS | `health.api.test.ts` › unknown API route | PASS (404 case only) | `49d3c70` |
 | NFR-06 Concurrent submissions | F-03 | 1 | 10 parallel → unique versions, limit kept | TEST-03-14 | `server/tests/api/submissions.api.test.ts` | PASS | `65aaf05` |
@@ -111,6 +112,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 - F-06 AC and tests are implemented and passing on commit `997b7d1` (feature branch; accepted release recorded at the Sprint 2 release).
 - F-07 AC and tests are implemented and passing on commit `9751f0f` (feature branch; accepted release recorded at the Sprint 2 release).
 - F-08 AC and tests are implemented and passing on commit `249bc1a` (feature branch; accepted release recorded at the Sprint 2 release).
+- F-09 AC and tests are implemented and passing on commit `31949c8` (feature branch; accepted release recorded at the Sprint 2 release).
 - E2E #6 verified Sprint 1 normal domain journey (TEST-E2E-01) and rejection journey (TEST-E2E-02) on commit `5936f32` (the reviewed head of PR #12; specs first passed on `049bbfe`).
 - Sprint 2–3 requirements have a feature and sprint but no AC or tests yet; this is expected at Deliverable 1.
 - BR-05 was revised by CHG-03 (Lab 7, #59). The v0.1 rule's PASS results stay recorded; the revised rule (AC-03-04 rev., AC-03-14..AC-03-18) failed on the pre-change code at RED `f5deaf7` and passes on GREEN `8259688` (feature branch; accepted release and deployed revision recorded at the release). Impact analysis: `docs/labs/lab-07/change-impact.md`.

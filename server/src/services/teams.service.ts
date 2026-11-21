@@ -2,7 +2,12 @@ import { Prisma } from "@prisma/client";
 import { getPrisma } from "../prisma.js";
 import { AuthenticatedUser } from "../middleware/auth.js";
 import { HttpError, notFound } from "../utils/httpError.js";
-import { validateMilestoneInput, validateMilestoneUpdate, validateTeamIds } from "../utils/validation.js";
+import {
+  deriveMilestoneStatus,
+  validateMilestoneInput,
+  validateMilestoneUpdate,
+  validateTeamIds,
+} from "../utils/validation.js";
 
 const personSelect = { id: true, name: true, email: true } as const;
 
@@ -13,6 +18,16 @@ const teamInclude = {
 
 const milestoneInclude = {
   createdBy: { select: { id: true, name: true } },
+  // F-09 (no N+1): load only the latest submission version and its feedback count.
+  submissions: {
+    orderBy: { version: "desc" },
+    take: 1,
+    select: {
+      version: true,
+      daysLate: true,
+      _count: { select: { feedback: true } },
+    },
+  },
 } satisfies Prisma.MilestoneInclude;
 
 type TeamWithPeople = Prisma.TeamGetPayload<{ include: typeof teamInclude }>;
@@ -29,7 +44,16 @@ function toTeamDto(team: TeamWithPeople) {
   };
 }
 
-function toMilestoneDto(m: MilestoneWithCreator) {
+function toMilestoneDto(m: MilestoneWithCreator, now: Date = new Date()) {
+  const latest = m.submissions[0];
+  const status = deriveMilestoneStatus({
+    deadline: m.deadline,
+    now,
+    latestSubmission: latest
+      ? { daysLate: latest.daysLate, feedbackCount: latest._count.feedback }
+      : null,
+  });
+
   return {
     id: m.id,
     teamId: m.teamId,
@@ -38,6 +62,7 @@ function toMilestoneDto(m: MilestoneWithCreator) {
     deadline: m.deadline.toISOString(),
     createdAt: m.createdAt.toISOString(),
     createdBy: m.createdBy,
+    status,
   };
 }
 
@@ -78,7 +103,8 @@ export async function listMilestones(user: AuthenticatedUser, teamId: number) {
     include: milestoneInclude,
     orderBy: [{ deadline: "asc" }, { id: "asc" }],
   });
-  return milestones.map(toMilestoneDto);
+  const now = new Date();
+  return milestones.map((m) => toMilestoneDto(m, now));
 }
 
 // Role is checked by requireRole("SUPERVISOR") on the route; scope is checked here, before validation.
@@ -107,7 +133,8 @@ export async function createMilestoneForTeams(user: AuthenticatedUser, body: unk
       prisma.milestone.create({ data: { ...input, teamId, createdById: user.id }, include: milestoneInclude })
     )
   );
-  return created.map(toMilestoneDto);
+  const now = new Date();
+  return created.map((m) => toMilestoneDto(m, now));
 }
 
 export async function getMilestone(user: AuthenticatedUser, milestoneId: number) {

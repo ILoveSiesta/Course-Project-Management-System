@@ -56,6 +56,13 @@ export interface Team {
   supervisors: Person[];
 }
 
+export type MilestoneStatus =
+  | "Not submitted"
+  | "Overdue"
+  | "Submitted"
+  | "Submitted late"
+  | "Reviewed";
+
 export interface Milestone {
   id: number;
   teamId: number;
@@ -64,6 +71,7 @@ export interface Milestone {
   deadline: string;
   createdAt: string;
   createdBy: { id: number; name: string };
+  status?: MilestoneStatus;
 }
 
 export interface MilestoneDraft {

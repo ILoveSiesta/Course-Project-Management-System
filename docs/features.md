@@ -17,6 +17,7 @@
 | 1.3 | 2026-11-21 | ILoveSiesta | F-06 status updated to Implemented (#63) |
 | 1.4 | 2026-11-21 | ILoveSiesta | F-08 status updated to Implemented (#66) |
 | 1.5 | 2026-11-21 | phet526 | F-07 status updated to Implemented (#64) |
+| 1.6 | 2026-11-21 | phet526 | F-09 status updated to Implemented (#67) |
 
 Requirement IDs refer to `docs/srs.md`. Sprint 1 features have GitHub issues and engineering contracts in
 `docs/sprints/sprint-1/`. Sprint 2–3 features are allocated now and specified in their sprint.
@@ -35,7 +36,7 @@ Status values: **Planned** · **In progress** · **Implemented** · **Tested** �
 | F-06 | Milestone for several teams | Create the same milestone for several assigned teams in one action | FR-11, BR-04 | F-02 | 2 | #63 | Implemented |
 | F-07 | Revision history | Full version history per team–milestone with feedback on each version | FR-15, BR-09 | F-03, F-04 | 2 | #64 | Implemented |
 | F-08 | Grades and release | Record a grade per team–milestone; release grades; students see released grades only | FR-18, FR-19, BR-11 | F-03 | 2 | #66 | Implemented |
-| F-09 | Team–milestone status | Derived status (Not submitted, Overdue, Submitted, Submitted late, Reviewed) shown on lists | FR-20, BR-12 | F-03, F-04 | 2 | — | Planned |
+| F-09 | Team–milestone status | Derived status (Not submitted, Overdue, Submitted, Submitted late, Reviewed) shown on lists | FR-20, BR-12 | F-03, F-04 | 2 | #67 | Implemented |
 | F-10 | Progress board | Student: own team's milestones by status; supervisor: teams × milestones board | FR-21 | F-09 | 3 | — | Planned |
 | F-11 | Supervisor summary report | Per-team counts by status, late submissions, average released grade | FR-22, NFR-10 | F-08, F-09 | 3 | — | Planned |
 | F-12 | Submission filtering | Filter supervisor submission list by team, milestone and status | FR-23 | F-09 | 3 | — | Planned |
