@@ -8,6 +8,7 @@
 | 0.4 | 2026-11-06 | ILoveSiesta | D-06 agreed without TA confirmation: removed the TA dependency of F-13 and the related risk |
 | 0.5 | 2026-11-17 | ILoveSiesta | §3: Lab 6 runs on the `sprint-1` staging branch (TA decision) instead of landing in Sprint 2 (#48) |
 | 0.6 | 2026-11-21 | ILoveSiesta | §1: Sprint 2 dates revised to 21 – 29 Nov (staging `sprint-2` opened from `v0.1.2`); §3: Lab 7 runs on `sprint-2` with its own Issue/branch/PR (#59, #60) |
+| 0.7 | 2026-11-21 | ILoveSiesta | §1: Sprint 3 starts on 21 Nov from `v0.2.0` (staging `sprint-3`), release candidate `v0.3.0` at 29 Nov and final `v1.0.0` by 13 Dec; §3: Lab 7 records (#70) go through `sprint-3` (#81) |
 
 Feature IDs refer to `docs/features.md`; requirement IDs to `docs/srs.md`.
 
@@ -17,7 +18,7 @@ Feature IDs refer to `docs/features.md`; requirement IDs to `docs/srs.md`.
 |---|---|---|---|---|---|---|
 | 1 | 3 – 8 Nov 2026 | Small working domain slice: a supervisor sets a milestone, a student team submits work, the supervisor gives feedback — with real authentication, backend permissions and persistence | F-01, F-02, F-03, F-04; SR-01, SR-02, SR-04 | Engineering baseline (#1) first; then F-01 → F-02 → F-03 → F-04 → E2E (#6) | Release `v0.1.0` on `main`; all Sprint 1 AC verified by automated tests; documented local setup | Deliverable 1 — 8 Nov |
 | 2 | 21 – 29 Nov 2026 (planned 9 – 25 Nov; started after Labs 5–6 used the Sprint 1 release until 21 Nov; staging `sprint-2` from `v0.1.2` = `9dd9239`) | Core expansion: milestone maintenance, revision history, grades with release, team–milestone status; ship through the delivery pipeline | F-05, F-06, F-07, F-08, F-09; SR-03 | Sprint 1 release; Lab 5 pipeline (SR-03) before the Sprint 2 release | All Sprint 2 features complete, reviewed and verified; deployed on GCP from `main` | Deliverable 2 — 29 Nov (must be complete) |
-| 3 | 26 Nov – 13 Dec 2026 | Completion and hardening: progress board, reports, filtering, team management; regression, UAT fixes, performance and responsive checks | F-10, F-11, F-12, F-13; SR-05, SR-06 | F-09 (status) for F-10–F-12; F-08 for F-11; F-01 data for F-13 | All baseline features complete; final regression and UAT re-tests pass; final release deployed | Progress at 29 Nov; final 13 Dec |
+| 3 | 21 Nov – 13 Dec 2026 (planned 26 Nov; staging `sprint-3` opened from `v0.2.0` = `7c3a970` right after the Sprint 2 release; stays open until the final release) | Completion and hardening: progress board, reports, filtering, team management; regression, UAT fixes, performance and responsive checks | F-10, F-11, F-12, F-13; SR-05, SR-06 | F-09 (status) for F-10–F-12; F-08 for F-11; F-01 data for F-13 | All baseline features complete; final regression and UAT re-tests pass; final release deployed | Progress at 29 Nov (release candidate `v0.3.0` from `sprint-3`); final 13 Dec (`v1.0.0`) |
 
 ## 2. Sprint 1 scope
 
@@ -68,7 +69,7 @@ their next issue, so each feature can start as soon as the previous one is merge
 |---|---|---|---|
 | Lab 5 — Docker, CI/CD, GCP | 15 Nov | Sprint 1 release `v0.1.0` | Sprint 2 (establishes SR-03) |
 | Lab 6 — Cross-team UAT and defects | 22 Nov | Sprint 1 scope on the recorded release `38dc25c` | Sprint 1 staging `sprint-1` (TA decision, 17 Nov): UAT documents and defect fixes as branches from `sprint-1`, released to `main` once at the end of Lab 6 |
-| Lab 7 — Maintenance change and release readiness | 29 Nov | Behaviour accepted in the Sprint 1 release `v0.1.2` (Lab 6), changed on the current `sprint-2` code | Sprint 2 staging `sprint-2`: approved change request #59 with its own Issue/branch/PR, kept separate from Sprint 2 feature work, released to `main` through the normal release PR |
+| Lab 7 — Maintenance change and release readiness | 29 Nov | Behaviour accepted in the Sprint 1 release `v0.1.2` (Lab 6), changed on the current `sprint-2` code | Sprint 2 staging `sprint-2`: approved change request #59 with its own Issue/branch/PR, kept separate from Sprint 2 feature work, released to `main` in `v0.2.0`. The Lab 7 records (#70: metrics, release readiness, retrospective; documents only) go through Sprint 3 staging `sprint-3` into `main` with `v0.3.0`, kept separate by their own Issue/branch/PR and the `lab7` label |
 
 ## 4. Risks and responses
 
