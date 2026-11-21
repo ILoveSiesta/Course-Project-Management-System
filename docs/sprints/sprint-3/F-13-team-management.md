@@ -8,6 +8,7 @@
 |---|---|---|---|
 | 0.1 | 2026-11-22 | phet526 | Initial contract for F-13 (issue #83): team creation, unassigned-student picker, member add/remove, BR-10 concurrency, BR-14 submitter preservation & removed-student access rules |
 | 0.2 | 2026-11-22 | phet526 | Definition of Done filled with executed local & CI (`44932928877`) results; no behaviour change |
+| 0.3 | 2026-11-22 | phet526 | Address PR #88 review: scope TEST-13-15 member-row assertions to `.member-info` and add `beforeEach`/`afterEach` `ensureStudentTwoInAlpha` cleanup (`f894aa6`, CI `44934740519`) |
 
 ## 1. Linked requirements
 
@@ -126,7 +127,7 @@ No schema change and no Prisma migration: `Team` (`name @unique`), `TeamMembersh
 ## 8. Definition of Done and evidence
 
 - [x] All AC-13-01..AC-13-11 implemented
-- [x] All STS tests executed and passing on a fresh test database — CI `CI & Docker Build` run `44932928877` on commit `a4dd669` (`194 / 194` passed, `0` failed, `0` skipped): `deploy/tests` `17` OK (+ deploy/release stub shell checks), backend `22` files / `139` passed (`team-management.api.test.ts` `10`, `team-management-validation.test.ts` `1`), frontend `11` files / `33` passed (`TeamManagement.test.tsx` `3`), Playwright E2E `5` passed in `13.8s` (`f13-team-management.spec.ts`), and Docker image `cpms-app:ci` built cleanly; local checks (`npm run build`, `client` `33`, `server/tests/unit` `40`, `health.api.test.ts` `2`, `deploy/tests` `17`) also passed (`local Docker Desktop stopped`)
-- [x] TDD red → green commits recorded on `feature/F-13-team-management`: contract `26b20bc` → RED `eae26bf` (unit `validateTeamName is not a function`; UI missing `"Create team"`, `"Student"`, `"No members yet."`) → implementation `0f39b85` → E2E selector fixes `2c7af88` / `a4dd669` (CI `44932928877` green)
+- [x] All STS tests executed and passing on a fresh test database — CI `CI & Docker Build` run `44934740519` on commit `f894aa6` (`194 / 194` passed, `0` failed, `0` skipped): `deploy/tests` `17` OK (+ deploy/release stub shell checks), backend `22` files / `139` passed (`team-management.api.test.ts` `10`, `team-management-validation.test.ts` `1`), frontend `11` files / `33` passed (`TeamManagement.test.tsx` `3`), Playwright E2E `5` passed in `14.1s` (no retries; `f13-team-management.spec.ts` `4.2s`), and Docker image `cpms-app:ci` built cleanly; local checks (`npm run build`, `client` `33`, `server/tests/unit` `40`, `health.api.test.ts` `2`, `deploy/tests` `17`) also passed (`local Docker Desktop stopped`)
+- [x] TDD red → green commits recorded on `feature/F-13-team-management`: contract `26b20bc` → RED `eae26bf` (unit `validateTeamName is not a function`; UI missing `"Create team"`, `"Student"`, `"No members yet."`) → implementation `0f39b85` → E2E selector & repeatability fixes `2c7af88` / `a4dd669` / `f894aa6` (CI `44934740519` green)
 - [x] SRS FR-07 / BR-14 (`0.10`), System SDS §3.1 / §4 / §4.3 / §5 (`0.12`), `docs/traceability.md` (`2.3`), `docs/features.md` (`1.7`) updated
 - [ ] PR `#88` reviewed by `@ILoveSiesta` (approve before merge) and merged into `sprint-3`

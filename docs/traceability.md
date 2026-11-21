@@ -25,6 +25,7 @@
 | 2.1 | 2026-11-21 | phet526 | F-07 AC/tests and results on the feature branch (commit `9751f0f`, #64): FR-15; F-07 rows added to BR-01, BR-02, BR-06, BR-09, NFR-02, NFR-03 (renumbered from 1.10 after F-08 PR #76 took 2.0) |
 | 2.2 | 2026-11-21 | phet526 | F-09 AC/tests and results on the feature branch (commit `31949c8`, #67): FR-20, BR-12; F-09 access tests added to NFR-02, NFR-03 (renumbered after F-08 PR #76 took 2.0 and F-07 PR #75 took 2.1) |
 | 2.3 | 2026-11-22 | phet526 | F-13 AC/tests and results on the feature branch (commit `a4dd669`, CI `44932928877`, #83): FR-07, BR-10, BR-14; F-13 rows added to BR-02, BR-03, NFR-02, NFR-03, NFR-12 |
+| 2.4 | 2026-11-22 | phet526 | F-13 E2E TEST-13-15 locator & cleanup fix (`f894aa6`, CI `44934740519`): updated FR-07, BR-14 and §4 Coverage gaps references |
 
 Feature and responsibility IDs refer to `docs/features.md`.
 
@@ -45,7 +46,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | FR-04 Role-based home | F-01 | 1 | AC-01-11 | TEST-01-13..13c; E2E (#6) | `client/tests/Auth.test.tsx` | PASS | `d24f2c0` |
 | FR-05 Student views own team | F-02 | 1 | AC-02-01, AC-02-11 | TEST-02-01, TEST-02-12 | `server/tests/api/teams-milestones.api.test.ts`; `client/tests/Milestones.test.tsx` | PASS | `b97f30d` |
 | FR-06 Supervisor lists assigned teams | F-02 | 1 | AC-02-02 | TEST-02-02 | `server/tests/api/teams-milestones.api.test.ts` | PASS | `b97f30d` |
-| FR-07 Team management | F-13 | 3 | AC-13-01..AC-13-11 | TEST-13-01..TEST-13-15 | `server/tests/api/team-management.api.test.ts`; `server/tests/unit/team-management-validation.test.ts`; `client/tests/TeamManagement.test.tsx`; `e2e/f13-team-management.spec.ts` | PASS | `a4dd669` |
+| FR-07 Team management | F-13 | 3 | AC-13-01..AC-13-11 | TEST-13-01..TEST-13-15 | `server/tests/api/team-management.api.test.ts`; `server/tests/unit/team-management-validation.test.ts`; `client/tests/TeamManagement.test.tsx`; `e2e/f13-team-management.spec.ts` | PASS | `f894aa6` |
 | FR-08 Create milestone | F-02 | 1 | AC-02-05, AC-02-12 | TEST-02-05, TEST-02-14; TEST-E2E-01 (#6) | `server/tests/api/teams-milestones.api.test.ts`; `client/tests/Milestones.test.tsx`; `e2e/sprint1-normal-journey.spec.ts` | PASS | `5936f32` |
 | FR-09 List milestones | F-02 | 1 | AC-02-09, AC-02-10, AC-02-11 | TEST-02-09, TEST-02-10, TEST-02-12, TEST-02-13 | `server/tests/api/teams-milestones.api.test.ts`; `client/tests/Milestones.test.tsx` | PASS | `b97f30d` |
 | FR-10 Edit / extend milestone | F-05 | 2 | AC-05-01, AC-05-02, AC-05-08, AC-05-09 | TEST-05-01, TEST-05-02, TEST-05-09, TEST-05-10 | `server/tests/api/milestone-edit.api.test.ts`; `client/tests/MilestoneEdit.test.tsx` | PASS | `fdfdff4` |
@@ -83,7 +84,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | BR-11 Grade visibility after release; scale and change rules | F-08 | 2 | AC-08-02, AC-08-03, AC-08-04, AC-08-05, AC-08-07 | TEST-08-02, TEST-08-03, TEST-08-04, TEST-08-05, TEST-08-07, TEST-08-08 | `server/tests/api/grades.api.test.ts`; `server/tests/unit/grade-validation.test.ts` | PASS | `249bc1a` |
 | BR-12 Derived status | F-09 | 2 | AC-09-01, AC-09-02, AC-09-03, AC-09-04 | TEST-09-01, TEST-09-02, TEST-09-03, TEST-09-06 | `server/tests/api/milestone-status.api.test.ts`; `server/tests/unit/milestone-status.test.ts` | PASS | `31949c8` |
 | BR-13 Deadline only extended | F-05 | 2 | AC-05-02, AC-05-03, AC-05-06, AC-05-07 | TEST-05-02, TEST-05-03, TEST-05-06, TEST-05-07 | `server/tests/api/milestone-edit.api.test.ts` | PASS | `fdfdff4` |
-| BR-14 Membership change keeps submitter | F-13 | 3 | AC-13-07, AC-13-11 | TEST-13-09, TEST-13-15 | `server/tests/api/team-management.api.test.ts`; `e2e/f13-team-management.spec.ts` | PASS | `a4dd669` |
+| BR-14 Membership change keeps submitter | F-13 | 3 | AC-13-07, AC-13-11 | TEST-13-09, TEST-13-15 | `server/tests/api/team-management.api.test.ts`; `e2e/f13-team-management.spec.ts` | PASS | `f894aa6` |
 
 ## 3. Non-functional requirements
 
@@ -118,7 +119,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 - Sprint 2–3 requirements have a feature and sprint but no AC or tests yet; this is expected at Deliverable 1.
 - BR-05 was revised by CHG-03 (Lab 7, #59). The v0.1 rule's PASS results stay recorded; the revised rule (AC-03-04 rev., AC-03-14..AC-03-18) failed on the pre-change code at RED `f5deaf7` and passes on GREEN `8259688` (feature branch; accepted release and deployed revision recorded at the release). Impact analysis: `docs/labs/lab-07/change-impact.md`.
 - NFR-05 is partly verified (404 and F-01 validation/auth error shapes). 5xx cases come with later features.
-- F-13 / FR-07 AC and tests (`TEST-13-01..TEST-13-15`) are implemented and passing on commit `a4dd669` (feature branch `feature/F-13-team-management`, CI run `44932928877`, #83). F-10..F-12 remain Sprint 3 work (`#84`).
+- F-13 / FR-07 AC and tests (`TEST-13-01..TEST-13-15`) are implemented and passing on commit `f894aa6` (feature branch `feature/F-13-team-management`, CI run `44934740519`, #83). F-10..F-12 remain Sprint 3 work (`#84`).
 
 ## 5. Approved changes
 
