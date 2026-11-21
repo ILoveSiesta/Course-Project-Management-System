@@ -76,6 +76,31 @@ export function validateTeamIds(body: unknown): number[] {
   return raw as number[];
 }
 
+export interface GradeInput {
+  score: number;
+  version: number;
+}
+
+// F-08 (BR-11, G1/G2): score is an integer 0–100, version a positive integer (a version number of the milestone;
+// whether it exists in the milestone is checked by the service). Collects both fields before rejecting.
+export function validateGradeInput(body: unknown): GradeInput {
+  const input = (typeof body === "object" && body !== null ? body : {}) as Record<string, unknown>;
+  const details: Record<string, string> = {};
+  const isInteger = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v);
+
+  if (input.score === undefined || input.score === null) details.score = "REQUIRED";
+  else if (!isInteger(input.score)) details.score = "INVALID_TYPE";
+  else if (input.score < 0 || input.score > 100) details.score = "OUT_OF_RANGE";
+
+  if (input.version === undefined || input.version === null) details.version = "REQUIRED";
+  else if (!isInteger(input.version) || input.version <= 0) details.version = "INVALID_TYPE";
+
+  if (Object.keys(details).length > 0) {
+    throw new HttpError(400, "VALIDATION_ERROR", "Invalid grade", details);
+  }
+  return { score: input.score as number, version: input.version as number };
+}
+
 export interface MilestoneUpdate {
   title?: string;
   description?: string | null;
