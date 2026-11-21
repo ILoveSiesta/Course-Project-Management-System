@@ -2,7 +2,7 @@
 
 | Version | Date | Author(s) | Change |
 |---|---|---|---|
-| 0.1 | 2026-11-21 | ILoveSiesta | Contract index, Sprint 2 completion table, Lab 7 maintenance change, Product Definition of Done and known limitations for the Sprint 2 release `v0.2.0` (#68) |
+| 0.1 | 2026-11-21 | ILoveSiesta | Contract index, Sprint 2 completion table, Lab 7 maintenance change, Product Definition of Done and known limitations for the Sprint 2 release `v0.2.0` (#79) |
 
 One contract per feature, committed **before** the tests and the implementation (`docs(F-XX): contract` →
 `test(F-XX)` → `feat(F-XX)`). Staging branch: `sprint-2`, opened from the accepted Sprint 1 release `v0.1.2`
@@ -21,7 +21,8 @@ Every PR targets `sprint-2`, was approved by the other student before merging, a
 | F-09 Team–milestone status | [`F-09-milestone-status.md`](F-09-milestone-status.md) v0.2 | #67 | #77 | phet526 → ILoveSiesta | `1da45f5` |
 | AC-01-10 idempotent seed (Sprint 1 known limitation) | [`../sprint-1/F-01-auth.md`](../sprint-1/F-01-auth.md) v0.4 | #65 | #74 | phet526 → ILoveSiesta | `022acea` |
 | Setup: `sprint-2` staging, CI trigger, plan v0.6, Lab 6 documents | — | #60 | #61 | ILoveSiesta → phet526 | `891d8ce` |
-| Release preparation: footer `CPMS v0.2.0`, this file, contributions, AI use | — | #68 | this PR | ILoveSiesta → phet526 | — |
+| Release preparation: footer `CPMS v0.2.0`, this file, contributions, AI use | — | #79 (split from #68) | #78 | ILoveSiesta → phet526 | — |
+| Release `sprint-2` → `main`, tag `v0.2.0`, deployment checks | — | #68 | release PR | ILoveSiesta → phet526 | (on `main`) |
 
 ## 2. Sprint 2 feature completion
 
