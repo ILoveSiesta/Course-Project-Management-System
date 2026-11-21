@@ -1,7 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
-import { ApiError, Milestone, Team, createMilestoneApi, getTeamApi, getTeamMilestonesApi } from "../api.js";
+import {
+  ApiError,
+  Milestone,
+  Team,
+  createMilestoneApi,
+  createMilestoneForTeamsApi,
+  getTeamApi,
+  getTeamMilestonesApi,
+  getTeamsApi,
+} from "../api.js";
 import { MilestoneList, TeamSummary } from "./TeamDetails.js";
 import { milestoneFieldMessage as fieldMessage } from "../milestoneFields.js";
 
@@ -23,6 +32,10 @@ export const SupervisorTeam: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  // F-06: the supervisor's assigned teams and the other teams ticked for the new milestone.
+  const [assignedTeams, setAssignedTeams] = useState<Team[]>([]);
+  const [otherTeamIds, setOtherTeamIds] = useState<number[]>([]);
+  const [createdFor, setCreatedFor] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -47,26 +60,47 @@ export const SupervisorTeam: React.FC = () => {
       }
     })();
 
+    // F-06: the team list only adds options to the form; if it cannot be loaded the form still works
+    // for this team (F-02 path).
+    getTeamsApi(token)
+      .then((teams) => {
+        if (active) setAssignedTeams(teams);
+      })
+      .catch(() => undefined);
+
     return () => {
       active = false;
     };
   }, [token, teamId]); // logout is recreated each render; it is only called on 401
+
+  const toggleTeam = (id: number) =>
+    setOtherTeamIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
     setFieldErrors({});
     setFormError(null);
+    setCreatedFor(null);
     setIsSaving(true);
 
     try {
       // datetime-local has no zone: it is read in the browser's time zone and sent as UTC.
-      const created = await createMilestoneApi(token, teamId, {
-        title,
-        description,
-        deadline: deadline ? new Date(deadline).toISOString() : "",
-      });
-      setMilestones((list) => [...list, created].sort(byDeadline));
+      const draft = { title, description, deadline: deadline ? new Date(deadline).toISOString() : "" };
+      if (otherTeamIds.length === 0) {
+        const created = await createMilestoneApi(token, teamId, draft);
+        setMilestones((list) => [...list, created].sort(byDeadline));
+      } else {
+        // F-06: this team first, then the ticked teams; one milestone per team comes back.
+        const createdList = await createMilestoneForTeamsApi(token, { teamIds: [teamId, ...otherTeamIds], ...draft });
+        const own = createdList.filter((m) => m.teamId === teamId);
+        setMilestones((list) => [...list, ...own].sort(byDeadline));
+        const nameOf = (id: number) => assignedTeams.find((t) => t.id === id)?.name ?? (id === teamId ? team?.name : `#${id}`);
+        setCreatedFor(
+          `Milestone created for ${createdList.length} teams: ${createdList.map((m) => nameOf(m.teamId)).join(", ")}`
+        );
+        setOtherTeamIds([]);
+      }
       setTitle("");
       setDescription("");
       setDeadline("");
@@ -103,7 +137,25 @@ export const SupervisorTeam: React.FC = () => {
           <section className="card">
             <h3>New milestone</h3>
             {formError && <p role="alert" className="alert">{formError}</p>}
+            {createdFor && <p role="status" className="muted">{createdFor}</p>}
             <form onSubmit={handleSubmit} noValidate>
+              {assignedTeams.length > 0 && (
+                <fieldset className={`form-field team-options${fieldErrors.teamIds ? " has-error" : ""}`}>
+                  <legend>Teams</legend>
+                  {assignedTeams.map((t) => (
+                    <label key={t.id}>
+                      <input
+                        type="checkbox"
+                        checked={t.id === teamId || otherTeamIds.includes(t.id)}
+                        disabled={t.id === teamId}
+                        onChange={() => toggleTeam(t.id)}
+                      />
+                      {t.id === teamId ? `${t.name} (this team)` : t.name}
+                    </label>
+                  ))}
+                  {errorFor("teamIds")}
+                </fieldset>
+              )}
               <div className={fieldClass("title")}>
                 <label htmlFor="milestone-title">Title</label>
                 <input id="milestone-title" value={title} onChange={(e) => setTitle(e.target.value)} />

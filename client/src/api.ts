@@ -151,6 +151,18 @@ export async function createMilestoneApi(token: string, teamId: number, draft: M
   return data.milestone;
 }
 
+// F-06: the same milestone for several assigned teams; one milestone per team is returned.
+export async function createMilestoneForTeamsApi(
+  token: string,
+  draft: MilestoneDraft & { teamIds: number[] }
+): Promise<Milestone[]> {
+  const data = await apiRequest<{ milestones: Milestone[] }>(token, "/milestones", {
+    method: "POST",
+    body: JSON.stringify(draft),
+  });
+  return data.milestones;
+}
+
 export async function getMilestoneApi(token: string, milestoneId: number): Promise<Milestone> {
   const data = await apiRequest<{ milestone: Milestone }>(token, `/milestones/${milestoneId}`);
   return data.milestone;

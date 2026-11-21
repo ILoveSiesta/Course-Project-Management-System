@@ -54,6 +54,28 @@ export function validateMilestoneInput(body: unknown, now: Date): MilestoneInput
   return { title, description, deadline };
 }
 
+const MAX_TEAMS = 20;
+
+// F-06 (FR-11): the team list of a multi-team milestone: 1–20 distinct positive integer IDs.
+export function validateTeamIds(body: unknown): number[] {
+  const input = (typeof body === "object" && body !== null ? body : {}) as Record<string, unknown>;
+  const raw = input.teamIds;
+
+  let code: string | undefined;
+  if (raw === undefined || raw === null || (Array.isArray(raw) && raw.length === 0)) {
+    code = "REQUIRED";
+  } else if (!Array.isArray(raw) || !raw.every((id) => typeof id === "number" && Number.isInteger(id) && id > 0)) {
+    code = "INVALID_TYPE";
+  } else if (new Set(raw).size !== raw.length) {
+    code = "DUPLICATE";
+  } else if (raw.length > MAX_TEAMS) {
+    code = "TOO_MANY";
+  }
+
+  if (code) throw new HttpError(400, "VALIDATION_ERROR", "Invalid team selection", { teamIds: code });
+  return raw as number[];
+}
+
 export interface MilestoneUpdate {
   title?: string;
   description?: string | null;
