@@ -1,4 +1,5 @@
 import { HttpError } from "./httpError.js";
+import { hasInvalidTextCharacters } from "./validation.js";
 
 const COMMENT_MAX = 5000;
 
@@ -15,6 +16,7 @@ export function validateFeedbackInput(body: unknown): { comment: string } {
   } else {
     comment = input.comment.trim();
     if (!comment) code = "REQUIRED";
+    else if (hasInvalidTextCharacters(input.comment)) code = "INVALID_CHARACTER";
     else if (comment.length > COMMENT_MAX) code = "TOO_LONG";
   }
 

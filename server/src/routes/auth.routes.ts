@@ -6,7 +6,11 @@ export const authRouter = Router();
 
 authRouter.post("/login", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const result = await loginService(req.body.email, req.body.password);
+    const body = (typeof req.body === "object" && req.body !== null ? req.body : {}) as {
+      email?: string;
+      password?: string;
+    };
+    const result = await loginService(body.email, body.password);
     res.status(200).json(result);
   } catch (err) {
     if (err instanceof AuthError) {
