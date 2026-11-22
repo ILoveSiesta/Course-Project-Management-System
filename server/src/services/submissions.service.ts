@@ -78,6 +78,16 @@ export async function createSubmission(user: AuthenticatedUser, milestoneId: num
     `;
     if (!locked) throw notFound();
 
+    // BR-01 / BR-14 (F-13): re-check membership under FOR SHARE inside the locked transaction so an
+    // in-flight submission cannot succeed after a concurrent removal, and a removal waits for a
+    // submission that has already passed this check.
+    const member = await tx.$queryRaw<Array<{ id: number }>>`
+      SELECT id FROM "TeamMembership"
+      WHERE "studentId" = ${user.id} AND "teamId" = ${ownMilestone.teamId}
+      FOR SHARE
+    `;
+    if (member.length === 0) throw notFound();
+
     const existingCount = await tx.submission.count({
       where: { milestoneId },
     });

@@ -15,6 +15,9 @@ Course Project Management System — CPE334 Theme 6
 | 0.9 | 2026-11-21 | ILoveSiesta | F-08 (#66): §2.1/§2.2 `Grade` entity and `Milestone.gradesReleasedAt` (migration `f08_grades`); §2.3 grades no longer planned; §3.1 grade card on both milestone detail screens; §4 errors `NOTHING_TO_GRADE`, `GRADE_RELEASED`, `NO_GRADE`; §4.2 grade endpoints; §5 grade rows (student 403) |
 | 0.10 | 2026-11-21 | phet526 | F-07 (#64): §3.1 dedicated Revision history screen (`/student/milestones/:id/history`, `/supervisor/milestones/:id/history`); §4.2 endpoint `GET /api/milestones/:milestoneId/history`; §5 row for viewing revision history |
 | 0.11 | 2026-11-21 | phet526 | F-09 (#67): §3.1 student My team and supervisor team detail show derived status badges on milestone lists; §4.2 milestone endpoints include derived `status` without storing it |
+| 0.12 | 2026-11-22 | phet526 | F-13 (#83): §3.1 supervisor dashboard team creation and supervisor team detail member add/remove; §4 errors `TEAM_NAME_EXISTS`, `STUDENT_ALREADY_IN_TEAM`; §4.3 F-13 team management endpoints; §5 updated row for team management (`403` for students) |
+| 0.13 | 2026-11-22 | phet526 | F-13 (#83) §2.4: `seed.ts` creates baseline student `TeamMembership` rows only when first creating each student account so F-13 membership changes survive release `cpms-migrate` re-seeds (`prisma migrate reset` restores demo layout) |
+| 0.14 | 2026-11-22 | phet526 | F-13 (#83) §1.3: `createSubmission` re-checks `TeamMembership` with `FOR SHARE` inside the milestone-locked transaction so a concurrent member removal rejects an in-flight submission (`BR-01`, `BR-14`) |
 
 Requirement IDs (FR/BR/NFR/D) refer to `docs/srs.md`. Feature contracts in `docs/sprints/sprint-N/` give the
 exact endpoint request/response shapes; this document defines the shared structure and conventions they follow.
@@ -62,7 +65,7 @@ server/src/
 |---|---|---|
 | Authentication (401) | `authenticate` middleware on every route except login and health | — |
 | Role permissions (403) | `requireRole` on the route | — |
-| Record scope: own team / assigned team (BR-01, BR-02) | Service, by resolving the record's team and checking membership/assignment for `req.user` | — |
+| Record scope: own team / assigned team (BR-01, BR-02) | Service, by resolving the record's team and checking membership/assignment for `req.user`; `createSubmission` also re-checks `TeamMembership` with `FOR SHARE` inside the milestone-locked transaction so a concurrent F-13 member removal rejects an in-flight submission (`BR-14`) | — |
 | Field validation (BR-04, BR-08) | Service (shared validators in `utils/`) | DB column lengths / not-null |
 | Version numbering and limit (BR-06, BR-07) | Service, inside a transaction that locks the milestone row | Unique (`milestoneId`, `version`) |
 | Late calculation and 7-day late window (BR-05, rev. CHG-03) | Service at insert time, using server time and the deadline read in the locked transaction; window checked after the version limit (pure helpers in `utils/submissionValidation.ts`) | Check `daysLate >= 0` (no upper-bound constraint: rows stored before CHG-03 may exceed 7) |
@@ -128,7 +131,7 @@ Foreign keys use `ON DELETE RESTRICT`: no Sprint 1 operation deletes teams, mile
 
 - Each feature adds its models with one Prisma migration named after the feature, e.g. `prisma migrate dev --name f01_auth_teams`. Migrations are committed under `server/prisma/migrations/` and never edited after merge.
 - Deployments apply migrations with `prisma migrate deploy`.
-- `server/prisma/seed.ts` is **idempotent** (upserts by e-mail / team name) and creates synthetic data only:
+- `server/prisma/seed.ts` is **idempotent** (upserts by e-mail / team name) and creates synthetic data only. It creates the baseline teams first and inserts each student's baseline `TeamMembership` only inside that student account's `create` branch (`update` leaves memberships untouched), so supervisor-managed moves and removals (F-13) survive release `cpms-migrate` re-runs (`NFR-08`); `prisma migrate reset` restores the demo layout:
 
 | Team | Students | Supervisors |
 |---|---|---|
@@ -156,8 +159,8 @@ flowchart TD
 | Login | All | E-mail + password; on success go to the role's home | F-01 |
 | My team | Student | Team name, members, supervisors; milestone list by deadline with derived status badge | F-02, F-09 |
 | Student milestone detail | Student | Submit / resubmit form; list of versions with late badge and days late; feedback on each version; grade after release | F-03, F-04, F-08 |
-| My teams | Supervisor | Assigned teams with members | F-02 |
-| Supervisor team detail | Supervisor | Milestone list with derived status badge; create-milestone form, optionally for several assigned teams at once | F-02, F-06, F-09 |
+| My teams | Supervisor | Assigned teams with members; create-team form (`F-13`) | F-02, F-13 |
+| Supervisor team detail | Supervisor | Member management (unassigned-student picker, add/remove member); milestone list with derived status badge; create-milestone form, optionally for several assigned teams at once | F-02, F-06, F-09, F-13 |
 | Supervisor milestone detail | Supervisor | Versions with late badge; add feedback to a version; edit the milestone and extend its deadline; record, change and release the grade | F-03, F-04, F-05, F-08 |
 | Revision history | All | Dedicated read-only revision history per milestone: version ordering (`desc`/`asc`), `Latest` badge, submitter/time, late status, and per-version feedback with author and time | F-07 |
 
@@ -203,6 +206,8 @@ other role redirects to the user's own home.
 | 409 | `GRADE_RELEASED` | Change or release after the milestone's grades were released (BR-11) |
 | 409 | `NO_GRADE` | Release without a grade (BR-11) |
 | 409 | `SUBMISSION_WINDOW_CLOSED` | Submission later than `deadline + 7 × 24 h` (BR-05, CHG-03); checked after `VERSION_LIMIT_REACHED` |
+| 409 | `TEAM_NAME_EXISTS` | Creating a team whose trimmed name matches an existing team (case-insensitive) |
+| 409 | `STUDENT_ALREADY_IN_TEAM` | Adding a student who already has a `TeamMembership` (BR-10) |
 | 500 | `INTERNAL_ERROR` | Unexpected error; details only in server logs (NFR-05) |
 
 **Check order** for every protected request: authenticate (401) → role (403) → record scope (404) → validation
@@ -240,6 +245,15 @@ Exact request/response shapes are defined in each feature contract.
 | GET | `/api/milestones/:milestoneId/history` | Any, in scope (`?order=desc\|asc`, default `desc`; out-of-scope → 404) | F-07 |
 | Milestone endpoints (list, detail, create, edit) | — | Every serialized `Milestone` includes server-derived `status` (BR-12, never stored) | F-09 |
 
+### 4.3 Sprint 3 endpoints
+
+| Method | Path | Role | Feature |
+|---|---|---|---|
+| POST | `/api/teams` | Supervisor (student `403`; creator assigned automatically) | F-13 |
+| GET | `/api/teams/available-students` | Supervisor (student `403`; unassigned students only) | F-13 |
+| POST | `/api/teams/:teamId/members` | Supervisor, assigned (student `403`) | F-13 |
+| DELETE | `/api/teams/:teamId/members/:studentId` | Supervisor, assigned (student `403`) | F-13 |
+
 ## 5. Roles and permissions
 
 "Own team" = the team the student belongs to. "Assigned" = a team the supervisor has a `SupervisorAssignment` for.
@@ -261,7 +275,7 @@ Out-of-scope reads return 404; operations the role may never perform return 403.
 | Record / change / release grade | ❌ 403 | Assigned teams | 2 |
 | View grade | Own team, after release | Assigned teams | 2 |
 | Progress board, reports, filters | Own team | Assigned teams | 3 |
-| Manage teams and members | ❌ | Teams they supervise (D-06) | 3 |
+| Manage teams and members | ❌ 403 | Create teams (assigned automatically); add/remove members on assigned teams (`F-13`, D-06) | 3 |
 
 ## 6. Authentication and session lifecycle
 

@@ -178,3 +178,40 @@ export function deriveMilestoneStatus(input: {
   }
   return now.getTime() > deadline.getTime() ? "Overdue" : "Not submitted";
 }
+
+const TEAM_NAME_MAX = 80;
+
+// F-13 (FR-07): team name is a trimmed string 1–80 characters.
+export function validateTeamName(body: unknown): string {
+  const input = (typeof body === "object" && body !== null ? body : {}) as Record<string, unknown>;
+  const raw = input.name;
+
+  if (raw === undefined || raw === null) {
+    throw new HttpError(400, "VALIDATION_ERROR", "Invalid team", { name: "REQUIRED" });
+  }
+  if (typeof raw !== "string") {
+    throw new HttpError(400, "VALIDATION_ERROR", "Invalid team", { name: "INVALID_TYPE" });
+  }
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    throw new HttpError(400, "VALIDATION_ERROR", "Invalid team", { name: "REQUIRED" });
+  }
+  if (trimmed.length > TEAM_NAME_MAX) {
+    throw new HttpError(400, "VALIDATION_ERROR", "Invalid team", { name: "TOO_LONG" });
+  }
+  return trimmed;
+}
+
+// F-13 (FR-07): target user ID when adding a student to a team must be a positive integer.
+export function validateAddMemberInput(body: unknown): number {
+  const input = (typeof body === "object" && body !== null ? body : {}) as Record<string, unknown>;
+  const raw = input.studentId;
+
+  if (raw === undefined || raw === null) {
+    throw new HttpError(400, "VALIDATION_ERROR", "Invalid team member", { studentId: "REQUIRED" });
+  }
+  if (typeof raw !== "number" || !Number.isInteger(raw) || raw <= 0) {
+    throw new HttpError(400, "VALIDATION_ERROR", "Invalid team member", { studentId: "INVALID_TYPE" });
+  }
+  return raw;
+}

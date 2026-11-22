@@ -441,3 +441,45 @@ a:hover {
 .feedback-form {
   margin-top: 10px;
 }
+
+/* --- Team management (F-13) --- */
+
+.member-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.member-info {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 0.85rem;
+}
+
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+  margin-top: 12px;
+}
+
+.inline-form .form-field {
+  flex: 1 1 220px;
+  margin-bottom: 0;
+}
+
+.status-notice {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--color-success-soft);
+  color: var(--color-success);
+  font-size: 0.9rem;
+}
