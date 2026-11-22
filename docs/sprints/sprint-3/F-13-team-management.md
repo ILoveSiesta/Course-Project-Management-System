@@ -15,11 +15,12 @@
 | 0.7 | 2026-11-22 | phet526 | Update DoD with full `a1632b9` RED (`4 failed / 139 passed`), `e9a7854` RED (`1 failed / 143 passed`), and GREEN `b9d279d` (`45002978696`, `199 / 199` passed) evidence; sync SDS (`0.13`) and traceability (`2.6`) references |
 | 0.8 | 2026-11-22 | phet526 | Add AC-13-13 / TEST-13-20 (`createSubmission` re-checks `TeamMembership` with `FOR SHARE` inside the milestone-locked transaction so a concurrent member removal rejects an in-flight submission with `404`) |
 | 0.9 | 2026-11-22 | phet526 | Update DoD with round-4 RED (`5a1d169`, CI `45005525513`) → GREEN (`1397c2e`, CI `45005779308`, `200 / 200` passed), exact local vs CI vs reviewer run attribution, and SDS (`0.14`) / traceability (`2.7`) references |
+| 0.10 | 2026-11-22 | phet526 | Link `BR-01` in §1 and `F-03` (`createSubmission`) in §2 Dependencies; update traceability reference in DoD to `2.8` |
 
 ## 1. Linked requirements
 
 - **FR:** FR-07 (a supervisor manages teams they supervise: create a team, add a student member, and remove a member)
-- **BR:** BR-10 (a student belongs to at most one team; rejected with `409` if already assigned), BR-14 (removing or moving a member keeps `Submission.submittedById` unchanged on existing submissions; removed student loses access to the old team), BR-02 (supervisor scope: assigned teams only for member management), BR-03 (supervisor-only operations → `403` for students)
+- **BR:** BR-01 (a removed student loses access to the old team's records immediately, including in-flight submissions), BR-10 (a student belongs to at most one team; rejected with `409` if already assigned), BR-14 (removing or moving a member keeps `Submission.submittedById` unchanged on existing submissions; removed student loses access to the old team), BR-02 (supervisor scope: assigned teams only for member management), BR-03 (supervisor-only operations → `403` for students)
 - **NFR:** NFR-02 (`401` on all new endpoints), NFR-03 (`403`/`404` without data disclosure), NFR-05 (safe JSON error shape), NFR-08 (member moves and removals survive re-execution of the release migration/seed job), NFR-12 (UI shows field and rule rejection reasons)
 - **Decisions:** D-04 (teams can have multiple assigned supervisors; creating a team assigns the creator), D-05 (a student belongs to at most one team), D-06 (supervisors manage teams and membership from Sprint 3 onward)
 
@@ -45,7 +46,7 @@
 - **Access and check order** (`SDS §4–§5`): authenticate (`401`) → role check (`403`) → team scope & integer ID checks (`404`) → body validation (`400`) → target user check (`404` unknown / `400` non-student) → business-rule conflict (`409`).
   - **Student:** `403 FORBIDDEN` on `POST /api/teams`, `GET /api/teams/available-students`, `POST /api/teams/:teamId/members`, and `DELETE /api/teams/:teamId/members/:studentId`.
   - **Unassigned supervisor / unknown IDs / non-numeric or out-of-range IDs:** `404 NOT_FOUND` with no team or membership disclosure (`parseId` rejects IDs `<= 0` or `> 2147483647` as `404`, and `DELETE` for a student who is not a member of that team also returns `404 NOT_FOUND`).
-- **Dependencies:** F-01 (`User`, `Team`, `TeamMembership`, `SupervisorAssignment`, `authenticate`, `requireRole`), F-02 (`listTeams`, `getTeam`, `scopeFilter`, `TeamSummary`).
+- **Dependencies:** F-01 (`User`, `Team`, `TeamMembership`, `SupervisorAssignment`, `authenticate`, `requireRole`), F-02 (`listTeams`, `getTeam`, `scopeFilter`, `TeamSummary`), F-03 (`createSubmission`, which re-checks `TeamMembership` inside the milestone lock).
 
 ## 3. UI specification
 
@@ -148,5 +149,5 @@ Seed persistence (`NFR-08`): `server/prisma/seed.ts` creates the baseline teams 
   - Round-2 fixes (`211a9f8` contract → `a1632b9` RED: local unit `parseId("2147483648")` `expected undefined to be 404`; full PostgreSQL `4 failed / 139 passed (143)` observed in `@ILoveSiesta`'s round-3 review, no CI run on `a1632b9` → `dd2e5db` GREEN, CI `45000265755`, server `143/143`, `198/198` total)
   - Round-3 seed persistence (`ebeeb71` contract → `e9a7854` RED on CI `45002682158`: server `1 failed / 143 passed (144)`, `TEST-13-19` `AssertionError: expected [ 1 ] to deeply equal [ 20 ]` → `b9d279d` GREEN, CI `45002978696`, server `144/144`, `199/199` total)
   - Round-4 in-flight submission lock (`dbbb31e` contract → `5a1d169` RED on CI `45005525513`: server `1 failed / 144 passed (145)`, `TEST-13-20` `AssertionError: expected 201 to be 404` → `1397c2e` GREEN, CI `45005779308`, server `145/145`, `200/200` total)
-- [x] SRS FR-07 / BR-14 (`0.10`), System SDS §1.3 / §2.4 / §3.1 / §4 / §4.3 / §5 (`0.14`), `docs/traceability.md` (`2.7`), `docs/features.md` (`1.7`) updated
+- [x] SRS FR-07 / BR-14 (`0.10`), System SDS §1.3 / §2.4 / §3.1 / §4 / §4.3 / §5 (`0.14`), `docs/traceability.md` (`2.8`), `docs/features.md` (`1.7`) updated
 - [ ] PR `#88` reviewed by `@ILoveSiesta` (approve before merge) and merged into `sprint-3`
