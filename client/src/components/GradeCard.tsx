@@ -50,8 +50,8 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
   onUnauthorized,
 }) => {
   const latestVersion = submissions.reduce((max, s) => Math.max(max, s.version), 0);
-  const [score, setScore] = useState("");
-  const [version, setVersion] = useState("");
+  const [score, setScore] = useState(() => (state.grade ? String(state.grade.score) : ""));
+  const [version, setVersion] = useState(() => String(state.grade?.version ?? latestVersion));
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
@@ -61,6 +61,10 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
     setScore(state.grade ? String(state.grade.score) : "");
     setVersion(String(state.grade?.version ?? latestVersion));
   }, [state.grade?.score, state.grade?.version, latestVersion]);
+
+  const hasUnsavedChanges =
+    state.grade !== null &&
+    (score.trim() !== String(state.grade.score) || version !== String(state.grade.version));
 
   const handleError = (err: unknown) => {
     if (err instanceof ApiError && err.status === 401) return onUnauthorized();
@@ -88,6 +92,7 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
   };
 
   const release = async () => {
+    if (hasUnsavedChanges) return;
     setFieldErrors({});
     setFormError(null);
     setIsBusy(true);
@@ -146,12 +151,22 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
               </select>
               {errorFor("version")}
             </div>
+            {hasUnsavedChanges && (
+              <p className="muted" role="status">
+                Save the grade before releasing
+              </p>
+            )}
             <div className="form-actions">
               <button type="submit" className="btn" disabled={isBusy}>
                 Save grade
               </button>
               {state.grade && (
-                <button type="button" className="btn btn-secondary" disabled={isBusy} onClick={release}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={isBusy || hasUnsavedChanges}
+                  onClick={release}
+                >
                   Release grade
                 </button>
               )}
