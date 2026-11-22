@@ -12,6 +12,7 @@
 | 0.4 | 2026-11-22 | phet526 | Defect #93 (`DEF-GRADE-RELEASE`): revise §2, §3, §6 (`AC-08-10`) and §7 (`TEST-08-12`) so **Release grade** is disabled with `"Save the grade before releasing"` whenever **Score** or **Graded version** has unsaved edits vs the stored grade |
 | 0.5 | 2026-11-22 | phet526 | Update §8.1 DoD with `DEF-GRADE-RELEASE` (#93) RED (`6cd2e11`, CI `45034210203`) → GREEN (`f5a0912`, CI `45034474980`, `201 / 201` passed) evidence |
 | 0.6 | 2026-11-22 | phet526 | Address PR #97 review (`8114740`): revise §2, §3, §6 (`AC-08-10`), and §7 (`TEST-08-12..14`) — place `"Save the grade before releasing"` after `.form-actions`, compare numeric score value while treating empty `score` as changed, disable **Score** and **Graded version** while `isBusy`, clarify `"saves successfully"` in `AC-08-10`, and add `TEST-08-13`–`TEST-08-14` plus empty-score and changed-score Save→Release coverage in `TEST-08-12` |
+| 0.7 | 2026-11-22 | phet526 | Update §8.1 DoD with PR #97 traceability refs (`2.14`, `2.15`), labeled CI `45034210203` client counts, and round-2 `DEF-GRADE-RELEASE` (#93) RED (`25b0e18`) → GREEN (`36d0d99`, CI `45044529526`, `226 / 226` passed) evidence |
 
 ## 1. Linked requirements
 
@@ -155,7 +156,8 @@ Existing tests that render the milestone pages (`Submissions.test.tsx`, `Feedbac
 
 ### 8.1 Defect `#93` (`DEF-GRADE-RELEASE`) follow-up verification
 
-- [x] Owner triage posted on `#93` (`issuecomment-7080702373`), F-08 contract updated (`0.4`–`0.5`, `AC-08-10`, `TEST-08-12`), and `docs/traceability.md` (`2.11`) updated
+- [x] Owner triage posted on `#93` (`issuecomment-7080702373`), F-08 contract updated (`0.4`–`0.7`, `AC-08-10`, `TEST-08-12..14`), and `docs/traceability.md` (`2.14`, `2.15`) updated
 - [x] TDD RED → GREEN on `fix/F-08-release-unsaved-grade`:
-  - Contract (`38f89ca`) → RED (`6cd2e11`, test only: local `Grades.test.tsx` `1 failed | 3 passed (4)` at `TEST-08-12` `expect(element).toBeDisabled()`; CI `45034210203` failed on the same line) → GREEN (`f5a0912`, CI `45034474980`, `201 / 201` passed: `deploy/tests` `17`, server `22` files / `145` passed, client `11` files / `34` passed including `TEST-08-12`, Playwright E2E `5` passed in `15.1s`, Docker build OK; local `npm run build`, server unit `41/41`, client `34/34` also passed)
+  - Round 1: Contract `0.4` (`38f89ca`) → RED (`6cd2e11`, test only: `Grades.test.tsx` `1 failed | 3 passed (4)`, CI `45034210203` client `1 failed / 33 passed (34)` at `TEST-08-12` `expect(element).toBeDisabled()`) → GREEN (`f5a0912`, CI `45034474980`, `201 / 201` passed: `deploy/tests` `17`, server `22` files / `145` passed, client `11` files / `34` passed including `TEST-08-12`, Playwright E2E `5` passed in `15.1s`, Docker build OK; local `npm run build`, server unit `41/41`, client `34/34` also passed); synced with `sprint-3` @ `9aebc93` at `8114740` (CI `45040940899`, `224 / 224` passed)
+  - Round 2 (PR #97 review): Contract `0.6` (`92e3c18`) → RED (`25b0e18`, tests only: local client `3 failed | 39 passed (42)`, `Grades.test.tsx` `3 failed | 3 passed (6)` on DOM position of notice, equivalent scores `"80.0"`/`"8e1"`/`"080"`, and `isBusy` inputs) → GREEN (`36d0d99`, CI `45044529526`, `226 / 226` passed in `2m12s`: `deploy/tests` `17`, server `24` files / `162` passed, client `12` files / `42` passed incl. `TEST-08-12..14`, Playwright E2E `5` passed in `13.7s`, Docker build OK; local `npm run build`, server unit `44/44`, client `42/42` also passed)
 - [ ] PR reviewed by `@ILoveSiesta` and merged into `sprint-3`
