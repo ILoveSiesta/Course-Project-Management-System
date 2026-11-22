@@ -12,6 +12,7 @@
 | 0.4 | 2026-11-21 | phet526 | Added `TEST-01-14` for `AC-01-10` (seed idempotency) and §8.1 follow-up checklist (#65) |
 | 0.5 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): reject NUL (`U+0000`) and unpaired UTF-16 surrogates in login `email`/`password` with `400 VALIDATION_ERROR` (`INVALID_CHARACTER`, `"Email or password contains an unsupported character"`), safely reject non-object JSON/non-JSON bodies (`400`), and link SDS §4 unreadable-request errors (`400`/`413`/`415`) |
 | 0.6 | 2026-11-22 | phet526 | Address PR #91 round-3 review: distinguish missing/non-JSON/array login body (`400 VALIDATION_ERROR`) from primitive JSON body including `null` (`400 BAD_REQUEST`) |
+| 0.7 | 2026-11-23 | phet526 | Defect #92 (`DEF-SERVER-ERR`): revise §2, §4, §6 (`AC-01-12..15`), and §7 (`TEST-01-15..18`) so `authenticate` forwards DB/unexpected errors to `500 INTERNAL_ERROR` (logging server-side), `logoutService` handles parallel requests for one `jti` idempotently (`204`), `loginService` runs dummy cost-10 `bcrypt.compare` for unknown emails, and malformed login JSON never logs raw request bodies/passwords |
 
 ## 1. Linked requirements
 
@@ -23,14 +24,14 @@
 ## 2. Feature-level design
 
 - **Behavior and workflow:**
-  - **Login:** A user provides email and password. The system verifies credentials using bcrypt hash comparison. On success, it issues a signed JWT token containing user identity and role, and returns the token with the user profile.
-  - **Current user retrieval:** The client sends `Authorization: Bearer <token>`. The `authenticate` middleware verifies signature and expiration, checks whether the token's `jti` exists in `RevokedToken`, loads the user from the database, and attaches `req.user = { id, role }`.
-  - **Logout:** A logged-in user sends `POST /api/auth/logout`. The system records the token's `jti` and expiration timestamp into `RevokedToken` and returns `204 No Content`. Any subsequent request using this token is rejected with `401 UNAUTHENTICATED`.
+  - **Login:** A user provides email and password. The system verifies credentials using bcrypt hash comparison. If the email is not found, `loginService` runs a dummy cost-10 bcrypt comparison before returning `401 INVALID_CREDENTIALS` so response latency matches an existing account with a wrong password. On success, it issues a signed JWT token containing user identity and role, and returns the token with the user profile.
+  - **Current user retrieval:** The client sends `Authorization: Bearer <token>`. The `authenticate` middleware verifies signature and expiration (`401` on JWT failure), checks whether the token's `jti` exists in `RevokedToken`, loads the user from the database (`401` if revoked or missing), and attaches `req.user = { id, role }`. Unexpected or database errors during the `RevokedToken` / `User` lookup are forwarded via `next(err)` to the safe `500 INTERNAL_ERROR` handler (logged on the server, never disguised as `401`).
+  - **Logout:** A logged-in user sends `POST /api/auth/logout`. The system records the token's `jti` and expiration timestamp into `RevokedToken` idempotently (`ON CONFLICT DO NOTHING` semantics across concurrent requests) and returns `204 No Content`. Any subsequent request using this token is rejected with `401 UNAUTHENTICATED`. Database errors return `500 INTERNAL_ERROR` and leave the token unrevoked.
   - **Role Guard:** `requireRole(role)` middleware verifies `req.user.role`. If the role does not match the required role, it returns `403 FORBIDDEN` with no data.
 - **Business rules and validation:**
   - Emails are normalized to lower-case and validated; a missing, non-JSON, or array body returns `400 VALIDATION_ERROR`, whereas a primitive JSON body (including `null`) is rejected by the parser with `400 BAD_REQUEST`.
   - Both `email` and `password` reject NUL (`U+0000`) and unpaired UTF-16 surrogates per SDS §4 (`400 VALIDATION_ERROR`, `details.<field> = "INVALID_CHARACTER"`, message `"Email or password contains an unsupported character"`, NFR-12). Unreadable HTTP bodies/charsets follow SDS §4 (`400 BAD_REQUEST`, `413 PAYLOAD_TOO_LARGE`, `415 UNSUPPORTED_MEDIA_TYPE`).
-  - Password must be provided and verified against the stored bcrypt hash. Plaintext passwords are never stored.
+  - Password must be provided and verified against the stored bcrypt hash (or a precomputed cost-10 dummy hash when the email is unknown). Plaintext passwords are never stored, and body-parser/JSON syntax errors on login fail with `400 BAD_REQUEST` before server error logging so raw request bodies and passwords are never written to logs.
   - Error responses follow `{ error: { code, message, details? } }` with no leaked stack trace.
 - **Failure and boundary cases:**
   - Non-existent email or incorrect password: returns identical `401 INVALID_CREDENTIALS` (prevents user enumeration).
@@ -68,8 +69,8 @@
 | Method | Path | Auth / role | Request body | Success response | Error codes |
 |---|---|---|---|---|---|
 | `POST` | `/api/auth/login` | None | `{ "email": string, "password": string }` | `200` `{ "token": string, "user": { "id": number, "name": string, "email": string, "role": string } }` | `400 VALIDATION_ERROR` (missing fields or `INVALID_CHARACTER`)<br/>`400 BAD_REQUEST` / `413` / `415` (SDS §4)<br/>`401 INVALID_CREDENTIALS` |
-| `POST` | `/api/auth/logout` | Bearer token | None | `204 No Content` | `401 UNAUTHENTICATED` |
-| `GET` | `/api/auth/me` | Bearer token | None | `200` `{ "user": { "id": number, "name": string, "email": string, "role": string } }` | `401 UNAUTHENTICATED` |
+| `POST` | `/api/auth/logout` | Bearer token | None | `204 No Content` | `401 UNAUTHENTICATED`<br/>`500 INTERNAL_ERROR` (database failure; token unrevoked) |
+| `GET` | `/api/auth/me` | Bearer token | None | `200` `{ "user": { "id": number, "name": string, "email": string, "role": string } }` | `401 UNAUTHENTICATED`<br/>`500 INTERNAL_ERROR` (database failure during auth lookup) |
 
 ## 5. Data specification
 
@@ -117,6 +118,10 @@ Models added to `server/prisma/schema.prisma` with migration `f01_auth_teams`:
 | **AC-01-09** | **Given** database schema constraints, **then** duplicate email, duplicate team name, duplicate student team membership, or duplicate team-supervisor assignment are rejected by unique constraints. |
 | **AC-01-10** | **Given** a fresh database, **when** seed script is executed, **then** Teams Alpha, Beta, Gamma with students and supervisors are created idempotently. |
 | **AC-01-11** | **Given** client SPA, **when** user logs in, **then** route to respective role home (`/student` or `/supervisor`); logout clears token and returns to `/login`. |
+| **AC-01-12** | **Given** a valid Bearer token when the database is unreachable or drops a connection during `authenticate`, **when** `GET /api/auth/me`, a protected route (`GET /api/teams`), or `POST /api/auth/logout` is called, **then** return `500 INTERNAL_ERROR` and log the failure on the server; missing, malformed, expired, or revoked tokens stay `401 UNAUTHENTICATED`, and a failed logout leaves the token usable once the database recovers. |
+| **AC-01-13** | **Given** a valid Bearer token, **when** multiple concurrent `POST /api/auth/logout` requests arrive in parallel for that token, **then** every request returns `204` (never `500`) and the token is revoked (`401 UNAUTHENTICATED` afterward). |
+| **AC-01-14** | **Given** `POST /api/auth/login`, **when** called with an unknown email vs an existing email with a wrong password, **then** both run cost-10 `bcrypt.compare` work with comparable response latency and return identical `401 INVALID_CREDENTIALS`. |
+| **AC-01-15** | **Given** `POST /api/auth/login` with malformed JSON (or unreadable request body) containing a password, **then** return `400 BAD_REQUEST` and never write the raw request body or password to server logs. |
 
 ## 7. Software Test Specification (STS)
 
@@ -140,6 +145,10 @@ Models added to `server/prisma/schema.prisma` with migration `f01_auth_teams`:
 | `TEST-01-13` | AC-01-11 | UI | Client rendered at /login | Fill student credentials and submit | Redirects to /student, renders dashboard & user info | `client/tests/Auth.test.tsx` › student login & redirect |
 | `TEST-01-13b`| AC-01-11 | UI | Client rendered at /login | Fill supervisor credentials and submit | Redirects to /supervisor, renders dashboard | `client/tests/Auth.test.tsx` › supervisor login & redirect |
 | `TEST-01-13c`| AC-01-11 | UI | Client authenticated | Click "Log out" button | Clears session token, redirects to /login | `client/tests/Auth.test.tsx` › logout clears session |
+| `TEST-01-15` | AC-01-12 | Unit + API | Valid token; DB failure / dropped-connection rejection in `authenticate`, then recovery; plus missing/malformed/expired/revoked controls | Call `GET /api/auth/me`, `GET /api/teams`, and `POST /api/auth/logout` during failure, then `GET /api/auth/me` after recovery | Returns `500 INTERNAL_ERROR` (logged via `console.error`) during outage; valid token succeeds (`200`) on recovery; invalid/expired/revoked controls return `401 UNAUTHENTICATED` | `server/tests/api/auth.api.test.ts` › TEST-01-15 |
+| `TEST-01-16` | AC-01-13 | API + DB | Valid student Bearer token on real PostgreSQL | Send 5 concurrent `POST /api/auth/logout` requests via `Promise.all` (across multiple rounds), then `GET /api/auth/me` | Every parallel logout returns `204` (never `500`); subsequent `GET /api/auth/me` returns `401 UNAUTHENTICATED` | `server/tests/api/auth.api.test.ts` › TEST-01-16 |
+| `TEST-01-17` | AC-01-14 | Unit + API | Unknown email vs seeded email with wrong password | Run repeated `POST /api/auth/login` rounds (and unit spy verification on `bcrypt.compare`) | Both return identical `401 INVALID_CREDENTIALS`; `bcrypt.compare` executes on unknown email and median latency is comparable to known-email wrong password | `server/tests/api/auth.api.test.ts` › TEST-01-17; `server/tests/unit/auth-timing.test.ts` › TEST-01-17u |
+| `TEST-01-18` | AC-01-15 | API | Malformed JSON body carrying a synthetic password marker on `POST /api/auth/login` | Spy on `console.error`, `console.warn`, and `console.log` while sending malformed JSON | Returns `400 BAD_REQUEST` and no console call includes the synthetic password marker (regression guard already satisfied by `#91`) | `server/tests/api/auth.api.test.ts` › TEST-01-18 |
 
 ## 8. Definition of Done and evidence
 
