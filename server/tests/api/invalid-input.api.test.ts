@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import http from "node:http";
 import zlib from "node:zlib";
 import request from "supertest";
 import { Prisma } from "@prisma/client";
@@ -459,71 +460,118 @@ describe("Defect #90 (DEF-BAD-INPUT): unreadable requests, NUL/unpaired surrogat
   });
 
   it("TEST-90-14: Part A undecodable gzip/deflate compressed bodies return 400 BAD_REQUEST with neutral message while valid gzip passes", async () => {
+    const postRawBytes = (
+      path: string,
+      headers: Record<string, string>,
+      payload: Buffer
+    ): Promise<{ status: number; body: unknown }> =>
+      new Promise((resolve, reject) => {
+        const srv = http.createServer(app);
+        srv.listen(0, "127.0.0.1", () => {
+          const addr = srv.address();
+          if (!addr || typeof addr === "string") {
+            srv.close();
+            reject(new Error("Unexpected server address"));
+            return;
+          }
+          const req = http.request(
+            {
+              host: "127.0.0.1",
+              port: addr.port,
+              path,
+              method: "POST",
+              headers: { ...headers, "Content-Length": String(payload.length) },
+            },
+            (res) => {
+              const chunks: Buffer[] = [];
+              res.on("data", (chunk: Buffer) => chunks.push(chunk));
+              res.on("end", () => {
+                srv.close();
+                const text = Buffer.concat(chunks).toString("utf8");
+                resolve({ status: res.statusCode ?? 0, body: text ? JSON.parse(text) : null });
+              });
+            }
+          );
+          req.on("error", (err) => {
+            srv.close();
+            reject(err);
+          });
+          req.end(payload);
+        });
+      });
+
     const beforeCount = await getPrisma().milestone.count();
 
     // Positive control: valid gzipped JSON succeeds
     const validGzipLogin = zlib.gzipSync(
       Buffer.from(JSON.stringify({ email: "student1@cpms.test", password: DEMO_PASSWORD }))
     );
-    const okLogin = await request(app)
-      .post("/api/auth/login")
-      .set("Content-Type", "application/json")
-      .set("Content-Encoding", "gzip")
-      .send(validGzipLogin);
+    const okLogin = await postRawBytes(
+      "/api/auth/login",
+      { "Content-Type": "application/json", "Content-Encoding": "gzip" },
+      validGzipLogin
+    );
     expect(okLogin.status).toBe(200);
 
     const validGzipMilestone = zlib.gzipSync(
       Buffer.from(JSON.stringify({ title: "DEF-90 Gzip Control", deadline: FUTURE_DEADLINE }))
     );
-    const okMilestone = await request(app)
-      .post(`/api/teams/${teamIds["Team Alpha"]}/milestones`)
-      .set("Authorization", `Bearer ${tokens.supervisor1}`)
-      .set("Content-Type", "application/json")
-      .set("Content-Encoding", "gzip")
-      .send(validGzipMilestone);
+    const okMilestone = await postRawBytes(
+      `/api/teams/${teamIds["Team Alpha"]}/milestones`,
+      {
+        Authorization: `Bearer ${tokens.supervisor1}`,
+        "Content-Type": "application/json",
+        "Content-Encoding": "gzip",
+      },
+      validGzipMilestone
+    );
     expect(okMilestone.status).toBe(201);
-    createdMilestoneIds.push(okMilestone.body.milestone.id);
+    createdMilestoneIds.push((okMilestone.body as { milestone: { id: number } }).milestone.id);
 
     const countAfterControl = await getPrisma().milestone.count();
     expect(countAfterControl).toBe(beforeCount + 1);
 
-    const invalidCases: Array<[string, string, Buffer, boolean]> = [
-      ["login invalid gzip (no token)", "/api/auth/login", Buffer.from("not-gzip"), false],
+    const invalidCases: Array<[string, Record<string, string>, Buffer]> = [
       [
-        "milestone invalid gzip",
-        `/api/teams/${teamIds["Team Alpha"]}/milestones`,
+        "/api/auth/login",
+        { "Content-Type": "application/json", "Content-Encoding": "gzip" },
         Buffer.from("not-gzip"),
-        true,
       ],
       [
-        "milestone truncated gzip",
         `/api/teams/${teamIds["Team Alpha"]}/milestones`,
+        {
+          Authorization: `Bearer ${tokens.supervisor1}`,
+          "Content-Type": "application/json",
+          "Content-Encoding": "gzip",
+        },
+        Buffer.from("not-gzip"),
+      ],
+      [
+        `/api/teams/${teamIds["Team Alpha"]}/milestones`,
+        {
+          Authorization: `Bearer ${tokens.supervisor1}`,
+          "Content-Type": "application/json",
+          "Content-Encoding": "gzip",
+        },
         validGzipMilestone.subarray(0, 10),
-        true,
+      ],
+      [
+        `/api/teams/${teamIds["Team Alpha"]}/milestones`,
+        {
+          Authorization: `Bearer ${tokens.supervisor1}`,
+          "Content-Type": "application/json",
+          "Content-Encoding": "deflate",
+        },
+        Buffer.from("not-deflate"),
       ],
     ];
 
-    for (const [, path, payload, withAuth] of invalidCases) {
-      const req = request(app)
-        .post(path)
-        .set("Content-Type", "application/json")
-        .set("Content-Encoding", "gzip");
-      if (withAuth) req.set("Authorization", `Bearer ${tokens.supervisor1}`);
-      const res = await req.send(payload);
+    for (const [path, headers, payload] of invalidCases) {
+      const res = await postRawBytes(path, headers, payload);
       expect(res.status).toBe(400);
       assertSafeError(res.body, "BAD_REQUEST");
-      expect(res.body.error.message).toBe("Request body could not be read");
+      expect((res.body as { error: { message: string } }).error.message).toBe("Request body could not be read");
     }
-
-    const badDeflate = await request(app)
-      .post(`/api/teams/${teamIds["Team Alpha"]}/milestones`)
-      .set("Authorization", `Bearer ${tokens.supervisor1}`)
-      .set("Content-Type", "application/json")
-      .set("Content-Encoding", "deflate")
-      .send(Buffer.from("not-deflate"));
-    expect(badDeflate.status).toBe(400);
-    assertSafeError(badDeflate.body, "BAD_REQUEST");
-    expect(badDeflate.body.error.message).toBe("Request body could not be read");
 
     expect(await getPrisma().milestone.count()).toBe(countAfterControl);
   });
