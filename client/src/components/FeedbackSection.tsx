@@ -6,6 +6,7 @@ const FIELD_MESSAGES: Record<string, string> = {
   REQUIRED: "Required",
   TOO_LONG: "Too long (max 5000 characters)",
   INVALID_TYPE: "Invalid value",
+  INVALID_CHARACTER: "Contains an unsupported character",
 };
 
 interface FeedbackSectionProps {

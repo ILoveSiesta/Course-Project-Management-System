@@ -9,6 +9,7 @@
 | 0.1 | 2026-11-21 | ILoveSiesta | Initial contract for F-05 (issue #62) |
 | 0.2 | 2026-11-21 | ILoveSiesta | Definition of Done filled with executed results; no behaviour change |
 | 0.3 | 2026-11-21 | ILoveSiesta | §2 note on the BR-05 7-day late window (CHG-03, Lab 7 #59): an extension also moves the window; no F-05 behaviour, code or test change (covered by TEST-03-22 in F-03 v0.2) |
+| 0.4 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): reject NUL (`U+0000`) and unpaired UTF-16 surrogates in `title`/`description` (`INVALID_CHARACTER`, `"Contains an unsupported character"`), bound `deadline` UTC years to `1–9999` (`INVALID_DATE`), and link SDS §4 |
 
 ## 1. Linked requirements
 
@@ -22,10 +23,10 @@
 - **Behaviour and workflow**
   - On **Supervisor milestone detail** (`/supervisor/milestones/:milestoneId`) an assigned supervisor opens **Edit milestone**, changes the title, description and/or deadline, and saves. The milestone card shows the new values; students see them on their pages through the existing F-02 reads.
   - The update is a partial update: only the fields present in the request change.
-- **Business rules and validation**
-  - `title` (if present): string, trimmed, 1–120 characters (BR-04).
-  - `description` (if present): string ≤ 2000 characters or `null`; an empty or blank string clears it (stored as `null`), as on creation (BR-04).
-  - `deadline` (if present): ISO 8601 date-time string.
+- **Business rules and validation (shared rules in SDS §4)**
+  - `title` (if present): string, trimmed, 1–120 characters, no NUL (`U+0000`) or unpaired UTF-16 surrogates (`INVALID_CHARACTER`).
+  - `description` (if present): string ≤ 2000 characters or `null`, no NUL or unpaired UTF-16 surrogates (`INVALID_CHARACTER`); an empty or blank string clears it (stored as `null`), as on creation (BR-04).
+  - `deadline` (if present): ISO 8601 date-time string with UTC year in `1–9999` (`INVALID_DATE` for `year >= 10000` or `< 1`, `9999` accepted).
   - At least one of `title`, `description`, `deadline` must be present; an empty body is a validation error.
   - **BR-13 (extend only):** a new deadline must be **later than or equal to** the stored deadline. An earlier deadline, even by 1 ms, is rejected with `409 DEADLINE_NOT_EXTENDED` and **nothing in the request is stored** (also not the title or description sent with it). The same deadline is accepted (no change).
   - A deadline that has already passed may be extended, including to another past time (used to reopen work for a team); the creation rule "deadline later than now" (BR-04) applies only when a milestone is created.
@@ -48,7 +49,7 @@
 | Supervisor team detail (`/supervisor/teams/:teamId`) | — | No UI change: the milestone list reads the stored values | — |
 
 - Only fields whose value differs from the loaded milestone are sent. The deadline input shows minutes only, so an untouched deadline is **not** sent (sending the minute-rounded value could move it earlier by the seconds part and be rejected).
-- Field error texts: `REQUIRED` → "Required"; `TOO_LONG` → "Too long (max N characters)"; `INVALID_DATE` → "Invalid date"; `NO_CHANGES` → "Change at least one field".
+- Field error texts: `REQUIRED` → "Required"; `TOO_LONG` → "Too long (max N characters)"; `INVALID_DATE` → "Invalid date"; `INVALID_TYPE` → "Invalid value"; `INVALID_CHARACTER` → "Contains an unsupported character"; `NO_CHANGES` → "Change at least one field".
 - Students have no edit control (usability only; the API enforces BR-03).
 - Styling uses the shared classes in `client/src/theme.css` (`card`, `form-field`, `has-error`, `field-error`, `btn`, `btn-secondary`, `alert`); no inline styles.
 
@@ -68,7 +69,7 @@ Validation error example (400):
 { "error": { "code": "VALIDATION_ERROR", "message": "Invalid milestone", "details": { "title": "TOO_LONG" } } }
 ```
 
-`details` values: `REQUIRED` (blank title), `TOO_LONG`, `INVALID_DATE`, `INVALID_TYPE`, and `NO_CHANGES` under the key `body` for an empty request.
+`details` values: `REQUIRED` (blank title), `TOO_LONG`, `INVALID_DATE` (including year outside `1–9999`), `INVALID_TYPE`, `INVALID_CHARACTER`, and `NO_CHANGES` under the key `body` for an empty request.
 
 Rule rejection (409):
 
