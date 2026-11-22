@@ -18,6 +18,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.12 | 2026-11-22 | phet526 | F-13 (#83): §3.1 supervisor dashboard team creation and supervisor team detail member add/remove; §4 errors `TEAM_NAME_EXISTS`, `STUDENT_ALREADY_IN_TEAM`; §4.3 F-13 team management endpoints; §5 updated row for team management (`403` for students) |
 | 0.13 | 2026-11-22 | phet526 | F-13 (#83) §2.4: `seed.ts` creates baseline student `TeamMembership` rows only when first creating each student account so F-13 membership changes survive release `cpms-migrate` re-seeds (`prisma migrate reset` restores demo layout) |
 | 0.14 | 2026-11-22 | phet526 | F-13 (#83) §1.3: `createSubmission` re-checks `TeamMembership` with `FOR SHARE` inside the milestone-locked transaction so a concurrent member removal rejects an in-flight submission (`BR-01`, `BR-14`) |
+| 0.15 | 2026-11-22 | ILoveSiesta | Sprint 3 contracts (#84): §4.3 one Sprint 3 table with the planned endpoints and screens of F-10, F-11, F-12; §5 the progress board is for both roles while the summary report and submission filters are supervisor-only (FR-22, FR-23) (renumbered from 0.12 after F-13 PR #88 took 0.12–0.14) |
 
 Requirement IDs (FR/BR/NFR/D) refer to `docs/srs.md`. Feature contracts in `docs/sprints/sprint-N/` give the
 exact endpoint request/response shapes; this document defines the shared structure and conventions they follow.
@@ -245,14 +246,19 @@ Exact request/response shapes are defined in each feature contract.
 | GET | `/api/milestones/:milestoneId/history` | Any, in scope (`?order=desc\|asc`, default `desc`; out-of-scope → 404) | F-07 |
 | Milestone endpoints (list, detail, create, edit) | — | Every serialized `Milestone` includes server-derived `status` (BR-12, never stored) | F-09 |
 
-### 4.3 Sprint 3 endpoints
+### 4.3 Sprint 3 endpoints (contracts in `docs/sprints/sprint-3/`)
 
-| Method | Path | Role | Feature |
-|---|---|---|---|
-| POST | `/api/teams` | Supervisor (student `403`; creator assigned automatically) | F-13 |
-| GET | `/api/teams/available-students` | Supervisor (student `403`; unassigned students only) | F-13 |
-| POST | `/api/teams/:teamId/members` | Supervisor, assigned (student `403`) | F-13 |
-| DELETE | `/api/teams/:teamId/members/:studentId` | Supervisor, assigned (student `403`) | F-13 |
+F-13 is implemented (#83). F-10, F-11 and F-12 are planned: read-only endpoints, no schema change; status comes from the F-09 helper with one `now` per request.
+
+| Method | Path | Role | Feature | Screen |
+|---|---|---|---|---|
+| POST | `/api/teams` | Supervisor (student `403`; creator assigned automatically) | F-13 | `/supervisor` |
+| GET | `/api/teams/available-students` | Supervisor (student `403`; unassigned students only) | F-13 | `/supervisor/teams/:teamId` |
+| POST | `/api/teams/:teamId/members` | Supervisor, assigned (student `403`) | F-13 | `/supervisor/teams/:teamId` |
+| DELETE | `/api/teams/:teamId/members/:studentId` | Supervisor, assigned (student `403`) | F-13 | `/supervisor/teams/:teamId` |
+| GET | `/api/board` | Any, scoped (student: own team; supervisor: assigned teams) | F-10 (planned) | `/student/board`, `/supervisor/board` |
+| GET | `/api/reports/summary` | Supervisor, assigned teams (student 403) | F-11 (planned) | `/supervisor/report` |
+| GET | `/api/submissions?teamId=&milestoneId=&status=` | Supervisor, assigned teams (student 403; invalid filter 400 `INVALID_FILTER`; out-of-scope team/milestone 404) | F-12 (planned) | `/supervisor/submissions` |
 
 ## 5. Roles and permissions
 
@@ -274,7 +280,8 @@ Out-of-scope reads return 404; operations the role may never perform return 403.
 | Edit / extend milestone | ❌ 403 | Assigned teams | 2 |
 | Record / change / release grade | ❌ 403 | Assigned teams | 2 |
 | View grade | Own team, after release | Assigned teams | 2 |
-| Progress board, reports, filters | Own team | Assigned teams | 3 |
+| Progress board | Own team | Assigned teams | 3 |
+| Summary report, submission filters | ❌ 403 | Assigned teams | 3 |
 | Manage teams and members | ❌ 403 | Create teams (assigned automatically); add/remove members on assigned teams (`F-13`, D-06) | 3 |
 
 ## 6. Authentication and session lifecycle

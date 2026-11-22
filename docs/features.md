@@ -19,6 +19,7 @@
 | 1.5 | 2026-11-21 | phet526 | F-07 status updated to Implemented (#64) |
 | 1.6 | 2026-11-21 | phet526 | F-09 status updated to Implemented (#67) |
 | 1.7 | 2026-11-22 | phet526 | F-13 status updated to Implemented (#83) |
+| 1.8 | 2026-11-22 | ILoveSiesta | F-10, F-11, F-12: contracts written (#84), status Contract; implementation after Deliverable 2 (renumbered from 1.7 after F-13 PR #88 took 1.7) |
 
 Requirement IDs refer to `docs/srs.md`. Sprint 1 features have GitHub issues and engineering contracts in
 `docs/sprints/sprint-1/`. Sprint 2–3 features are allocated now and specified in their sprint.
@@ -38,9 +39,9 @@ Status values: **Planned** · **In progress** · **Implemented** · **Tested** �
 | F-07 | Revision history | Full version history per team–milestone with feedback on each version | FR-15, BR-09 | F-03, F-04 | 2 | #64 | Implemented |
 | F-08 | Grades and release | Record a grade per team–milestone; release grades; students see released grades only | FR-18, FR-19, BR-11 | F-03 | 2 | #66 | Implemented |
 | F-09 | Team–milestone status | Derived status (Not submitted, Overdue, Submitted, Submitted late, Reviewed) shown on lists | FR-20, BR-12 | F-03, F-04 | 2 | #67 | Implemented |
-| F-10 | Progress board | Student: own team's milestones by status; supervisor: teams × milestones board | FR-21 | F-09 | 3 | — | Planned |
-| F-11 | Supervisor summary report | Per-team counts by status, late submissions, average released grade | FR-22, NFR-10 | F-08, F-09 | 3 | — | Planned |
-| F-12 | Submission filtering | Filter supervisor submission list by team, milestone and status | FR-23 | F-09 | 3 | — | Planned |
+| F-10 | Progress board | Student: own team's milestones by status; supervisor: teams × milestones board | FR-21 | F-09 | 3 | #84 (contract) | Contract (`docs/sprints/sprint-3/F-10-progress-board.md`); implementation after D2 |
+| F-11 | Supervisor summary report | Per-team counts by status, late submissions, average released grade | FR-22, NFR-10 | F-08, F-09 | 3 | #84 (contract) | Contract (`docs/sprints/sprint-3/F-11-summary-report.md`, includes the NFR-10 measurement plan); implementation after D2 |
+| F-12 | Submission filtering | Filter supervisor submission list by team, milestone and status | FR-23 | F-09 | 3 | #84 (contract) | Contract (`docs/sprints/sprint-3/F-12-submission-filter.md`); implementation after D2 |
 | F-13 | Team management | Supervisor creates teams they supervise and manages members (D-06) | FR-07, BR-10, BR-14 | F-01 | 3 | #83 | Implemented |
 
 ## 2. System responsibilities (cross-cutting)

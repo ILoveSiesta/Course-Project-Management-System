@@ -30,6 +30,8 @@
 | 2.6 | 2026-11-22 | phet526 | F-13 seed/release membership persistence (`AC-13-12` / `TEST-13-19`) added to FR-07 and NFR-08 (`e9a7854` RED `1 failed / 143 passed` → `b9d279d` GREEN `144/144`, CI `45002978696`, #83) |
 | 2.7 | 2026-11-22 | phet526 | F-13 in-flight submission lock (`AC-13-13` / `TEST-13-20`) added to FR-07, BR-01 and BR-14 (`5a1d169` RED `1 failed / 144 passed` CI `45005525513` → `1397c2e` GREEN `145/145` CI `45005779308`); NFR-08 clarified separating local/CI TEST-13-19 PASS, Lab 5/7 prior-release checks, and PLANNED F-13 GCP redeploy for `v0.3.0` (#85) |
 | 2.8 | 2026-11-22 | phet526 | NFR-08 updated to cite `server/tests/api/team-management.api.test.ts` › `TEST-13-19`, exact Lab 5 C-05 rollback/roll-forward releases (`1da4813` / `v0.1.1` `53003a5`), and Lab 7 `v0.1.2` → `v0.2.0` check |
+| 2.9 | 2026-11-22 | ILoveSiesta | Sprint 3 contracts F-10, F-11, F-12 (#84): planned AC and test IDs for FR-21, FR-22, FR-23, NFR-10 (measurement plan in the F-11 contract) and NFR-11; all PLANNED (contracts only, implementation after Deliverable 2) (renumbered from 2.3 after F-13 PR #88 took 2.3–2.8) |
+| 2.10 | 2026-11-22 | ILoveSiesta | §4: F-10 and F-12 contracts revised to v0.2 (#84); AC and test IDs unchanged, rows stay PLANNED (renumbered from 2.4 after F-13 PR #88 took 2.3–2.8) |
 
 Feature and responsibility IDs refer to `docs/features.md`.
 
@@ -65,9 +67,9 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | FR-18 Record grade | F-08 | 2 | AC-08-01, AC-08-02, AC-08-07, AC-08-08 | TEST-08-01, TEST-08-02, TEST-08-07, TEST-08-08, TEST-08-09 | `server/tests/api/grades.api.test.ts`; `server/tests/unit/grade-validation.test.ts`; `client/tests/Grades.test.tsx` | PASS | `249bc1a` |
 | FR-19 Release grades | F-08 | 2 | AC-08-03, AC-08-04, AC-08-05, AC-08-08, AC-08-09 | TEST-08-03, TEST-08-04, TEST-08-05, TEST-08-09, TEST-08-10, TEST-08-11 | `server/tests/api/grades.api.test.ts`; `client/tests/Grades.test.tsx` | PASS | `249bc1a` |
 | FR-20 Team–milestone status | F-09 | 2 | AC-09-01, AC-09-02, AC-09-03, AC-09-04, AC-09-05, AC-09-07 | TEST-09-01, TEST-09-02, TEST-09-03, TEST-09-04, TEST-09-06, TEST-09-07, TEST-09-08 | `server/tests/api/milestone-status.api.test.ts`; `server/tests/unit/milestone-status.test.ts`; `client/tests/MilestoneStatus.test.tsx` | PASS | `31949c8` |
-| FR-21 Progress board | F-10 | 3 | Sprint 3 contract | — | — | PLANNED | — |
-| FR-22 Summary report | F-11 | 3 | Sprint 3 contract | — | — | PLANNED | — |
-| FR-23 Filter submissions | F-12 | 3 | Sprint 3 contract | — | — | PLANNED | — |
+| FR-21 Progress board | F-10 | 3 | AC-10-01, AC-10-02, AC-10-03, AC-10-04, AC-10-05, AC-10-06 | TEST-10-01, TEST-10-02, TEST-10-03, TEST-10-04, TEST-10-05, TEST-10-06, TEST-10-07 | — (planned: `server/tests/api/board.api.test.ts`; `client/tests/ProgressBoard.test.tsx`) | PLANNED | — |
+| FR-22 Summary report | F-11 | 3 | AC-11-01, AC-11-02, AC-11-03, AC-11-04, AC-11-05, AC-11-06 | TEST-11-01, TEST-11-02, TEST-11-03, TEST-11-04, TEST-11-05, TEST-11-06, TEST-11-07 | — (planned: `server/tests/api/summary-report.api.test.ts`; `client/tests/SummaryReport.test.tsx`) | PLANNED | — |
+| FR-23 Filter submissions | F-12 | 3 | AC-12-01, AC-12-02, AC-12-03, AC-12-04, AC-12-05, AC-12-06, AC-12-07 | TEST-12-01, TEST-12-02, TEST-12-03, TEST-12-04, TEST-12-05, TEST-12-06, TEST-12-07 | — (planned: `server/tests/api/submission-filter.api.test.ts`; `client/tests/SubmissionFilter.test.tsx`) | PLANNED | — |
 
 ## 2. Business rules
 
@@ -103,8 +105,8 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | NFR-07 Reproducible setup | SR-04 | 1 | README-only fresh setup | Teammate run before release (manual check, #6) | Manual: phet526 followed the README on their own machine (install, env setup, `npm run build`, `npm test`, `npm run test:e2e`), recorded in the PR #16 review | PASS (manual) | `559bc29` |
 | NFR-08 Durable data on GCP | SR-03; F-13 (`AC-13-12`) | 2, 3 | Data survives restart/redeploy on GCP (and seed re-runs) | Post-deployment check on GCP (Lab 5 C-05; Lab 7; F-13 redeploy on `v0.3.0` #85); TEST-13-19 (local/CI seed re-run) | `server/tests/api/team-management.api.test.ts` › TEST-13-19: PASS on `b9d279d` (CI `45002978696`); Lab 5 C-05 (`docs/labs/lab-05/deployment.md` §7.1): record survived restart, rollback to `1da4813` and roll-forward on `v0.1.1` (`53003a5`); Lab 7 (`docs/labs/lab-07/release-readiness.md`): existing data survived `v0.1.2` → `v0.2.0`; F-13 membership across a real GCP redeploy: not yet run | INCOMPLETE (`TEST-13-19` PASS on CI; F-13 GCP redeploy PLANNED for `v0.3.0` #85) | `b9d279d` (local/CI); `v0.3.0` (#85) PLANNED |
 | NFR-09 CI quality gate | SR-03 | 2 | Failing check blocks merge | CI run evidence (Lab 5) | — | PLANNED | — |
-| NFR-10 Response time | SR-05 (with F-11) | 3 | p95 ≤ 500 ms on seeded dataset | Sprint 3 smoke test | — | PLANNED | — |
-| NFR-11 Responsive UI | SR-06 | 3 | 375 px and 1280 px | Sprint 3 Playwright viewports | — | PLANNED | — |
+| NFR-10 Response time | SR-05 (with F-11) | 3 | AC-11-08: p95 ≤ 500 ms for `/api/reports/summary`, `/api/board`, `/api/submissions`, `/api/teams/:id/milestones` on 20 teams × 10 milestones × 3 versions (F-11 contract §2.4) | TEST-11-09 | — (planned: `server/tests/perf/nfr10.perf.test.ts`, `npm run test:perf --prefix server`) | PLANNED | — |
+| NFR-11 Responsive UI | SR-06 | 3 | 375 px and 1280 px; new Sprint 3 screens: AC-10-07, AC-11-07, AC-12-08 | TEST-10-08, TEST-11-08, TEST-12-08 (existing screens: Sprint 3 Playwright viewport suite, planned) | — (planned: `e2e/sprint3-board-report.spec.ts`) | PLANNED | — |
 | NFR-12 Understandable rejections | SR-02 | 1 (extended each sprint) | Reason shown for every rejection | TEST-02-15 (milestone validation); TEST-03-16 (version limit); TEST-04-12 (feedback validation); TEST-13-12..13 (team/member rejections); TEST-E2E-02 (#6) | `client/tests/Milestones.test.tsx`; `client/tests/Submissions.test.tsx`; `client/tests/Feedback.test.tsx`; `client/tests/TeamManagement.test.tsx`; `e2e/sprint1-rejection-journey.spec.ts` | PASS | `5936f32; dd2e5db` |
 
 ## 4. Coverage gaps
@@ -123,7 +125,8 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 - Sprint 2–3 requirements have a feature and sprint but no AC or tests yet; this is expected at Deliverable 1.
 - BR-05 was revised by CHG-03 (Lab 7, #59). The v0.1 rule's PASS results stay recorded; the revised rule (AC-03-04 rev., AC-03-14..AC-03-18) failed on the pre-change code at RED `f5deaf7` and passes on GREEN `8259688` (feature branch; accepted release and deployed revision recorded at the release). Impact analysis: `docs/labs/lab-07/change-impact.md`.
 - NFR-05 is partly verified (404 and F-01 validation/auth error shapes). 5xx cases come with later features.
-- F-13 / FR-07 AC and tests (`TEST-13-01..TEST-13-20`) are implemented and passing on commit `1397c2e` (feature branch `feature/F-13-team-management`, CI run `45005779308`, #83). F-10..F-12 remain Sprint 3 work (`#84`).
+- F-13 / FR-07 AC and tests (`TEST-13-01..TEST-13-20`) are implemented and passing on commit `1397c2e` (feature branch `feature/F-13-team-management`, CI run `45005779308`, #83).
+- F-10, F-11 and F-12 have contracts with AC and STS IDs (#84, contracts F-10 v0.2, F-11 v0.1 and F-12 v0.2 in `docs/sprints/sprint-3/`); they are implemented after Deliverable 2, so their FR-21, FR-22, FR-23, NFR-10 and NFR-11 rows stay PLANNED. Their 401/403/404 tests (TEST-10-04, TEST-11-05, TEST-12-05, TEST-12-06) are added to NFR-02 and NFR-03 when they pass.
 
 ## 5. Approved changes
 
