@@ -125,6 +125,8 @@ export async function createMilestone(user: AuthenticatedUser, teamId: number, b
 // disclosure of which one failed), then the milestone fields (400). All rows are created in one transaction.
 export async function createMilestoneForTeams(user: AuthenticatedUser, body: unknown) {
   const teamIds = validateTeamIds(body);
+  // An ID above INT4 is an unknown team (404). Prisma throws on such a value, so decide before the query (#89).
+  if (teamIds.some((id) => id > PG_INT4_MAX)) throw notFound();
   const inScope = await getPrisma().team.count({ where: { id: { in: teamIds }, ...scopeFilter(user) } });
   if (inScope !== teamIds.length) throw notFound();
 
