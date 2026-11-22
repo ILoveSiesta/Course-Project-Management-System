@@ -20,6 +20,7 @@ const FIELD_MESSAGES: Record<string, string> = {
   REQUIRED: "Required",
   INVALID_URL: "Link must be an http or https URL",
   INVALID_TYPE: "Invalid value",
+  INVALID_CHARACTER: "Contains an unsupported character",
 };
 const MAX_LENGTH: Record<string, number> = { title: 120, description: 2000, link: 2048 };
 

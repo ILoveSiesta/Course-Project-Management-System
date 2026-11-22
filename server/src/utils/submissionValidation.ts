@@ -1,4 +1,5 @@
 import { HttpError } from "./httpError.js";
+import { hasInvalidTextCharacters } from "./validation.js";
 
 export interface SubmissionInput {
   title: string;
@@ -41,6 +42,7 @@ export function validateSubmissionInput(body: unknown): SubmissionInput {
   } else {
     title = input.title.trim();
     if (!title) details.title = "REQUIRED";
+    else if (hasInvalidTextCharacters(input.title)) details.title = "INVALID_CHARACTER";
     else if (title.length > TITLE_MAX) details.title = "TOO_LONG";
   }
 
@@ -48,6 +50,8 @@ export function validateSubmissionInput(body: unknown): SubmissionInput {
   if (input.description !== undefined && input.description !== null) {
     if (typeof input.description !== "string") {
       details.description = "INVALID_TYPE";
+    } else if (hasInvalidTextCharacters(input.description)) {
+      details.description = "INVALID_CHARACTER";
     } else if (input.description.length > DESCRIPTION_MAX) {
       details.description = "TOO_LONG";
     } else {
@@ -64,6 +68,8 @@ export function validateSubmissionInput(body: unknown): SubmissionInput {
     link = input.link.trim();
     if (!link) {
       details.link = "REQUIRED";
+    } else if (hasInvalidTextCharacters(input.link)) {
+      details.link = "INVALID_CHARACTER";
     } else if (link.length > LINK_MAX) {
       details.link = "TOO_LONG";
     } else {

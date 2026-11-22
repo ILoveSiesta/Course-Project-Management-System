@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { getPrisma } from "../prisma.js";
 import { signToken } from "../utils/jwt.js";
+import { hasInvalidTextCharacters } from "../utils/validation.js";
 
 export class AuthError extends Error {
   code: string;
@@ -19,13 +20,23 @@ export async function loginService(email?: string, password?: string) {
   const details: Record<string, string> = {};
   if (!email || typeof email !== "string" || !email.trim()) {
     details.email = "REQUIRED";
+  } else if (hasInvalidTextCharacters(email)) {
+    details.email = "INVALID_CHARACTER";
   }
   if (!password || typeof password !== "string") {
     details.password = "REQUIRED";
+  } else if (hasInvalidTextCharacters(password)) {
+    details.password = "INVALID_CHARACTER";
   }
 
   if (Object.keys(details).length > 0) {
-    throw new AuthError(400, "VALIDATION_ERROR", "Email and password are required", details);
+    const hasInvalidChar = Object.values(details).includes("INVALID_CHARACTER");
+    throw new AuthError(
+      400,
+      "VALIDATION_ERROR",
+      hasInvalidChar ? "Email or password contains an unsupported character" : "Email and password are required",
+      details
+    );
   }
 
   const normalizedEmail = email!.trim().toLowerCase();

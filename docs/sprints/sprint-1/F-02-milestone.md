@@ -9,6 +9,7 @@
 | 0.1 | 2026-11-05 | ILoveSiesta | Initial contract for F-02 (issue #3) |
 | 0.2 | 2026-11-05 | ILoveSiesta | Definition of Done filled with executed results; no behaviour change |
 | 0.3 | 2026-11-05 | ILoveSiesta | §3: screens use the shared stylesheet (CHG-01); no behaviour, text or test change |
+| 0.4 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): reject NUL (`U+0000`) and unpaired UTF-16 surrogates in `title`/`description` (`INVALID_CHARACTER`, `"Contains an unsupported character"`), bound `deadline` UTC years to `1–9999` (`INVALID_DATE`), and link SDS §4 |
 
 ## 1. Linked requirements
 
@@ -23,10 +24,10 @@
   - A student opens **My team** (`/student`): sees their team's name, members and supervisors, and the team's milestones ordered by deadline (earliest first).
   - A supervisor opens **My teams** (`/supervisor`): sees every team they are assigned to, with members. Selecting a team opens **Team detail** (`/supervisor/teams/:teamId`): members, supervisors, milestones ordered by deadline and a **Create milestone** form.
   - Creating a milestone stores it for that team with the supervisor as `createdBy`; the list refreshes and shows it.
-- **Business rules and validation (BR-04)**
-  - `title`: required, trimmed, 1–120 characters.
-  - `description`: optional; empty string is stored as `null`; at most 2000 characters.
-  - `deadline`: required ISO 8601 date-time; must be **strictly later** than the server's current time at the moment of creation.
+- **Business rules and validation (BR-04, shared rules in SDS §4)**
+  - `title`: required, trimmed, 1–120 characters, no NUL (`U+0000`) or unpaired UTF-16 surrogates (`INVALID_CHARACTER`).
+  - `description`: optional; empty string is stored as `null`; at most 2000 characters, no NUL or unpaired UTF-16 surrogates (`INVALID_CHARACTER`).
+  - `deadline`: required ISO 8601 date-time with UTC year in `1–9999` (`INVALID_DATE` for `year >= 10000` or `< 1`, `9999` accepted); must be **strictly later** than the server's current time at the moment of creation.
 - **Access (BR-01..BR-03, SDS §4–§5)** — check order: authenticate (401) → role (403) → record scope (404) → validation (400).
   - Student: own team only. Supervisor: teams with a `SupervisorAssignment`.
   - Out-of-scope or non-existent team/milestone → `404 NOT_FOUND` (no disclosure). A non-numeric or non-positive ID is treated as not found.
@@ -45,7 +46,7 @@
 
 - Deadlines are displayed in Asia/Bangkok time, e.g. `8 Nov 2026, 23:59 (ICT)` (A-04).
 - The deadline input is `datetime-local`; its value is interpreted in the browser's time zone and sent as an ISO string in UTC.
-- Field error texts: `REQUIRED` → "Required"; `TOO_LONG` → "Too long (max N characters)"; `INVALID_DATE` → "Invalid date"; `MUST_BE_FUTURE` → "Deadline must be in the future".
+- Field error texts: `REQUIRED` → "Required"; `TOO_LONG` → "Too long (max N characters)"; `INVALID_DATE` → "Invalid date"; `MUST_BE_FUTURE` → "Deadline must be in the future"; `INVALID_CHARACTER` → "Contains an unsupported character".
 - A `401` from any F-02 call logs the user out (token cleared) and returns to `/login` (SDS §3.2).
 - Students have no create form, and there is no student route to a supervisor screen. This is only for usability; the API enforces BR-03.
 - Styling (CHG-01): all screens use the shared classes in `client/src/theme.css` (SDS §3.2): app header with brand, user name, role badge and Log out; content in cards; field errors shown in red under the input with a red border. The F-01 login and header move to the same style.
@@ -77,7 +78,7 @@ Validation error example:
 { "error": { "code": "VALIDATION_ERROR", "message": "Invalid milestone", "details": { "title": "REQUIRED", "deadline": "MUST_BE_FUTURE" } } }
 ```
 
-`details` values: `REQUIRED`, `TOO_LONG`, `INVALID_DATE`, `MUST_BE_FUTURE`, `INVALID_TYPE`.
+`details` values: `REQUIRED`, `TOO_LONG`, `INVALID_DATE`, `MUST_BE_FUTURE`, `INVALID_TYPE`, `INVALID_CHARACTER`.
 
 ## 5. Data specification
 

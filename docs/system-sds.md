@@ -19,6 +19,9 @@ Course Project Management System — CPE334 Theme 6
 | 0.13 | 2026-11-22 | phet526 | F-13 (#83) §2.4: `seed.ts` creates baseline student `TeamMembership` rows only when first creating each student account so F-13 membership changes survive release `cpms-migrate` re-seeds (`prisma migrate reset` restores demo layout) |
 | 0.14 | 2026-11-22 | phet526 | F-13 (#83) §1.3: `createSubmission` re-checks `TeamMembership` with `FOR SHARE` inside the milestone-locked transaction so a concurrent member removal rejects an in-flight submission (`BR-01`, `BR-14`) |
 | 0.15 | 2026-11-22 | ILoveSiesta | Sprint 3 contracts (#84): §4.3 one Sprint 3 table with the planned endpoints and screens of F-10, F-11, F-12; §5 the progress board is for both roles while the summary report and submission filters are supervisor-only (FR-22, FR-23) (renumbered from 0.12 after F-13 PR #88 took 0.12–0.14) |
+| 0.16 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): §4 add `400 BAD_REQUEST`, `413 PAYLOAD_TOO_LARGE`, `415 UNSUPPORTED_MEDIA_TYPE`, document pre-auth request parsing order, shared text-character rule (`INVALID_CHARACTER` for NUL `U+0000` and unpaired UTF-16 surrogates) and milestone year range (`1–9999` → `INVALID_DATE`); §9.1 regression test IDs (`TEST-90-U01..U03`, `TEST-90-01..13`) |
+| 0.17 | 2026-11-22 | phet526 | Address PR #91 review: §4 cover undecodable `gzip`/`deflate` stream errors (`Z_DATA_ERROR`/`Z_BUF_ERROR`/`Z_NEED_DICT` → `400 BAD_REQUEST` `"Request body could not be read"`), correct request check order so body parsing precedes auth (`401`) while URL parameter decoding (`%zz`) runs after auth (`401`) and before role (`403`); update §6 login 400 rule and §9.1 (`TEST-90-14`, `TEST-90-UI01..06`) |
+| 0.18 | 2026-11-22 | phet526 | Address PR #91 round-3 review: clarify in §4 that missing, non-JSON, or array login bodies return `400 VALIDATION_ERROR` while JSON primitives including `null` return `400 BAD_REQUEST` |
 
 Requirement IDs (FR/BR/NFR/D) refer to `docs/srs.md`. Feature contracts in `docs/sprints/sprint-N/` give the
 exact endpoint request/response shapes; this document defines the shared structure and conventions they follow.
@@ -196,7 +199,8 @@ other role redirects to the user's own home.
 
 | Status | `code` | When |
 |---|---|---|
-| 400 | `VALIDATION_ERROR` | Missing/invalid fields (`details` maps field → reason) |
+| 400 | `BAD_REQUEST` | Request URL or body cannot be parsed (malformed JSON, primitive JSON body, undecodable compressed `gzip`/`deflate` stream, malformed URL percent-encoding) |
+| 400 | `VALIDATION_ERROR` | Missing/invalid fields (`details` maps field → reason, including `INVALID_CHARACTER` for NUL/unpaired UTF-16 surrogates and `INVALID_DATE` for milestone years outside `1–9999`) |
 | 401 | `UNAUTHENTICATED` | No, malformed, expired or revoked token |
 | 401 | `INVALID_CREDENTIALS` | Login failed (same response for unknown e-mail and wrong password) |
 | 403 | `FORBIDDEN` | The user's role may not call this operation |
@@ -209,11 +213,18 @@ other role redirects to the user's own home.
 | 409 | `SUBMISSION_WINDOW_CLOSED` | Submission later than `deadline + 7 × 24 h` (BR-05, CHG-03); checked after `VERSION_LIMIT_REACHED` |
 | 409 | `TEAM_NAME_EXISTS` | Creating a team whose trimmed name matches an existing team (case-insensitive) |
 | 409 | `STUDENT_ALREADY_IN_TEAM` | Adding a student who already has a `TeamMembership` (BR-10) |
+| 413 | `PAYLOAD_TOO_LARGE` | Request body exceeds server parser limit (100 kB) |
+| 415 | `UNSUPPORTED_MEDIA_TYPE` | Unsupported request charset or content encoding |
 | 500 | `INTERNAL_ERROR` | Unexpected error; details only in server logs (NFR-05) |
 
-**Check order** for every protected request: authenticate (401) → role (403) → record scope (404) → validation
-(400) → business rule (409). Scope is checked before validation so that probing another team's records never
-reveals whether they exist.
+**Pre-check (body parsing) & check order:** `express.json()` body parsing runs before authentication, so unreadable request bodies (malformed or primitive JSON, undecodable `gzip`/`deflate` streams raising `Z_DATA_ERROR`/`Z_BUF_ERROR`/`Z_NEED_DICT`, body `> 100 kB`, unsupported charset/encoding) fail fast with `400 BAD_REQUEST` (non-JSON stream errors use neutral `"Request body could not be read"`), `413 PAYLOAD_TOO_LARGE`, or `415 UNSUPPORTED_MEDIA_TYPE` even when no token is provided (chosen over delaying parser errors past auth because an unreadable payload cannot be parsed safely). Only specifically recognized Express/body-parser/zlib 4xx errors map to these responses; ORM/database errors are never blanket-mapped to `400`, so unexpected failures keep returning safe `500 INTERNAL_ERROR`.
+
+**Shared text and date rules (F-01–F-06, F-13):**
+- All validated text fields (login `email`/`password`, milestone `title`/`description`, submission `title`/`description`/`link`, feedback `comment`, team `name`) reject NUL (`U+0000`) and unpaired UTF-16 surrogates (lone high `0xD800–0xDBFF` or lone low `0xDC00–0xDFFF`) with `400 VALIDATION_ERROR` and `details.<field> = "INVALID_CHARACTER"` rather than silently stripping characters; valid surrogate pairs (e.g. emoji) are accepted. UI field maps render `INVALID_CHARACTER` as `"Contains an unsupported character"`, and login errors containing `INVALID_CHARACTER` report `"Email or password contains an unsupported character"`.
+- A missing, non-JSON, or array body on `POST /api/auth/login` safely fails validation (`400 VALIDATION_ERROR`) instead of dereferencing `undefined`; a primitive JSON body, including `null`, is rejected by `express.json()` with `400 BAD_REQUEST`.
+- Milestone `deadline` values on create (`F-02`, `F-06`) and edit (`F-05`) must parse to a UTC year in `1–9999`; out-of-range years (e.g. `+010000-01-01T00:00:00.000Z`) fail with `400 VALIDATION_ERROR` and `details.deadline = "INVALID_DATE"` (year `9999` stays accepted).
+
+**Check order** for every protected request: body parsing (400/413/415) → authenticate (401, since `router.use(authenticate)` runs before route param decoding) → URL parameter decoding (400 `BAD_REQUEST` on malformed `%zz`, before role checks) → role (403) → record scope (404) → field validation (400 `VALIDATION_ERROR`) → business rule (409). Scope is checked before field validation so that probing another team's records never reveals whether they exist.
 
 ### 4.1 Sprint 1 endpoint overview
 
@@ -289,7 +300,7 @@ Out-of-scope reads return 404; operations the role may never perform return 403.
 | Step | Design |
 |---|---|
 | Password storage | `bcryptjs` hash with cost 10 (NFR-01). Plain passwords exist only in the seed's input and in the login request body. |
-| Login | `POST /api/auth/login { email, password }`. E-mail is lower-cased and looked up; the hash is compared with `bcrypt.compare`. Failure for any reason returns `401 INVALID_CREDENTIALS` with the same message. Success returns `200 { token, user: { id, name, email, role } }`. |
+| Login | `POST /api/auth/login { email, password }`. E-mail is lower-cased and looked up; the hash is compared with `bcrypt.compare`. Missing fields or invalid characters (`U+0000`, unpaired UTF-16 surrogates) return `400 VALIDATION_ERROR`; wrong e-mail or password returns `401 INVALID_CREDENTIALS` with the same message. Success returns `200 { token, user: { id, name, email, role } }`. |
 | Token | JWT signed with HS256 using `JWT_SECRET`. Claims: `sub` (user id), `role`, `jti` (random UUID), `iat`, `exp`. Lifetime `JWT_EXPIRES_IN` = 2 h (NFR-04). |
 | Client storage | The SPA keeps the token in `sessionStorage` (cleared when the tab closes) and sends it as a Bearer header. |
 | Each request | `authenticate` verifies signature and expiry, rejects the token if its `jti` is in `RevokedToken`, loads the user from the database and sets `req.user = { id, role }`. A deleted user or invalid token → 401. |
@@ -355,3 +366,9 @@ flowchart LR
 
 Integration tests reset the test database and reseed before each test file. Test IDs in each feature's STS map
 to test names so results can be traced to acceptance criteria.
+
+### 9.1 Defect `#90` (`DEF-BAD-INPUT`) regression tests
+
+- **Unit (`server/tests/unit/invalid-input.test.ts`):** `TEST-90-U01` (NUL & unpaired UTF-16 surrogate helper + valid emoji pair), `TEST-90-U02` (F-02/F-03/F-04/F-05/F-13 text field rejection with `INVALID_CHARACTER`), `TEST-90-U03` (milestone `deadline` UTC year bounds `1–9999` → `INVALID_DATE` on create/edit).
+- **API + DB (`server/tests/api/invalid-input.api.test.ts`):** `TEST-90-01` (positive controls), `TEST-90-02` (malformed JSON on login and milestone with/without token → `400 BAD_REQUEST`), `TEST-90-03` (primitive JSON `"text"` → `400 BAD_REQUEST`; non-JSON login body → `400 VALIDATION_ERROR`), `TEST-90-04` (malformed URL `%zz` without token → `401 UNAUTHENTICATED`; with token on `/teams/%zz`, `/milestones/%zz`, `/submissions/%zz` or as student on `POST /teams/%zz/milestones` → `400 BAD_REQUEST`), `TEST-90-05` (`> 100 kB` JSON body → `413 PAYLOAD_TOO_LARGE`), `TEST-90-06` (unsupported charset/encoding → `415 UNSUPPORTED_MEDIA_TYPE`), `TEST-90-07` (F-01 login NUL/unpaired surrogate → `400 VALIDATION_ERROR` with `"Email or password contains an unsupported character"`), `TEST-90-08` (F-02/F-05/F-06 milestone `title`/`description` NUL/surrogate → `400 VALIDATION_ERROR`, emoji → `201`), `TEST-90-09` (F-03 submission `title`/`description`/`link` NUL/surrogate → `400 VALIDATION_ERROR`), `TEST-90-10` (F-04 feedback `comment` NUL/surrogate → `400 VALIDATION_ERROR`), `TEST-90-11` (F-13 team `name` NUL/surrogate → `400 VALIDATION_ERROR`), `TEST-90-12` (milestone `deadline` year `≥ 10000` on F-02/F-06/F-05 → `400 VALIDATION_ERROR` `INVALID_DATE`, year `9999` accepted), `TEST-90-13` (unexpected non-HttpError failure still returns safe `500 INTERNAL_ERROR` with no internals), `TEST-90-14` (undecodable `gzip`/`deflate` stream body → `400 BAD_REQUEST` `"Request body could not be read"`, valid gzip → `200`/`201`).
+- **UI (`client/tests/InvalidInputUi.test.tsx`):** `TEST-90-UI01` (login alert shows `"Email or password contains an unsupported character"`), `TEST-90-UI02..UI06` (`F-13` `/supervisor`, `F-02` `/supervisor/teams/1`, `F-05` `/supervisor/milestones/10`, `F-03` `/student/milestones/10`, `F-04` `/supervisor/milestones/10` show `"Contains an unsupported character"` for `INVALID_CHARACTER`, never the raw enum code).

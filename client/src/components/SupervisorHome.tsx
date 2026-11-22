@@ -7,6 +7,7 @@ function teamNameErrorText(code: string): string {
   if (code === "REQUIRED") return "Required";
   if (code === "TOO_LONG") return "Too long (max 80 characters)";
   if (code === "INVALID_TYPE") return "Invalid value";
+  if (code === "INVALID_CHARACTER") return "Contains an unsupported character";
   return code;
 }
 
