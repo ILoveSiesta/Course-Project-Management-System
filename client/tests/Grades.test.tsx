@@ -219,15 +219,25 @@ describe("F-08 Grades UI", () => {
     fireEvent.click(within(card).getByRole("button", { name: "Release grade" }));
     expect(releaseCalls).toBe(0);
 
-    // Changed score + version: saving sends typed values, re-enables Release grade, and releases the saved grade
+    // Version-only change: Save grade stays enabled, sends stored score + new version, and re-enables Release grade
+    expect(within(card).getByRole("button", { name: "Save grade" })).toBeEnabled();
+    fireEvent.click(within(card).getByRole("button", { name: "Save grade" }));
+    expect(await within(card).findByText("80 / 100 (graded on Version 1)")).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Release grade" })).toBeEnabled();
+    expect(within(card).queryByText("Save the grade before releasing")).not.toBeInTheDocument();
+
+    // Score-only change: saving sends typed score + stored version, re-enables Release grade, and releases the saved grade
     fireEvent.change(within(card).getByLabelText("Score"), { target: { value: "92" } });
     fireEvent.click(within(card).getByRole("button", { name: "Save grade" }));
     expect(await within(card).findByText("92 / 100 (graded on Version 1)")).toBeInTheDocument();
     expect(within(card).getByRole("button", { name: "Release grade" })).toBeEnabled();
     expect(within(card).queryByText("Save the grade before releasing")).not.toBeInTheDocument();
 
-    const putCall = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
-    expect(JSON.parse(String(putCall![1]!.body))).toEqual({ score: 92, version: 1 });
+    const puts = fetchMock.mock.calls.filter(([, init]) => init?.method === "PUT");
+    expect(puts.map(([, init]) => JSON.parse(String(init!.body)))).toEqual([
+      { score: 80, version: 1 },
+      { score: 92, version: 1 },
+    ]);
 
     fireEvent.click(within(card).getByRole("button", { name: "Release grade" }));
     expect(await within(card).findByText(/^Released:/)).toBeInTheDocument();
