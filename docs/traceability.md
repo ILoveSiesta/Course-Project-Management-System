@@ -27,6 +27,7 @@
 | 2.3 | 2026-11-22 | phet526 | F-13 AC/tests and results on the feature branch (commit `a4dd669`, CI `44932928877`, #83): FR-07, BR-10, BR-14; F-13 rows added to BR-02, BR-03, NFR-02, NFR-03, NFR-12 |
 | 2.4 | 2026-11-22 | phet526 | F-13 E2E TEST-13-15 locator & cleanup fix (`f894aa6`, CI `44934740519`): updated FR-07, BR-14 and §4 Coverage gaps references |
 | 2.5 | 2026-11-22 | phet526 | F-13 wildcard/backslash, case-insensitive advisory lock and INT4 bounds fix (`TEST-13-16..TEST-13-18` on `dd2e5db`, CI `45000265755`, #83) |
+| 2.6 | 2026-11-22 | phet526 | F-13 seed/release membership persistence (`AC-13-12` / `TEST-13-19`) added to FR-07 and NFR-08 (`e9a7854` RED `1 failed / 143 passed` → `b9d279d` GREEN `144/144`, CI `45002978696`, #83) |
 
 Feature and responsibility IDs refer to `docs/features.md`.
 
@@ -47,7 +48,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | FR-04 Role-based home | F-01 | 1 | AC-01-11 | TEST-01-13..13c; E2E (#6) | `client/tests/Auth.test.tsx` | PASS | `d24f2c0` |
 | FR-05 Student views own team | F-02 | 1 | AC-02-01, AC-02-11 | TEST-02-01, TEST-02-12 | `server/tests/api/teams-milestones.api.test.ts`; `client/tests/Milestones.test.tsx` | PASS | `b97f30d` |
 | FR-06 Supervisor lists assigned teams | F-02 | 1 | AC-02-02 | TEST-02-02 | `server/tests/api/teams-milestones.api.test.ts` | PASS | `b97f30d` |
-| FR-07 Team management | F-13 | 3 | AC-13-01..AC-13-11 | TEST-13-01..TEST-13-18 | `server/tests/api/team-management.api.test.ts`; `server/tests/unit/team-management-validation.test.ts`; `client/tests/TeamManagement.test.tsx`; `e2e/f13-team-management.spec.ts` | PASS | `dd2e5db` |
+| FR-07 Team management | F-13 | 3 | AC-13-01..AC-13-12 | TEST-13-01..TEST-13-19 | `server/tests/api/team-management.api.test.ts`; `server/tests/unit/team-management-validation.test.ts`; `client/tests/TeamManagement.test.tsx`; `e2e/f13-team-management.spec.ts` | PASS | `b9d279d` |
 | FR-08 Create milestone | F-02 | 1 | AC-02-05, AC-02-12 | TEST-02-05, TEST-02-14; TEST-E2E-01 (#6) | `server/tests/api/teams-milestones.api.test.ts`; `client/tests/Milestones.test.tsx`; `e2e/sprint1-normal-journey.spec.ts` | PASS | `5936f32` |
 | FR-09 List milestones | F-02 | 1 | AC-02-09, AC-02-10, AC-02-11 | TEST-02-09, TEST-02-10, TEST-02-12, TEST-02-13 | `server/tests/api/teams-milestones.api.test.ts`; `client/tests/Milestones.test.tsx` | PASS | `b97f30d` |
 | FR-10 Edit / extend milestone | F-05 | 2 | AC-05-01, AC-05-02, AC-05-08, AC-05-09 | TEST-05-01, TEST-05-02, TEST-05-09, TEST-05-10 | `server/tests/api/milestone-edit.api.test.ts`; `client/tests/MilestoneEdit.test.tsx` | PASS | `fdfdff4` |
@@ -98,7 +99,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 | NFR-05 Safe error shape | SR-02 | 1 | JSON shape, no internals | Skeleton test `server/tests/health.api.test.ts` (404 case); F-01–F-04 STS; F-13 INT4 boundary (`TEST-13-18`) | `health.api.test.ts` › unknown API route; `team-management.api.test.ts` › TEST-13-18 | PASS (404 & INT4 bounds) | `49d3c70; dd2e5db` |
 | NFR-06 Concurrent submissions | F-03 | 1 | 10 parallel → unique versions, limit kept | TEST-03-14 | `server/tests/api/submissions.api.test.ts` | PASS | `65aaf05` |
 | NFR-07 Reproducible setup | SR-04 | 1 | README-only fresh setup | Teammate run before release (manual check, #6) | Manual: phet526 followed the README on their own machine (install, env setup, `npm run build`, `npm test`, `npm run test:e2e`), recorded in the PR #16 review | PASS (manual) | `559bc29` |
-| NFR-08 Durable data on GCP | SR-03 | 2 | Data survives restart/redeploy | Post-deployment check (Lab 5) | — | PLANNED | — |
+| NFR-08 Durable data on GCP | SR-03; F-13 (`AC-13-12`) | 2, 3 | Data survives restart/redeploy (and seed re-runs) | Post-deployment check (Lab 5); TEST-13-19 (F-13 seed/release persistence) | `server/tests/api/team-management.api.test.ts` › TEST-13-19 *(GCP post-deploy check recorded in Lab 5/7)* | PASS (TEST-13-19; Lab 5 GCP separate) | `b9d279d` |
 | NFR-09 CI quality gate | SR-03 | 2 | Failing check blocks merge | CI run evidence (Lab 5) | — | PLANNED | — |
 | NFR-10 Response time | SR-05 (with F-11) | 3 | p95 ≤ 500 ms on seeded dataset | Sprint 3 smoke test | — | PLANNED | — |
 | NFR-11 Responsive UI | SR-06 | 3 | 375 px and 1280 px | Sprint 3 Playwright viewports | — | PLANNED | — |
@@ -120,7 +121,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 - Sprint 2–3 requirements have a feature and sprint but no AC or tests yet; this is expected at Deliverable 1.
 - BR-05 was revised by CHG-03 (Lab 7, #59). The v0.1 rule's PASS results stay recorded; the revised rule (AC-03-04 rev., AC-03-14..AC-03-18) failed on the pre-change code at RED `f5deaf7` and passes on GREEN `8259688` (feature branch; accepted release and deployed revision recorded at the release). Impact analysis: `docs/labs/lab-07/change-impact.md`.
 - NFR-05 is partly verified (404 and F-01 validation/auth error shapes). 5xx cases come with later features.
-- F-13 / FR-07 AC and tests (`TEST-13-01..TEST-13-18`) are implemented and passing on commit `dd2e5db` (feature branch `feature/F-13-team-management`, CI run `45000265755`, #83). F-10..F-12 remain Sprint 3 work (`#84`).
+- F-13 / FR-07 AC and tests (`TEST-13-01..TEST-13-19`) are implemented and passing on commit `b9d279d` (feature branch `feature/F-13-team-management`, CI run `45002978696`, #83). F-10..F-12 remain Sprint 3 work (`#84`).
 
 ## 5. Approved changes
 

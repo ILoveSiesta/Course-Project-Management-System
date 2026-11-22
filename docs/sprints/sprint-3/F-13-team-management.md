@@ -11,7 +11,8 @@
 | 0.3 | 2026-11-22 | phet526 | Address PR #88 review: scope TEST-13-15 member-row assertions to `.member-info` and add `beforeEach`/`afterEach` `ensureStudentTwoInAlpha` cleanup (`f894aa6`, CI `44934740519`) |
 | 0.4 | 2026-11-22 | phet526 | Clarify case-insensitive duplicate rule (`lower(name) = lower(:name)` under `pg_advisory_xact_lock`, avoiding `ILIKE` wildcards), INT4 upper bound (`> 2147483647` → `404`), and regression tests `TEST-13-16..18` |
 | 0.5 | 2026-11-22 | phet526 | Definition of Done updated with RED (`a1632b9`) → GREEN (`dd2e5db`) results (`CI 45000265755`, `198 / 198` passed) and `docs/traceability.md` (`2.5`) reference |
-| 0.6 | 2026-11-22 | phet526 | Add AC-13-12 / TEST-13-19 (`seed()` preserves member moves/removals across releases, `NFR-08`), link `NFR-08` in §1 & §5, and record full `a1632b9` RED counts |
+| 0.6 | 2026-11-22 | phet526 | Add AC-13-12 / TEST-13-19 (`seed()` preserves member moves/removals across releases, `NFR-08`), link `NFR-08` in §1 & §5 |
+| 0.7 | 2026-11-22 | phet526 | Update DoD with full `a1632b9` RED (`4 failed / 139 passed`), `e9a7854` RED (`1 failed / 143 passed`), and GREEN `b9d279d` (`45002978696`, `199 / 199` passed) evidence; sync SDS (`0.13`) and traceability (`2.6`) references |
 
 ## 1. Linked requirements
 
@@ -136,8 +137,11 @@ Seed persistence (`NFR-08`): `server/prisma/seed.ts` creates the baseline teams 
 
 ## 8. Definition of Done and evidence
 
-- [x] All AC-13-01..AC-13-11 implemented
-- [x] All STS tests executed and passing on a fresh test database — CI `CI & Docker Build` run `45000265755` on commit `dd2e5db` (`198 / 198` passed, `0` failed, `0` skipped): `deploy/tests` `17` OK (+ deploy/release stub shell checks), backend `22` files / `143` passed (`team-management.api.test.ts` `13`, `team-management-validation.test.ts` `2`), frontend `11` files / `33` passed (`TeamManagement.test.tsx` `3`), Playwright E2E `5` passed in `14.4s` (no retries; `f13-team-management.spec.ts` `4.2s`), and Docker image `cpms-app:ci` built cleanly; local checks (`npm run build`, `client` `33`, `server/tests/unit` `41`, `health.api.test.ts` `2`, `deploy/tests` `17`) also passed (`local Docker Desktop stopped`)
-- [x] TDD red → green commits recorded on `feature/F-13-team-management`: initial contract `26b20bc` → RED `eae26bf` (unit `validateTeamName is not a function`; UI missing `"Create team"`, `"Student"`, `"No members yet."`) → implementation `0f39b85` → E2E locator & repeatability fixes `2c7af88` / `a4dd669` / `f894aa6` (CI `44934740519`) → contract clarification `211a9f8` → regression RED `a1632b9` (unit `parseId("2147483648")` failed `expected undefined to be 404`; PostgreSQL API regression tests `TEST-13-16..18`) → GREEN fix `dd2e5db` (CI `45000265755` green)
-- [x] SRS FR-07 / BR-14 (`0.10`), System SDS §3.1 / §4 / §4.3 / §5 (`0.12`), `docs/traceability.md` (`2.5`), `docs/features.md` (`1.7`) updated
+- [x] All AC-13-01..AC-13-12 implemented
+- [x] All STS tests executed and passing on a fresh test database — CI `CI & Docker Build` run `45002978696` on commit `b9d279d` (`199 / 199` passed, `0` failed, `0` skipped): `deploy/tests` `17` OK (+ deploy/release stub shell checks), backend `22` files / `144` passed (`team-management.api.test.ts` `14`, `team-management-validation.test.ts` `2`), frontend `11` files / `33` passed (`TeamManagement.test.tsx` `3`), Playwright E2E `5` passed in `14.6s` (no retries), and Docker image `cpms-app:ci` built cleanly; local checks (`npm run build`, `client` `33`, `server/tests/unit` `41`, `health.api.test.ts` `2`, `deploy/tests` `17`) also passed (`local Docker Desktop stopped`)
+- [x] TDD red → green commits recorded on `feature/F-13-team-management`:
+  - Initial feature (`26b20bc` contract → `eae26bf` RED `11 failed` API/unit & `3 failed` UI → `0f39b85` implementation → `2c7af88`/`a4dd669`/`f894aa6` E2E fixes, CI `44934740519`)
+  - Round-2 fixes (`211a9f8` contract → `a1632b9` RED server `4 failed / 139 passed (143)`: `TEST-13-16` `expected 409 to be 201`, `TEST-13-17` `expected [ 201, 201 ] to deeply equal [ 201, 409 ]`, `TEST-13-18` API `expected 500 to be 404` & unit `expected undefined to be 404` → `dd2e5db` GREEN, CI `45000265755`, server `143/143`, `198/198` total)
+  - Round-3 seed persistence (`ebeeb71` contract → `e9a7854` RED server `1 failed / 143 passed (144)` on CI `45002682158`: `TEST-13-19` `AssertionError: expected [ 1 ] to deeply equal [ 20 ]` → `b9d279d` GREEN, CI `45002978696`, server `144/144`, `199/199` total)
+- [x] SRS FR-07 / BR-14 (`0.10`), System SDS §2.4 / §3.1 / §4 / §4.3 / §5 (`0.13`), `docs/traceability.md` (`2.6`), `docs/features.md` (`1.7`) updated
 - [ ] PR `#88` reviewed by `@ILoveSiesta` (approve before merge) and merged into `sprint-3`
