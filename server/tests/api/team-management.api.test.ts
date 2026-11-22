@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import bcrypt from "bcryptjs";
 import request from "supertest";
-import { Role } from "@prisma/client";
+import { PrismaClient, Role } from "@prisma/client";
 import { app } from "../../src/app.js";
 import { getPrisma } from "../../src/prisma.js";
 import { seed } from "../../prisma/seed.js";
@@ -645,5 +645,102 @@ describe("F-13 Team management API", () => {
       .get("/api/teams/available-students")
       .set("Authorization", `Bearer ${tokens.supervisor1}`);
     expect(avail.body.students.map((s: { id: number }) => s.id)).toContain(userIds.student4);
+  });
+
+  it("TEST-13-20: AC-13-13 submission in flight during member removal returns 404 and stores nothing (with positive control)", async () => {
+    const prisma = getPrisma();
+    const alphaId = teamIds["Team Alpha"];
+    const locker = new PrismaClient();
+
+    async function runWithMilestoneLock<T>(milestoneId: number, whileLocked: () => Promise<T>): Promise<T> {
+      let releaseLock!: () => void;
+      const lockReleased = new Promise<void>((resolve) => {
+        releaseLock = resolve;
+      });
+      let lockAcquired!: () => void;
+      const acquired = new Promise<void>((resolve) => {
+        lockAcquired = resolve;
+      });
+
+      const txPromise = locker.$transaction(
+        async (tx) => {
+          await tx.$queryRaw`SELECT id FROM "Milestone" WHERE id = ${milestoneId} FOR UPDATE`;
+          lockAcquired();
+          await lockReleased;
+        },
+        { timeout: 15000 }
+      );
+
+      await acquired;
+      try {
+        return await whileLocked();
+      } finally {
+        releaseLock();
+        await txPromise;
+      }
+    }
+
+    try {
+      await prisma.teamMembership.upsert({
+        where: { studentId: userIds.student2 },
+        update: { teamId: alphaId },
+        create: { teamId: alphaId, studentId: userIds.student2 },
+      });
+
+      const msRes = await request(app)
+        .post(`/api/teams/${alphaId}/milestones`)
+        .set("Authorization", `Bearer ${tokens.supervisor1}`)
+        .send({ title: "F13 In-Flight Lock Test", deadline: new Date(Date.now() + 4 * DAY).toISOString() });
+      expect(msRes.status).toBe(201);
+      const msId: number = msRes.body.milestone.id;
+      createdMilestoneIds.push(msId);
+
+      // 1. Start POST while milestone row is locked (.then() starts Supertest immediately),
+      //    remove student2 while blocked on FOR UPDATE, then release lock -> expect 404 & 0 rows.
+      let inFlightPost!: Promise<request.Response>;
+      await runWithMilestoneLock(msId, async () => {
+        inFlightPost = request(app)
+          .post(`/api/milestones/${msId}/submissions`)
+          .set("Authorization", `Bearer ${tokens.student2}`)
+          .send({ title: "In-flight after removal", link: "https://example.com/inflight-removed" })
+          .then((res) => res);
+
+        await new Promise((r) => setTimeout(r, 150));
+
+        const delRes = await request(app)
+          .delete(`/api/teams/${alphaId}/members/${userIds.student2}`)
+          .set("Authorization", `Bearer ${tokens.supervisor1}`);
+        expect(delRes.status).toBe(200);
+      });
+
+      const removedSubmitRes = await inFlightPost;
+      expect(removedSubmitRes.status).toBe(404);
+      expect(removedSubmitRes.body.error.code).toBe("NOT_FOUND");
+      expect(await prisma.submission.count({ where: { milestoneId: msId } })).toBe(0);
+
+      // 2. Positive control: restore student2, hold the same lock without removal -> expect 201 & 1 row.
+      const restoreRes = await request(app)
+        .post(`/api/teams/${alphaId}/members`)
+        .set("Authorization", `Bearer ${tokens.supervisor1}`)
+        .send({ studentId: userIds.student2 });
+      expect(restoreRes.status).toBe(201);
+
+      let controlPost!: Promise<request.Response>;
+      await runWithMilestoneLock(msId, async () => {
+        controlPost = request(app)
+          .post(`/api/milestones/${msId}/submissions`)
+          .set("Authorization", `Bearer ${tokens.student2}`)
+          .send({ title: "In-flight positive control", link: "https://example.com/inflight-ok" })
+          .then((res) => res);
+
+        await new Promise((r) => setTimeout(r, 150));
+      });
+
+      const controlSubmitRes = await controlPost;
+      expect(controlSubmitRes.status).toBe(201);
+      expect(await prisma.submission.count({ where: { milestoneId: msId } })).toBe(1);
+    } finally {
+      await locker.$disconnect();
+    }
   });
 });
