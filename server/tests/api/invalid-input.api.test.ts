@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import zlib from "node:zlib";
 import request from "supertest";
 import { Prisma } from "@prisma/client";
 import { app } from "../../src/app.js";
@@ -166,12 +167,29 @@ describe("Defect #90 (DEF-BAD-INPUT): unreadable requests, NUL/unpaired surrogat
     assertSafeError(nonJsonLogin.body, "VALIDATION_ERROR");
   });
 
-  it("TEST-90-04: Part A malformed URL percent-encoding returns 400 BAD_REQUEST safely", async () => {
-    const res = await request(app)
-      .get("/api/teams/%zz")
-      .set("Authorization", `Bearer ${tokens.supervisor1}`);
-    expect(res.status).toBe(400);
-    assertSafeError(res.body, "BAD_REQUEST");
+  it("TEST-90-04: Part A malformed URL percent-encoding requires auth first (401 without token, 400 BAD_REQUEST with token before role check)", async () => {
+    for (const path of ["/api/teams/%zz", "/api/milestones/%zz", "/api/submissions/%zz"]) {
+      const noToken = await request(app).get(path);
+      expect(noToken.status).toBe(401);
+      assertSafeError(noToken.body, "UNAUTHENTICATED");
+
+      const withToken = await request(app)
+        .get(path)
+        .set("Authorization", `Bearer ${tokens.supervisor1}`);
+      expect(withToken.status).toBe(400);
+      assertSafeError(withToken.body, "BAD_REQUEST");
+    }
+
+    // Param decoding runs before requireRole('SUPERVISOR') once authenticated
+    const studentNoToken = await request(app).post("/api/teams/%zz/milestones").send({});
+    expect(studentNoToken.status).toBe(401);
+
+    const studentWithToken = await request(app)
+      .post("/api/teams/%zz/milestones")
+      .set("Authorization", `Bearer ${tokens.student1}`)
+      .send({});
+    expect(studentWithToken.status).toBe(400);
+    assertSafeError(studentWithToken.body, "BAD_REQUEST");
   });
 
   it("TEST-90-05: Part A body over 100 kB parser limit returns 413 PAYLOAD_TOO_LARGE and stores nothing", async () => {
@@ -227,6 +245,8 @@ describe("Defect #90 (DEF-BAD-INPUT): unreadable requests, NUL/unpaired surrogat
       expect(res.status).toBe(400);
       assertSafeError(res.body, "VALIDATION_ERROR");
       expect(res.body.error.details[field]).toBe("INVALID_CHARACTER");
+      expect(res.body.error.message).toBe("Email or password contains an unsupported character");
+      expect(res.body.error.message).not.toMatch(/required/i);
     }
   });
 
@@ -436,5 +456,75 @@ describe("Defect #90 (DEF-BAD-INPUT): unreadable requests, NUL/unpaired surrogat
       .set("Authorization", `Bearer ${tokens.supervisor1}`);
     expect(prismaErr.status).toBe(500);
     expect(prismaErr.body).toEqual({ error: { code: "INTERNAL_ERROR", message: "Unexpected server error" } });
+  });
+
+  it("TEST-90-14: Part A undecodable gzip/deflate compressed bodies return 400 BAD_REQUEST with neutral message while valid gzip passes", async () => {
+    const beforeCount = await getPrisma().milestone.count();
+
+    // Positive control: valid gzipped JSON succeeds
+    const validGzipLogin = zlib.gzipSync(
+      Buffer.from(JSON.stringify({ email: "student1@cpms.test", password: DEMO_PASSWORD }))
+    );
+    const okLogin = await request(app)
+      .post("/api/auth/login")
+      .set("Content-Type", "application/json")
+      .set("Content-Encoding", "gzip")
+      .send(validGzipLogin);
+    expect(okLogin.status).toBe(200);
+
+    const validGzipMilestone = zlib.gzipSync(
+      Buffer.from(JSON.stringify({ title: "DEF-90 Gzip Control", deadline: FUTURE_DEADLINE }))
+    );
+    const okMilestone = await request(app)
+      .post(`/api/teams/${teamIds["Team Alpha"]}/milestones`)
+      .set("Authorization", `Bearer ${tokens.supervisor1}`)
+      .set("Content-Type", "application/json")
+      .set("Content-Encoding", "gzip")
+      .send(validGzipMilestone);
+    expect(okMilestone.status).toBe(201);
+    createdMilestoneIds.push(okMilestone.body.milestone.id);
+
+    const countAfterControl = await getPrisma().milestone.count();
+    expect(countAfterControl).toBe(beforeCount + 1);
+
+    const invalidCases: Array<[string, string, Buffer, boolean]> = [
+      ["login invalid gzip (no token)", "/api/auth/login", Buffer.from("not-gzip"), false],
+      [
+        "milestone invalid gzip",
+        `/api/teams/${teamIds["Team Alpha"]}/milestones`,
+        Buffer.from("not-gzip"),
+        true,
+      ],
+      [
+        "milestone truncated gzip",
+        `/api/teams/${teamIds["Team Alpha"]}/milestones`,
+        validGzipMilestone.subarray(0, 10),
+        true,
+      ],
+    ];
+
+    for (const [, path, payload, withAuth] of invalidCases) {
+      const req = request(app)
+        .post(path)
+        .set("Content-Type", "application/json")
+        .set("Content-Encoding", "gzip");
+      if (withAuth) req.set("Authorization", `Bearer ${tokens.supervisor1}`);
+      const res = await req.send(payload);
+      expect(res.status).toBe(400);
+      assertSafeError(res.body, "BAD_REQUEST");
+      expect(res.body.error.message).toBe("Request body could not be read");
+    }
+
+    const badDeflate = await request(app)
+      .post(`/api/teams/${teamIds["Team Alpha"]}/milestones`)
+      .set("Authorization", `Bearer ${tokens.supervisor1}`)
+      .set("Content-Type", "application/json")
+      .set("Content-Encoding", "deflate")
+      .send(Buffer.from("not-deflate"));
+    expect(badDeflate.status).toBe(400);
+    assertSafeError(badDeflate.body, "BAD_REQUEST");
+    expect(badDeflate.body.error.message).toBe("Request body could not be read");
+
+    expect(await getPrisma().milestone.count()).toBe(countAfterControl);
   });
 });
