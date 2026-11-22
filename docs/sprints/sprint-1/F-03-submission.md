@@ -9,6 +9,7 @@
 | 0.1 | 2026-11-06 | phet526 | Initial contract for F-03 (issue #4) |
 | 0.2 | 2026-11-21 | ILoveSiesta | Lab 7 change request #59 (CHG-03, approved by TA Kantapat Suwannahong 2026-11-21): BR-05 late window of 7 × 24 h. Changed: §1, §2 (BR-05, check order), §3 (closed-window notice), §4 (`409 SUBMISSION_WINDOW_CLOSED`), §5 (no data change, stated), §6 (AC-03-04 revised; AC-03-14..AC-03-18 new), §7 (TEST-03-18..TEST-03-25 new; TEST-03-15/16 fixture clock revised), §8.1 (DoD of the change). Written and reviewed before any implementation commit. Impact analysis: `docs/labs/lab-07/change-impact.md` |
 | 0.3 | 2026-11-21 | ILoveSiesta | §8.1 filled with executed RED/GREEN/regression results (#59). TEST-03-22 precondition corrected from "now − 1 d" to "now − 23 h" before the test commit: an extension to exactly 1 day back makes the next submission slightly more than 24 h late, which BR-05 rounds up to 2 days. No rule change |
+| 0.4 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): reject NUL (`U+0000`) and unpaired UTF-16 surrogates in submission `title`, `description` and `link` (`INVALID_CHARACTER`, `"Contains an unsupported character"`), linking SDS §4 |
 
 ## 1. Linked requirements
 
@@ -40,10 +41,10 @@
     - When `count >= 3`, submitting throws `409 VERSION_LIMIT_REACHED` with message "Maximum of 3 versions reached for this milestone".
     - **Order of the two 409 rules (v0.2):** inside the transaction the version limit is checked **before** the late window, so a team with 3 versions keeps getting `VERSION_LIMIT_REACHED` (Sprint 1 behaviour unchanged) even after the window has closed.
     - Concurrency safety (NFR-06): creation runs inside a database transaction (`prisma.$transaction`) with a row lock (`FOR UPDATE` on `Milestone`) and a database unique constraint `@@unique([milestoneId, version])` preventing race conditions or duplicate version numbers.
-  - **BR-08 (Field validation):**
-    - `title`: required, trimmed, 1–120 characters (`REQUIRED`, `TOO_LONG`).
-    - `description`: optional; empty string is stored as `null`; at most 2000 characters (`TOO_LONG`, `INVALID_TYPE`).
-    - `link`: required, valid absolute `http` or `https` URL, at most 2048 characters (`REQUIRED`, `TOO_LONG`, `INVALID_URL`, `INVALID_TYPE`).
+  - **BR-08 (Field validation, shared rules in SDS §4):**
+    - `title`: required, trimmed, 1–120 characters, no NUL (`U+0000`) or unpaired UTF-16 surrogates (`REQUIRED`, `INVALID_CHARACTER`, `TOO_LONG`, `INVALID_TYPE`).
+    - `description`: optional; empty string is stored as `null`; at most 2000 characters, no NUL or unpaired UTF-16 surrogates (`INVALID_CHARACTER`, `TOO_LONG`, `INVALID_TYPE`).
+    - `link`: required, valid absolute `http` or `https` URL, at most 2048 characters, no NUL or unpaired UTF-16 surrogates (`REQUIRED`, `INVALID_CHARACTER`, `TOO_LONG`, `INVALID_URL`, `INVALID_TYPE`).
 - **Access and check order (SDS §4–§5):**
   - Check order: authenticate (401) → role (403) → record scope (404) → validation (400) → business rule (409: version limit, then late window). A closed window never changes the 401/403/404/400 answers.
   - Student: may view submissions and submit work only for milestones belonging to their own team (`memberships: { some: { studentId: user.id } }`).
@@ -58,6 +59,7 @@
 | Supervisor milestone detail | `/supervisor/milestones/:milestoneId` | Back to team link; milestone title, deadline (ICT), description; submission versions list with submitter name, link, late badge | Loading; not found/not allowed; empty submissions ("No submissions yet") |
 
 - Deadlines and submission times are formatted in Asia/Bangkok time, e.g. `8 Nov 2026, 23:59 (ICT)` (A-04).
+- Field error texts: `REQUIRED` → "Required"; `INVALID_URL` → "Link must be an http or https URL"; `TOO_LONG` → "Too long (max N characters)"; `INVALID_TYPE` → "Invalid value"; `INVALID_CHARACTER` → "Contains an unsupported character".
 - Submission versions display:
   - Header: `Version N`
   - Badge: `.badge.badge-success` "On time" if `daysLate === 0`; `.badge.badge-warning` `Late (+N d)` if `daysLate > 0`.

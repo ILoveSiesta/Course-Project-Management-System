@@ -8,6 +8,7 @@
 |---|---|---|---|
 | 0.1 | 2026-11-06 | ILoveSiesta | Initial contract for F-04 (issue #5) |
 | 0.2 | 2026-11-06 | ILoveSiesta | Definition of Done filled with executed results; no behaviour change |
+| 0.3 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): reject NUL (`U+0000`) and unpaired UTF-16 surrogates in feedback `comment` (`INVALID_CHARACTER`, `"Contains an unsupported character"`), linking SDS §4 |
 
 ## 1. Linked requirements
 
@@ -23,8 +24,8 @@
   - A version can receive several feedback entries; they are listed oldest first.
   - On **Student milestone detail** (`/student/milestones/:id`) every version shows its feedback entries (author, time in ICT, comment). There is no feedback form for students.
   - Submissions returned by the F-03 endpoints (`GET /api/milestones/:id/submissions`, `GET /api/submissions/:id`) now include their `feedback` array, so both screens get feedback with the submissions in one request.
-- **Business rules and validation (BR-09)**
-  - `comment`: required string, trimmed, 1–5000 characters.
+- **Business rules and validation (BR-09, shared rules in SDS §4)**
+  - `comment`: required string, trimmed, 1–5000 characters, no NUL (`U+0000`) or unpaired UTF-16 surrogates (`REQUIRED`, `INVALID_CHARACTER`, `TOO_LONG`, `INVALID_TYPE`).
   - A feedback entry belongs to exactly one submission version. Submitting a new version creates a new submission row; existing feedback stays on the version it was written for.
   - There is no endpoint to edit or delete feedback (D-08).
 - **Access (BR-01..BR-03, SDS §4–§5)** — check order: authenticate (401) → role (403) → record scope (404) → validation (400).
@@ -42,7 +43,7 @@
 | Student milestone detail | Under each version: feedback list (read-only) | Empty: "No feedback yet." |
 
 - Feedback entry shows the comment, then "by {author name} on {time} (ICT)" using `formatDeadline`.
-- Field error texts: `REQUIRED` → "Required"; `TOO_LONG` → "Too long (max 5000 characters)"; `INVALID_TYPE` → "Invalid value".
+- Field error texts: `REQUIRED` → "Required"; `TOO_LONG` → "Too long (max 5000 characters)"; `INVALID_TYPE` → "Invalid value"; `INVALID_CHARACTER` → "Contains an unsupported character".
 - A `401` logs the user out (SDS §3.2). Styling uses classes in `client/src/theme.css` only (SDS §3.2).
 
 ## 4. API specification
