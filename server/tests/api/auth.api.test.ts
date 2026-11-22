@@ -4,6 +4,7 @@ import express from "express";
 import { app } from "../../src/app.js";
 import { authRouter } from "../../src/routes/auth.routes.js";
 import { getPrisma } from "../../src/prisma.js";
+import * as prismaModule from "../../src/prisma.js";
 import { seed } from "../../prisma/seed.js";
 import { signToken } from "../../src/utils/jwt.js";
 import { authenticate, requireRole } from "../../src/middleware/auth.js";
@@ -322,16 +323,16 @@ describe("F-01 Authentication and Team Data API", () => {
       const token = loginRes.body.token as string;
       const expiredToken = signToken({ id: 1, role: "STUDENT" }, { expiresIn: "-1s" });
 
-      const prisma = getPrisma();
+      const prismaSpy = vi.spyOn(prismaModule, "getPrisma");
       const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      const revokedSpy = vi.spyOn(prisma.revokedToken, "findUnique");
-      const userSpy = vi.spyOn(prisma.user, "findUnique");
 
       try {
-        revokedSpy
-          .mockRejectedValueOnce(new Error("Can't reach database server"))
-          .mockRejectedValueOnce(new Error("Can't reach database server"))
-          .mockRejectedValueOnce(new Error("Can't reach database server"));
+        prismaSpy.mockReturnValue({
+          revokedToken: {
+            findUnique: vi.fn().mockRejectedValue(new Error("Can't reach database server")),
+          },
+          user: { findUnique: vi.fn() },
+        } as any);
 
         const meOutage = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
         expect(meOutage.status).toBe(500);
@@ -350,13 +351,20 @@ describe("F-01 Authentication and Team Data API", () => {
         expect(logoutOutage.status).toBe(500);
         expect(logoutOutage.body.error.code).toBe("INTERNAL_ERROR");
 
-        // Dropped connection on user lookup returns 500, then recovers on next call.
-        userSpy.mockRejectedValueOnce(new Error("P1017: Server has closed the connection"));
+        // Dropped connection on user lookup returns 500, then recovers on real DB.
+        prismaSpy.mockReturnValue({
+          revokedToken: { findUnique: vi.fn().mockResolvedValue(null) },
+          user: {
+            findUnique: vi.fn().mockRejectedValueOnce(new Error("P1017: Server has closed the connection")),
+          },
+        } as any);
         const staleConn = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
         expect(staleConn.status).toBe(500);
         expect(staleConn.body.error.code).toBe("INTERNAL_ERROR");
 
         expect(errorSpy).toHaveBeenCalledTimes(4);
+
+        prismaSpy.mockRestore();
 
         const afterRecovery = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
         expect(afterRecovery.status).toBe(200);
@@ -372,8 +380,7 @@ describe("F-01 Authentication and Team Data API", () => {
         expect(afterRevoke.status).toBe(401);
         expect(afterRevoke.body.error.code).toBe("UNAUTHENTICATED");
       } finally {
-        revokedSpy.mockRestore();
-        userSpy.mockRestore();
+        prismaSpy.mockRestore();
         errorSpy.mockRestore();
       }
     });
