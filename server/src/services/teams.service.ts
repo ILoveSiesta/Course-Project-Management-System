@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { getPrisma } from "../prisma.js";
 import { AuthenticatedUser } from "../middleware/auth.js";
-import { HttpError, notFound } from "../utils/httpError.js";
+import { HttpError, PG_INT4_MAX, notFound } from "../utils/httpError.js";
 import {
   deriveMilestoneStatus,
   validateAddMemberInput,
@@ -181,29 +181,32 @@ const studentAlreadyInTeamError = () =>
   new HttpError(409, "STUDENT_ALREADY_IN_TEAM", "Student already belongs to a team");
 
 // F-13 (FR-07): supervisor creates a team and automatically becomes an assigned supervisor (D-04, D-06).
+// Uses pg_advisory_xact_lock + exact lower(name) comparison so '_', '%' and '\' stay literal and
+// concurrent case-variant creates cannot both commit.
 export async function createTeam(user: AuthenticatedUser, body: unknown) {
   const name = validateTeamName(body);
-  const prisma = getPrisma();
 
-  const existing = await prisma.team.findFirst({
-    where: { name: { equals: name, mode: "insensitive" } },
-    select: { id: true },
+  return await getPrisma().$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(lower(${name})))`;
+    const dup = await tx.$queryRaw<Array<{ id: number }>>`
+      SELECT id FROM "Team" WHERE lower(name) = lower(${name}) LIMIT 1
+    `;
+    if (dup.length > 0) throw teamNameExistsError();
+
+    try {
+      const team = await tx.team.create({
+        data: {
+          name,
+          supervisorAssignments: { create: { supervisorId: user.id } },
+        },
+        include: teamInclude,
+      });
+      return toTeamDto(team);
+    } catch (err) {
+      if (isUniqueViolation(err)) throw teamNameExistsError();
+      throw err;
+    }
   });
-  if (existing) throw teamNameExistsError();
-
-  try {
-    const team = await prisma.team.create({
-      data: {
-        name,
-        supervisorAssignments: { create: { supervisorId: user.id } },
-      },
-      include: teamInclude,
-    });
-    return toTeamDto(team);
-  } catch (err) {
-    if (isUniqueViolation(err)) throw teamNameExistsError();
-    throw err;
-  }
 }
 
 // F-13: list unassigned students for the supervisor picker without disclosing other teams' data.
@@ -219,6 +222,7 @@ export async function listAvailableStudents() {
 export async function addTeamMember(user: AuthenticatedUser, teamId: number, body: unknown) {
   await findTeamInScope(user, teamId);
   const studentId = validateAddMemberInput(body);
+  if (studentId > PG_INT4_MAX) throw new HttpError(404, "NOT_FOUND", "Student not found");
   const prisma = getPrisma();
 
   const targetUser = await prisma.user.findUnique({
