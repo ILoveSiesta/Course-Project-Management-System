@@ -64,7 +64,7 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
 
   const hasUnsavedChanges =
     state.grade !== null &&
-    (score.trim() !== String(state.grade.score) || version !== String(state.grade.version));
+    (score.trim() === "" || Number(score) !== state.grade.score || version !== String(state.grade.version));
 
   const handleError = (err: unknown) => {
     if (err instanceof ApiError && err.status === 401) return onUnauthorized();
@@ -135,6 +135,7 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
                 min={0}
                 max={100}
                 step={1}
+                disabled={isBusy}
                 value={score}
                 onChange={(e) => setScore(e.target.value)}
               />
@@ -142,7 +143,12 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
             </div>
             <div className={fieldClass("version")}>
               <label htmlFor="grade-version">Graded version</label>
-              <select id="grade-version" value={version} onChange={(e) => setVersion(e.target.value)}>
+              <select
+                id="grade-version"
+                disabled={isBusy}
+                value={version}
+                onChange={(e) => setVersion(e.target.value)}
+              >
                 {submissions.map((s) => (
                   <option key={s.id} value={String(s.version)}>
                     Version {s.version}
@@ -151,11 +157,6 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
               </select>
               {errorFor("version")}
             </div>
-            {hasUnsavedChanges && (
-              <p className="muted" role="status">
-                Save the grade before releasing
-              </p>
-            )}
             <div className="form-actions">
               <button type="submit" className="btn" disabled={isBusy}>
                 Save grade
@@ -171,6 +172,11 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
                 </button>
               )}
             </div>
+            {hasUnsavedChanges && (
+              <p className="muted" role="status">
+                Save the grade before releasing
+              </p>
+            )}
           </form>
         </>
       )}
