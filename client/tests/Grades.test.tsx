@@ -160,4 +160,64 @@ describe("F-08 Grades UI", () => {
     const shownCard = await screen.findByRole("region", { name: "Grade" });
     expect(await within(shownCard).findByText("85 / 100 (graded on Version 1)")).toBeInTheDocument();
   });
+
+  it("TEST-08-12: disables Release grade with a notice while Score or Graded version has unsaved changes", async () => {
+    let state: unknown = graded(80, 2);
+    let releaseCalls = 0;
+    const fetchMock = mockApi(supervisor, (url, init) => {
+      if (url.endsWith("/api/milestones/10/grade") && init?.method === "PUT") {
+        const sent = JSON.parse(String(init.body));
+        state = graded(sent.score, sent.version);
+        return { status: 200, body: state };
+      }
+      if (url.endsWith("/api/milestones/10/grade/release") && init?.method === "POST") {
+        releaseCalls += 1;
+        state = graded(80, 1, true);
+        return { status: 200, body: state };
+      }
+      if (url.endsWith("/api/milestones/10/grade")) return { status: 200, body: state };
+    });
+    startAt("/supervisor/milestones/10");
+    render(<App />);
+
+    const card = await screen.findByRole("region", { name: "Grade" });
+    expect(await within(card).findByText("80 / 100 (graded on Version 2)")).toBeInTheDocument();
+
+    const releaseButton = within(card).getByRole("button", { name: "Release grade" });
+    expect(releaseButton).toBeEnabled();
+    expect(within(card).queryByText("Save the grade before releasing")).not.toBeInTheDocument();
+
+    // Changed score disables Release grade and explains why
+    fireEvent.change(within(card).getByLabelText("Score"), { target: { value: "95" } });
+    expect(within(card).getByRole("button", { name: "Release grade" })).toBeDisabled();
+    expect(within(card).getByRole("button", { name: "Save grade" })).toBeEnabled();
+    expect(within(card).getByText("Save the grade before releasing")).toBeInTheDocument();
+    fireEvent.click(within(card).getByRole("button", { name: "Release grade" }));
+    expect(releaseCalls).toBe(0);
+
+    // Reverting back to the stored score re-enables Release grade
+    fireEvent.change(within(card).getByLabelText("Score"), { target: { value: "80" } });
+    expect(within(card).getByRole("button", { name: "Release grade" })).toBeEnabled();
+    expect(within(card).queryByText("Save the grade before releasing")).not.toBeInTheDocument();
+
+    // Changed graded version also disables Release grade
+    fireEvent.change(within(card).getByLabelText("Graded version"), { target: { value: "1" } });
+    expect(within(card).getByRole("button", { name: "Release grade" })).toBeDisabled();
+    expect(within(card).getByText("Save the grade before releasing")).toBeInTheDocument();
+    fireEvent.click(within(card).getByRole("button", { name: "Release grade" }));
+    expect(releaseCalls).toBe(0);
+
+    // Saving the changed version re-enables Release grade and releases the saved grade
+    fireEvent.click(within(card).getByRole("button", { name: "Save grade" }));
+    expect(await within(card).findByText("80 / 100 (graded on Version 1)")).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Release grade" })).toBeEnabled();
+    expect(within(card).queryByText("Save the grade before releasing")).not.toBeInTheDocument();
+
+    const putCall = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(JSON.parse(String(putCall![1]!.body))).toEqual({ score: 80, version: 1 });
+
+    fireEvent.click(within(card).getByRole("button", { name: "Release grade" }));
+    expect(await within(card).findByText(/^Released:/)).toBeInTheDocument();
+    expect(releaseCalls).toBe(1);
+  });
 });
