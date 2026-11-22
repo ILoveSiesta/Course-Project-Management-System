@@ -9,6 +9,7 @@
 | 0.1 | 2026-11-21 | ILoveSiesta | Initial contract for F-08 (issue #66); decisions G1–G7 agreed by both students in #66 |
 | 0.2 | 2026-11-21 | ILoveSiesta | AC-08-06 / TEST-08-06 corrected before the test commit: student3 is a student, so `PUT` and release are rejected by role (403) before the scope check; only its `GET` gives 404. Validation helper named `validateGradeInput` in `server/src/utils/validation.ts` |
 | 0.3 | 2026-11-21 | ILoveSiesta | Definition of Done filled with executed results; no behaviour change |
+| 0.4 | 2026-11-22 | phet526 | Defect #93 (`DEF-GRADE-RELEASE`): revise §2, §3, §6 (`AC-08-10`) and §7 (`TEST-08-12`) so **Release grade** is disabled with `"Save the grade before releasing"` whenever **Score** or **Graded version** has unsaved edits vs the stored grade |
 
 ## 1. Linked requirements
 
@@ -20,7 +21,7 @@
 ## 2. Feature-level design
 
 - **Behaviour and workflow**
-  - On **Supervisor milestone detail** (`/supervisor/milestones/:milestoneId`) a new **Grade** card shows the current grade, e.g. `85 / 100 (graded on Version 1)`, and whether it is released. Before release it has a form with **Score** (0–100) and **Graded version** (a select of this milestone's versions, latest selected by default) and a **Save grade** button, plus a **Release grade** button once a grade exists. After release the form and buttons are gone and the card shows `Released: <time> (ICT)`.
+  - On **Supervisor milestone detail** (`/supervisor/milestones/:milestoneId`) a new **Grade** card shows the current grade, e.g. `85 / 100 (graded on Version 1)`, and whether it is released. Before release it has a form with **Score** (0–100) and **Graded version** (a select of this milestone's versions, latest selected by default) and a **Save grade** button, plus a **Release grade** button once a grade exists. If the form's **Score** or **Graded version** differs from the stored grade, **Release grade** stays disabled and the card displays `"Save the grade before releasing"` until the supervisor either saves or reverts the fields to the stored values. After release the form and buttons are gone and the card shows `Released: <time> (ICT)`.
   - On **Student milestone detail** (`/student/milestones/:milestoneId`) a **Grade** card shows "Grade not released" until release, then `85 / 100 (graded on Version 1)`.
 - **Business rules** (G1–G7 from #66)
   - **G1 scale:** the score is an integer from 0 to 100.
@@ -43,7 +44,7 @@
 
 | Screen | Route | Change | States |
 |---|---|---|---|
-| Supervisor milestone detail | `/supervisor/milestones/:milestoneId` | New **Grade** card under the milestone card | No submission: "Nothing to grade yet" and no form; not graded: "Not graded yet", form; graded, not released: `85 / 100 (graded on Version 1)`, "Not released", form filled with the stored values, **Release grade** button; released: grade line + `Released: <time> (ICT)`, no form; saving/releasing: buttons disabled; 409/400: the API message in an alert in the card, or the field text under the field; 401 → logout |
+| Supervisor milestone detail | `/supervisor/milestones/:milestoneId` | New **Grade** card under the milestone card | No submission: "Nothing to grade yet" and no form; not graded: "Not graded yet", form; graded, not released: `85 / 100 (graded on Version 1)`, "Not released", form filled with the stored values, **Release grade** button enabled when unchanged; unsaved form edits (`score.trim() !== String(state.grade.score)` or `version !== String(state.grade.version)`): **Release grade** disabled and status text `"Save the grade before releasing"` (`role="status"`, `.muted`), **Save grade** stays enabled (reverting or saving re-enables **Release grade**); released: grade line + `Released: <time> (ICT)`, no form; saving/releasing: buttons disabled; 409/400: the API message in an alert in the card, or the field text under the field; 401 → logout |
 | Student milestone detail | `/student/milestones/:milestoneId` | New **Grade** card | Not released: "Grade not released"; released: `85 / 100 (graded on Version 1)` |
 
 - Field texts: score `REQUIRED` → "Required", `INVALID_TYPE` / `OUT_OF_RANGE` → "Enter a whole number from 0 to 100"; version `REQUIRED` / `INVALID_TYPE` / `NOT_FOUND` → "Choose a version of this milestone".
@@ -119,6 +120,7 @@ Migration `f08_grades`:
 | AC-08-07 | Given an assigned supervisor, when the body has a missing, negative, 101, decimal or string score, or a missing, zero or non-integer version, then `400 VALIDATION_ERROR` with `details`; when the version number does not exist in this milestone (including one that exists only in another milestone), then `400` with `details.version = NOT_FOUND`; nothing is stored. |
 | AC-08-08 | Given a supervisor on Supervisor milestone detail with two versions, when they enter a score, keep the default (latest) version and click **Save grade**, then the request is `PUT …/grade { score, version: 2 }` and the card shows `<score> / 100 (graded on Version 2)` and "Not released"; when they click **Release grade**, then the card shows `Released: … (ICT)` and the form is gone; a 409 or 400 from the API is shown in the card. |
 | AC-08-09 | Given a student on Student milestone detail, when the API returns an unreleased state, then the Grade card shows "Grade not released"; when it returns a released grade, then it shows `<score> / 100 (graded on Version N)`. |
+| AC-08-10 | Given a milestone with a stored unreleased grade, when the supervisor edits **Score** or **Graded version** without saving, then **Release grade** is disabled and the card displays `"Save the grade before releasing"` (no release request is sent); when the supervisor reverts the inputs to the stored values or clicks **Save grade**, **Release grade** is enabled again and releases the stored grade. |
 
 ## 7. Software Test Specification (STS)
 
@@ -135,6 +137,7 @@ Migration `f08_grades`:
 | TEST-08-09 | AC-08-08 | UI | Mocked API: supervisor; milestone 10 with v1, v2; grade state not graded | Enter 85, Save grade; then Release grade | PUT body `{ score: 85, version: 2 }`; card text `85 / 100 (graded on Version 2)` and "Not released"; after release `Released:` text and no Save grade button | `client/tests/Grades.test.tsx` › TEST-08-09 |
 | TEST-08-10 | AC-08-08 | UI | Mocked API: PUT answers 409 `GRADE_RELEASED` | Save grade | Alert with the API message in the Grade card | same file › TEST-08-10 |
 | TEST-08-11 | AC-08-09 | UI | Mocked API: student; unreleased state, then a released grade | Render `/student/milestones/10` twice | "Grade not released"; then `85 / 100 (graded on Version 1)` | same file › TEST-08-11 |
+| TEST-08-12 | AC-08-10 | UI | Mocked API: supervisor; milestone 10 with v1, v2; stored unreleased grade `80` on Version 2 | Verify unchanged **Release grade** enabled (control); edit **Score** to `95` → revert to `80`; edit **Graded version** to `1` → **Save grade** → **Release grade** | **Release grade** disabled with `"Save the grade before releasing"` and `0` release calls on changed score and changed version; reverting re-enables **Release grade**; saving then releasing sends `PUT { score: 80, version: 1 }` then `POST .../release` and shows `Released:` | same file › TEST-08-12 |
 
 Existing tests that render the milestone pages (`Submissions.test.tsx`, `Feedback.test.tsx`, `MilestoneEdit.test.tsx`) do not mock the grade endpoint; the page must keep working when the grade request returns nothing useful, so these tests stay unchanged.
 
