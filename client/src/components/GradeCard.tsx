@@ -50,8 +50,8 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
   onUnauthorized,
 }) => {
   const latestVersion = submissions.reduce((max, s) => Math.max(max, s.version), 0);
-  const [score, setScore] = useState("");
-  const [version, setVersion] = useState("");
+  const [score, setScore] = useState(() => (state.grade ? String(state.grade.score) : ""));
+  const [version, setVersion] = useState(() => String(state.grade?.version ?? latestVersion));
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
@@ -61,6 +61,10 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
     setScore(state.grade ? String(state.grade.score) : "");
     setVersion(String(state.grade?.version ?? latestVersion));
   }, [state.grade?.score, state.grade?.version, latestVersion]);
+
+  const hasUnsavedChanges =
+    state.grade !== null &&
+    (score.trim() === "" || Number(score) !== state.grade.score || version !== String(state.grade.version));
 
   const handleError = (err: unknown) => {
     if (err instanceof ApiError && err.status === 401) return onUnauthorized();
@@ -88,6 +92,7 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
   };
 
   const release = async () => {
+    if (hasUnsavedChanges) return;
     setFieldErrors({});
     setFormError(null);
     setIsBusy(true);
@@ -130,6 +135,7 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
                 min={0}
                 max={100}
                 step={1}
+                disabled={isBusy}
                 value={score}
                 onChange={(e) => setScore(e.target.value)}
               />
@@ -137,7 +143,12 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
             </div>
             <div className={fieldClass("version")}>
               <label htmlFor="grade-version">Graded version</label>
-              <select id="grade-version" value={version} onChange={(e) => setVersion(e.target.value)}>
+              <select
+                id="grade-version"
+                disabled={isBusy}
+                value={version}
+                onChange={(e) => setVersion(e.target.value)}
+              >
                 {submissions.map((s) => (
                   <option key={s.id} value={String(s.version)}>
                     Version {s.version}
@@ -151,11 +162,21 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
                 Save grade
               </button>
               {state.grade && (
-                <button type="button" className="btn btn-secondary" disabled={isBusy} onClick={release}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={isBusy || hasUnsavedChanges}
+                  onClick={release}
+                >
                   Release grade
                 </button>
               )}
             </div>
+            {hasUnsavedChanges && (
+              <p className="muted" role="status">
+                Save the grade before releasing
+              </p>
+            )}
           </form>
         </>
       )}
