@@ -17,6 +17,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.11 | 2026-11-21 | phet526 | F-09 (#67): §3.1 student My team and supervisor team detail show derived status badges on milestone lists; §4.2 milestone endpoints include derived `status` without storing it |
 | 0.12 | 2026-11-22 | phet526 | F-13 (#83): §3.1 supervisor dashboard team creation and supervisor team detail member add/remove; §4 errors `TEAM_NAME_EXISTS`, `STUDENT_ALREADY_IN_TEAM`; §4.3 F-13 team management endpoints; §5 updated row for team management (`403` for students) |
 | 0.13 | 2026-11-22 | phet526 | F-13 (#83) §2.4: `seed.ts` creates baseline student `TeamMembership` rows only when first creating each student account so F-13 membership changes survive release `cpms-migrate` re-seeds (`prisma migrate reset` restores demo layout) |
+| 0.14 | 2026-11-22 | phet526 | F-13 (#83) §1.3: `createSubmission` re-checks `TeamMembership` with `FOR SHARE` inside the milestone-locked transaction so a concurrent member removal rejects an in-flight submission (`BR-01`, `BR-14`) |
 
 Requirement IDs (FR/BR/NFR/D) refer to `docs/srs.md`. Feature contracts in `docs/sprints/sprint-N/` give the
 exact endpoint request/response shapes; this document defines the shared structure and conventions they follow.
@@ -64,7 +65,7 @@ server/src/
 |---|---|---|
 | Authentication (401) | `authenticate` middleware on every route except login and health | — |
 | Role permissions (403) | `requireRole` on the route | — |
-| Record scope: own team / assigned team (BR-01, BR-02) | Service, by resolving the record's team and checking membership/assignment for `req.user` | — |
+| Record scope: own team / assigned team (BR-01, BR-02) | Service, by resolving the record's team and checking membership/assignment for `req.user`; `createSubmission` also re-checks `TeamMembership` with `FOR SHARE` inside the milestone-locked transaction so a concurrent F-13 member removal rejects an in-flight submission (`BR-14`) | — |
 | Field validation (BR-04, BR-08) | Service (shared validators in `utils/`) | DB column lengths / not-null |
 | Version numbering and limit (BR-06, BR-07) | Service, inside a transaction that locks the milestone row | Unique (`milestoneId`, `version`) |
 | Late calculation and 7-day late window (BR-05, rev. CHG-03) | Service at insert time, using server time and the deadline read in the locked transaction; window checked after the version limit (pure helpers in `utils/submissionValidation.ts`) | Check `daysLate >= 0` (no upper-bound constraint: rows stored before CHG-03 may exceed 7) |

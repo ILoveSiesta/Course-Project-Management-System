@@ -13,6 +13,7 @@
 | 0.5 | 2026-11-22 | phet526 | Definition of Done updated with RED (`a1632b9`) → GREEN (`dd2e5db`) results (`CI 45000265755`, `198 / 198` passed) and `docs/traceability.md` (`2.5`) reference |
 | 0.6 | 2026-11-22 | phet526 | Add AC-13-12 / TEST-13-19 (`seed()` preserves member moves/removals across releases, `NFR-08`), link `NFR-08` in §1 & §5 |
 | 0.7 | 2026-11-22 | phet526 | Update DoD with full `a1632b9` RED (`4 failed / 139 passed`), `e9a7854` RED (`1 failed / 143 passed`), and GREEN `b9d279d` (`45002978696`, `199 / 199` passed) evidence; sync SDS (`0.13`) and traceability (`2.6`) references |
+| 0.8 | 2026-11-22 | phet526 | Add AC-13-13 / TEST-13-20 (`createSubmission` re-checks `TeamMembership` with `FOR SHARE` inside the milestone-locked transaction so a concurrent member removal rejects an in-flight submission with `404`) |
 
 ## 1. Linked requirements
 
@@ -34,7 +35,7 @@
   - **Target user rules on add:** `studentId` must be a positive integer (`400 VALIDATION_ERROR`: `REQUIRED` / `INVALID_TYPE`). Positive integers above PostgreSQL 32-bit `INT4` max (`2147483647`) have no matching record and return **`404 NOT_FOUND`** (`"Student not found"`), just like any other unknown user ID. If the user exists with `role !== "STUDENT"` (e.g. a supervisor account), the API returns **`400 VALIDATION_ERROR`** with `details: { studentId: "NOT_A_STUDENT" }` and nothing is stored.
   - **BR-14 (removing or moving a member):** Removing a member deletes only the `TeamMembership` row; `Submission`, `Feedback`, `Grade`, and `Milestone` records remain untouched (`submittedById` stays pointing to the original student).
     - The team (remaining members and assigned supervisors) keeps all existing milestones, submissions, revision history, feedback, and grades, still displaying the original submitter's name (`submittedBy`).
-    - The removed student loses access immediately (`BR-01` scope uses `TeamMembership`): `GET /api/teams` returns `{ teams: [] }` (`Student Dashboard` displays `"You are not assigned to a team yet."`), and direct requests to the old team, its milestones, submissions, revision history, or grades return **`404 NOT_FOUND`**.
+    - The removed student loses access immediately (`BR-01` scope uses `TeamMembership`): `GET /api/teams` returns `{ teams: [] }` (`Student Dashboard` displays `"You are not assigned to a team yet."`), and direct requests to the old team, its milestones, submissions, revision history, or grades return **`404 NOT_FOUND`**. For student writes (`POST /api/milestones/:milestoneId/submissions`), `createSubmission` also re-checks `TeamMembership` with `FOR SHARE` directly after acquiring the milestone row lock (`FOR UPDATE`), so a submission that was already in flight when the student was removed is rejected with **`404 NOT_FOUND`** and stores nothing, while a concurrent removal waits for any submission that already passed the `FOR SHARE` check.
 - **Out of scope**
   - Deleting or renaming teams.
   - Assigning or removing other supervisors (`SupervisorAssignment` beyond adding the creating supervisor on team creation stays seed-managed per D-04/D-06).
@@ -110,6 +111,7 @@ Seed persistence (`NFR-08`): `server/prisma/seed.ts` creates the baseline teams 
 | AC-13-10 | Given **Supervisor team detail** (`/supervisor/teams/:teamId`), when the supervisor selects an unassigned student and clicks **Add member**, the member appears in **Members** and leaves the picker; when they click **Remove** beside a member, the member leaves **Members** and returns to the picker; errors (`409`) show in `.alert`. |
 | AC-13-11 | Given a browser user journey (E2E on real PostgreSQL), a supervisor creates a new team, opens it, removes a student who has an existing submission on an earlier team, adds that student to the new team, creates a milestone, verifies reload persistence, and confirms the earlier team's submission still shows the original submitter (`BR-14`). |
 | AC-13-12 | Given existing seeded students whose memberships were moved (e.g. `student2` moved from Team Alpha to a new team) or removed (e.g. `student4` removed from Team Beta), when `seed()` / the release migration job re-runs, both changes survive: `student2` stays in the new team (still receiving `404` on Team Alpha milestones and `200` on the new team's milestone) and `student4` remains unassigned (`NFR-08`, `FR-07`, `BR-14`). |
+| AC-13-13 | Given a student whose `POST /api/milestones/:milestoneId/submissions` is in flight waiting on the milestone lock when a supervisor removes them from that team (`DELETE /api/teams/:teamId/members/:studentId`), when the lock is released, the submission is rejected with `404 NOT_FOUND` and nothing is stored (`BR-01`, `BR-14`); under the same lock wait without removal (positive control), the submission succeeds with `201`. |
 
 ## 7. Software Test Specification (STS)
 
@@ -134,6 +136,7 @@ Seed persistence (`NFR-08`): `server/prisma/seed.ts` creates the baseline teams 
 | TEST-13-17 | AC-13-01 | Integration | `supervisor1`, `supervisor2` tokens | Concurrent `Promise.all` `POST /api/teams` for case variants `"F13 Race Pair"` and `"f13 race pair"` | Exactly one `201` and one `409 TEAM_NAME_EXISTS`; DB stores one row | same file › TEST-13-17 |
 | TEST-13-18 | AC-13-05, AC-13-06, AC-13-08 | API + Unit | `supervisor1`, Alpha team ID | `POST /teams/1/members` `{ studentId: 2147483648 }`, `DELETE /teams/1/members/2147483648`, `POST /teams/2147483648/members`; `parseId("2147483647")` / `parseId("2147483648")` | All three endpoints return `404 NOT_FOUND` (no `500`); `parseId` accepts `2147483647` and throws `404` on `2147483648` | same file › TEST-13-18; `server/tests/unit/team-management-validation.test.ts` |
 | TEST-13-19 | AC-13-12 | API + DB | Seeded `student2` (Alpha) & `student4` (Beta), new team + milestones | Move `student2` Alpha → new team and remove `student4` from Beta; run `seed()` again | Both membership changes survive `seed()`; `student2` still gets `404` on Alpha milestone and `200` on new-team milestone; `student4` remains in `available-students` | same file › TEST-13-19 |
+| TEST-13-20 | AC-13-13 | Integration | `student2` in Alpha, milestone locked via second Prisma client | Start `POST` submission while milestone is locked, remove `student2` (`200`), release lock; repeat without removal (positive control) | Removed case returns `404` and stores `0` rows; positive control without removal returns `201` and stores `1` row | same file › TEST-13-20 |
 
 ## 8. Definition of Done and evidence
 
