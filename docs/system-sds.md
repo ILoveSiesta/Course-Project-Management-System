@@ -19,6 +19,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.13 | 2026-11-22 | phet526 | F-13 (#83) §2.4: `seed.ts` creates baseline student `TeamMembership` rows only when first creating each student account so F-13 membership changes survive release `cpms-migrate` re-seeds (`prisma migrate reset` restores demo layout) |
 | 0.14 | 2026-11-22 | phet526 | F-13 (#83) §1.3: `createSubmission` re-checks `TeamMembership` with `FOR SHARE` inside the milestone-locked transaction so a concurrent member removal rejects an in-flight submission (`BR-01`, `BR-14`) |
 | 0.15 | 2026-11-22 | ILoveSiesta | Sprint 3 contracts (#84): §4.3 one Sprint 3 table with the planned endpoints and screens of F-10, F-11, F-12; §5 the progress board is for both roles while the summary report and submission filters are supervisor-only (FR-22, FR-23) (renumbered from 0.12 after F-13 PR #88 took 0.12–0.14) |
+| 0.16 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): §4 add `400 BAD_REQUEST`, `413 PAYLOAD_TOO_LARGE`, `415 UNSUPPORTED_MEDIA_TYPE`, document pre-auth request parsing order, shared text-character rule (`INVALID_CHARACTER` for NUL `U+0000` and unpaired UTF-16 surrogates) and milestone year range (`1–9999` → `INVALID_DATE`); §9.1 regression test IDs (`TEST-90-U01..U03`, `TEST-90-01..13`) |
 
 Requirement IDs (FR/BR/NFR/D) refer to `docs/srs.md`. Feature contracts in `docs/sprints/sprint-N/` give the
 exact endpoint request/response shapes; this document defines the shared structure and conventions they follow.
@@ -196,7 +197,8 @@ other role redirects to the user's own home.
 
 | Status | `code` | When |
 |---|---|---|
-| 400 | `VALIDATION_ERROR` | Missing/invalid fields (`details` maps field → reason) |
+| 400 | `BAD_REQUEST` | Request URL or JSON body cannot be parsed (malformed JSON, primitive JSON body, malformed URL percent-encoding) |
+| 400 | `VALIDATION_ERROR` | Missing/invalid fields (`details` maps field → reason, including `INVALID_CHARACTER` for NUL/unpaired UTF-16 surrogates and `INVALID_DATE` for milestone years outside `1–9999`) |
 | 401 | `UNAUTHENTICATED` | No, malformed, expired or revoked token |
 | 401 | `INVALID_CREDENTIALS` | Login failed (same response for unknown e-mail and wrong password) |
 | 403 | `FORBIDDEN` | The user's role may not call this operation |
@@ -209,11 +211,18 @@ other role redirects to the user's own home.
 | 409 | `SUBMISSION_WINDOW_CLOSED` | Submission later than `deadline + 7 × 24 h` (BR-05, CHG-03); checked after `VERSION_LIMIT_REACHED` |
 | 409 | `TEAM_NAME_EXISTS` | Creating a team whose trimmed name matches an existing team (case-insensitive) |
 | 409 | `STUDENT_ALREADY_IN_TEAM` | Adding a student who already has a `TeamMembership` (BR-10) |
+| 413 | `PAYLOAD_TOO_LARGE` | Request body exceeds server parser limit (100 kB) |
+| 415 | `UNSUPPORTED_MEDIA_TYPE` | Unsupported request charset or content encoding |
 | 500 | `INTERNAL_ERROR` | Unexpected error; details only in server logs (NFR-05) |
 
-**Check order** for every protected request: authenticate (401) → role (403) → record scope (404) → validation
-(400) → business rule (409). Scope is checked before validation so that probing another team's records never
-reveals whether they exist.
+**Pre-check (URL decoding & body parsing):** Request URL parameter decoding (`decodeURIComponent`) and `express.json()` parsing run before authentication, so unreadable requests (malformed URL `%zz`, malformed or primitive JSON, body `> 100 kB`, unsupported charset/encoding) fail fast with `400 BAD_REQUEST`, `413 PAYLOAD_TOO_LARGE`, or `415 UNSUPPORTED_MEDIA_TYPE` even when no token is provided (chosen over delaying parser errors past auth because an unreadable HTTP payload cannot be routed or parsed safely). Only specifically recognized Express/body-parser 4xx errors map to these responses; ORM/database errors are never blanket-mapped to `400`, so unexpected failures keep returning safe `500 INTERNAL_ERROR`.
+
+**Shared text and date rules (F-01–F-06, F-13):**
+- All validated text fields (login `email`/`password`, milestone `title`/`description`, submission `title`/`description`/`link`, feedback `comment`, team `name`) reject NUL (`U+0000`) and unpaired UTF-16 surrogates (lone high `0xD800–0xDBFF` or lone low `0xDC00–0xDFFF`) with `400 VALIDATION_ERROR` and `details.<field> = "INVALID_CHARACTER"` rather than silently stripping characters; valid surrogate pairs (e.g. emoji) are accepted.
+- Non-object or missing bodies on `POST /api/auth/login` safely fail validation (`400 VALIDATION_ERROR`) instead of dereferencing `undefined`.
+- Milestone `deadline` values on create (`F-02`, `F-06`) and edit (`F-05`) must parse to a UTC year in `1–9999`; out-of-range years (e.g. `+010000-01-01T00:00:00.000Z`) fail with `400 VALIDATION_ERROR` and `details.deadline = "INVALID_DATE"` (year `9999` stays accepted).
+
+**Check order** for every protected request (after URL decoding/body parsing succeeds): authenticate (401) → role (403) → record scope (404) → validation (400) → business rule (409). Scope is checked before validation so that probing another team's records never reveals whether they exist.
 
 ### 4.1 Sprint 1 endpoint overview
 
@@ -355,3 +364,8 @@ flowchart LR
 
 Integration tests reset the test database and reseed before each test file. Test IDs in each feature's STS map
 to test names so results can be traced to acceptance criteria.
+
+### 9.1 Defect `#90` (`DEF-BAD-INPUT`) regression tests
+
+- **Unit (`server/tests/unit/invalid-input.test.ts`):** `TEST-90-U01` (NUL & unpaired UTF-16 surrogate helper + valid emoji pair), `TEST-90-U02` (F-02/F-03/F-04/F-05/F-13 text field rejection with `INVALID_CHARACTER`), `TEST-90-U03` (milestone `deadline` UTC year bounds `1–9999` → `INVALID_DATE` on create/edit).
+- **API + DB (`server/tests/api/invalid-input.api.test.ts`):** `TEST-90-01` (positive controls), `TEST-90-02` (malformed JSON on login and milestone with/without token → `400 BAD_REQUEST`), `TEST-90-03` (primitive JSON `"text"` → `400 BAD_REQUEST`; non-JSON login body → `400 VALIDATION_ERROR`), `TEST-90-04` (malformed URL `%zz` → `400 BAD_REQUEST`), `TEST-90-05` (`> 100 kB` JSON body → `413 PAYLOAD_TOO_LARGE`), `TEST-90-06` (unsupported charset/encoding → `415 UNSUPPORTED_MEDIA_TYPE`), `TEST-90-07` (F-01 login NUL/unpaired surrogate → `400 VALIDATION_ERROR`), `TEST-90-08` (F-02/F-05/F-06 milestone `title`/`description` NUL/surrogate → `400 VALIDATION_ERROR`, emoji → `201`), `TEST-90-09` (F-03 submission `title`/`description`/`link` NUL/surrogate → `400 VALIDATION_ERROR`), `TEST-90-10` (F-04 feedback `comment` NUL/surrogate → `400 VALIDATION_ERROR`), `TEST-90-11` (F-13 team `name` NUL/surrogate → `400 VALIDATION_ERROR`), `TEST-90-12` (milestone `deadline` year `≥ 10000` on F-02/F-06/F-05 → `400 VALIDATION_ERROR` `INVALID_DATE`, year `9999` accepted), `TEST-90-13` (unexpected non-HttpError failure still returns safe `500 INTERNAL_ERROR` with no internals).
