@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import request from "supertest";
 import express from "express";
 import { app } from "../../src/app.js";
@@ -305,6 +305,166 @@ describe("F-01 Authentication and Team Data API", () => {
         .post("/api/auth/login")
         .send({ email: "student1@cpms.test", password: DEMO_PASSWORD });
       expect(loginAfterReseed.status).toBe(200);
+    });
+  });
+
+  describe("Defect #92 (DEF-SERVER-ERR): auth resilience, concurrent logout, timing parity and log safety", () => {
+    function median(values: number[]): number {
+      const sorted = [...values].sort((a, b) => a - b);
+      return sorted[Math.floor(sorted.length / 2)];
+    }
+
+    it("TEST-01-15: DB failure in authenticate returns logged 500 INTERNAL_ERROR without revoking tokens, while 401 controls stay 401", async () => {
+      const loginRes = await request(app)
+        .post("/api/auth/login")
+        .send({ email: "student1@cpms.test", password: DEMO_PASSWORD });
+      expect(loginRes.status).toBe(200);
+      const token = loginRes.body.token as string;
+      const expiredToken = signToken({ id: 1, role: "STUDENT" }, { expiresIn: "-1s" });
+
+      const prisma = getPrisma();
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const revokedSpy = vi.spyOn(prisma.revokedToken, "findUnique");
+      const userSpy = vi.spyOn(prisma.user, "findUnique");
+
+      try {
+        revokedSpy
+          .mockRejectedValueOnce(new Error("Can't reach database server"))
+          .mockRejectedValueOnce(new Error("Can't reach database server"))
+          .mockRejectedValueOnce(new Error("Can't reach database server"));
+
+        const meOutage = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
+        expect(meOutage.status).toBe(500);
+        expect(meOutage.body).toEqual({
+          error: { code: "INTERNAL_ERROR", message: "Unexpected server error" },
+        });
+
+        const teamsOutage = await request(app).get("/api/teams").set("Authorization", `Bearer ${token}`);
+        expect(teamsOutage.status).toBe(500);
+        expect(teamsOutage.body.error.code).toBe("INTERNAL_ERROR");
+
+        // Logout under DB outage returns 500 and must not revoke the token.
+        const logoutOutage = await request(app)
+          .post("/api/auth/logout")
+          .set("Authorization", `Bearer ${token}`);
+        expect(logoutOutage.status).toBe(500);
+        expect(logoutOutage.body.error.code).toBe("INTERNAL_ERROR");
+
+        // Dropped connection on user lookup returns 500, then recovers on next call.
+        userSpy.mockRejectedValueOnce(new Error("P1017: Server has closed the connection"));
+        const staleConn = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
+        expect(staleConn.status).toBe(500);
+        expect(staleConn.body.error.code).toBe("INTERNAL_ERROR");
+
+        expect(errorSpy).toHaveBeenCalledTimes(4);
+
+        const afterRecovery = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
+        expect(afterRecovery.status).toBe(200);
+        expect(afterRecovery.body.user.email).toBe("student1@cpms.test");
+
+        // 401 controls remain 401: missing, malformed, expired, and revoked.
+        expect((await request(app).get("/api/auth/me")).status).toBe(401);
+        expect((await request(app).get("/api/auth/me").set("Authorization", "Bearer bad-token")).status).toBe(401);
+        expect((await request(app).get("/api/auth/me").set("Authorization", `Bearer ${expiredToken}`)).status).toBe(401);
+
+        expect((await request(app).post("/api/auth/logout").set("Authorization", `Bearer ${token}`)).status).toBe(204);
+        const afterRevoke = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
+        expect(afterRevoke.status).toBe(401);
+        expect(afterRevoke.body.error.code).toBe("UNAUTHENTICATED");
+      } finally {
+        revokedSpy.mockRestore();
+        userSpy.mockRestore();
+        errorSpy.mockRestore();
+      }
+    });
+
+    it("TEST-01-16: parallel POST /api/auth/logout calls for the same token all return 204 and revoke it", async () => {
+      for (let round = 0; round < 5; round++) {
+        const loginRes = await request(app)
+          .post("/api/auth/login")
+          .send({ email: "student1@cpms.test", password: DEMO_PASSWORD });
+        expect(loginRes.status).toBe(200);
+        const token = loginRes.body.token as string;
+
+        const responses = await Promise.all(
+          Array.from({ length: 5 }, () =>
+            request(app).post("/api/auth/logout").set("Authorization", `Bearer ${token}`)
+          )
+        );
+        expect(
+          responses.map((r) => r.status),
+          `round ${round + 1} parallel logout statuses`
+        ).toEqual([204, 204, 204, 204, 204]);
+
+        const meAfter = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
+        expect(meAfter.status).toBe(401);
+        expect(meAfter.body.error.code).toBe("UNAUTHENTICATED");
+      }
+    });
+
+    it("TEST-01-17: login response latency for an unknown email stays comparable to an existing email with wrong password", async () => {
+      // Warmup request to eliminate one-time connection/JIT variance.
+      await request(app)
+        .post("/api/auth/login")
+        .send({ email: "student1@cpms.test", password: "wrong-password" });
+
+      const existingDurations: number[] = [];
+      const unknownDurations: number[] = [];
+
+      for (let i = 0; i < 5; i++) {
+        const t1 = performance.now();
+        const existingRes = await request(app)
+          .post("/api/auth/login")
+          .send({ email: "student1@cpms.test", password: "wrong-password" });
+        existingDurations.push(performance.now() - t1);
+        expect(existingRes.status).toBe(401);
+        expect(existingRes.body).toEqual({
+          error: { code: "INVALID_CREDENTIALS", message: "Invalid email or password" },
+        });
+
+        const t2 = performance.now();
+        const unknownRes = await request(app)
+          .post("/api/auth/login")
+          .send({ email: `unknown-${i}@cpms.test`, password: "wrong-password" });
+        unknownDurations.push(performance.now() - t2);
+        expect(unknownRes.status).toBe(401);
+        expect(unknownRes.body).toEqual({
+          error: { code: "INVALID_CREDENTIALS", message: "Invalid email or password" },
+        });
+      }
+
+      const existingMed = median(existingDurations);
+      const unknownMed = median(unknownDurations);
+      expect(unknownMed).toBeGreaterThanOrEqual(existingMed * 0.4);
+    });
+
+    it("TEST-01-18: malformed login JSON containing a password returns 400 BAD_REQUEST and never writes the body to logs", async () => {
+      const secretMarker = "SYNTHETIC-PASSWORD-SECRET-92";
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      try {
+        const res = await request(app)
+          .post("/api/auth/login")
+          .set("Content-Type", "application/json")
+          .send(`{"email":"student1@cpms.test","password":"${secretMarker}",`);
+
+        expect(res.status).toBe(400);
+        expect(res.body).toEqual({
+          error: { code: "BAD_REQUEST", message: "Malformed JSON request body" },
+        });
+
+        const allLogged = [...errorSpy.mock.calls, ...warnSpy.mock.calls, ...logSpy.mock.calls]
+          .flat()
+          .map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg) ?? String(arg)))
+          .join("\n");
+        expect(allLogged).not.toContain(secretMarker);
+      } finally {
+        logSpy.mockRestore();
+        warnSpy.mockRestore();
+        errorSpy.mockRestore();
+      }
     });
   });
 });
