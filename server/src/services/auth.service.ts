@@ -30,7 +30,13 @@ export async function loginService(email?: string, password?: string) {
   }
 
   if (Object.keys(details).length > 0) {
-    throw new AuthError(400, "VALIDATION_ERROR", "Email and password are required", details);
+    const hasInvalidChar = Object.values(details).includes("INVALID_CHARACTER");
+    throw new AuthError(
+      400,
+      "VALIDATION_ERROR",
+      hasInvalidChar ? "Email or password contains an unsupported character" : "Email and password are required",
+      details
+    );
   }
 
   const normalizedEmail = email!.trim().toLowerCase();

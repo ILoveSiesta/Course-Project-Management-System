@@ -4,6 +4,7 @@ const FIELD_MESSAGES: Record<string, string> = {
   INVALID_DATE: "Invalid date",
   MUST_BE_FUTURE: "Deadline must be in the future",
   INVALID_TYPE: "Invalid value",
+  INVALID_CHARACTER: "Contains an unsupported character",
   NO_CHANGES: "Change at least one field",
 };
 const MAX_LENGTH: Record<string, number> = { title: 120, description: 2000 };

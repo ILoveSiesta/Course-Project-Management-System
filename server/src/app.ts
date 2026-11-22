@@ -88,9 +88,10 @@ export function createApp(options: AppOptions = {}): Express {
 
 function mapRequestParseError(err: unknown): HttpError | null {
   if (typeof err !== "object" || err === null) return null;
-  const candidate = err as { status?: unknown; statusCode?: unknown; type?: unknown };
+  const candidate = err as { status?: unknown; statusCode?: unknown; type?: unknown; code?: unknown };
   const status = typeof candidate.status === "number" ? candidate.status : candidate.statusCode;
   const type = typeof candidate.type === "string" ? candidate.type : "";
+  const code = typeof candidate.code === "string" ? candidate.code : "";
 
   if (status === 413 && type === "entity.too.large") {
     return new HttpError(413, "PAYLOAD_TOO_LARGE", "Request body is too large");
@@ -98,20 +99,25 @@ function mapRequestParseError(err: unknown): HttpError | null {
   if (status === 415 && (type === "charset.unsupported" || type === "encoding.unsupported")) {
     return new HttpError(415, "UNSUPPORTED_MEDIA_TYPE", "Unsupported charset or content encoding");
   }
+
+  const isJsonParseError = err instanceof SyntaxError || type === "entity.parse.failed";
+  const isZlibStreamError = code === "Z_DATA_ERROR" || code === "Z_BUF_ERROR" || code === "Z_NEED_DICT";
   if (
     status === 400 &&
-    (err instanceof SyntaxError ||
+    (isJsonParseError ||
       err instanceof URIError ||
-      type === "entity.parse.failed" ||
       type === "request.size.invalid" ||
       type === "request.aborted" ||
-      type === "stream.encoding.set")
+      type === "stream.encoding.set" ||
+      isZlibStreamError)
   ) {
-    return new HttpError(
-      400,
-      "BAD_REQUEST",
-      err instanceof URIError ? "Malformed URL parameter" : "Malformed JSON request body"
-    );
+    const message =
+      err instanceof URIError
+        ? "Malformed URL parameter"
+        : isJsonParseError
+          ? "Malformed JSON request body"
+          : "Request body could not be read";
+    return new HttpError(400, "BAD_REQUEST", message);
   }
   return null;
 }
