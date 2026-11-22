@@ -10,6 +10,7 @@
 | 0.2 | 2026-11-21 | ILoveSiesta | AC-08-06 / TEST-08-06 corrected before the test commit: student3 is a student, so `PUT` and release are rejected by role (403) before the scope check; only its `GET` gives 404. Validation helper named `validateGradeInput` in `server/src/utils/validation.ts` |
 | 0.3 | 2026-11-21 | ILoveSiesta | Definition of Done filled with executed results; no behaviour change |
 | 0.4 | 2026-11-22 | phet526 | Defect #93 (`DEF-GRADE-RELEASE`): revise §2, §3, §6 (`AC-08-10`) and §7 (`TEST-08-12`) so **Release grade** is disabled with `"Save the grade before releasing"` whenever **Score** or **Graded version** has unsaved edits vs the stored grade |
+| 0.5 | 2026-11-22 | phet526 | Update §8.1 DoD with `DEF-GRADE-RELEASE` (#93) RED (`6cd2e11`, CI `45034210203`) → GREEN (`f5a0912`, CI `45034474980`, `201 / 201` passed) evidence |
 
 ## 1. Linked requirements
 
@@ -148,3 +149,10 @@ Existing tests that render the milestone pages (`Submissions.test.tsx`, `Feedbac
 - [x] TDD red → green: failing tests `b616439` (tests only) on `517f3a4`: build OK; server 8 failed — 7 API with `404` because the grade routes did not exist (each negative case carries a positive control), 1 unit `validateGradeInput is not a function`; client 3 failed — no "Grade" region → implementation `249bc1a` (all pass). Contract v0.2 corrected AC-08-06 before the test commit (student3's `PUT`/release get 403 by role)
 - [x] SRS BR-11 (v0.8), System SDS (v0.9), `docs/traceability.md` (v2.0), `docs/features.md` (v1.4) updated
 - [ ] PR reviewed by phet526 (approve before merge) and merged into `sprint-2`
+
+### 8.1 Defect `#93` (`DEF-GRADE-RELEASE`) follow-up verification
+
+- [x] Owner triage posted on `#93` (`issuecomment-7080702373`), F-08 contract updated (`0.4`–`0.5`, `AC-08-10`, `TEST-08-12`), and `docs/traceability.md` (`2.11`) updated
+- [x] TDD RED → GREEN on `fix/F-08-release-unsaved-grade`:
+  - Contract (`38f89ca`) → RED (`6cd2e11`, test only: local `Grades.test.tsx` `1 failed | 3 passed (4)` at `TEST-08-12` `expect(element).toBeDisabled()`; CI `45034210203` failed on the same line) → GREEN (`f5a0912`, CI `45034474980`, `201 / 201` passed: `deploy/tests` `17`, server `22` files / `145` passed, client `11` files / `34` passed including `TEST-08-12`, Playwright E2E `5` passed in `15.1s`, Docker build OK; local `npm run build`, server unit `41/41`, client `34/34` also passed)
+- [ ] PR reviewed by `@ILoveSiesta` and merged into `sprint-3`
