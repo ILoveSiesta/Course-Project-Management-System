@@ -45,6 +45,7 @@ describe("F-06 Milestone for several teams API", () => {
   });
 
   afterAll(async () => {
+    await getPrisma().submission.deleteMany({ where: { milestone: { title: { startsWith: PREFIX } } } });
     await getPrisma().milestone.deleteMany({ where: { title: { startsWith: PREFIX } } });
   });
 
@@ -189,5 +190,69 @@ describe("F-06 Milestone for several teams API", () => {
     // Positive control: a valid request with the same team list succeeds.
     const ok = await createForTeams(tokens.supervisor1, { teamIds: [alpha], title: `${PREFIX}Valid`, deadline: inDays(5) });
     expect(ok.status).toBe(201);
+  });
+
+  it("TEST-06-10: a team ID above the INT4 maximum is an unknown team (404), and nothing is stored (#89)", async () => {
+    const alpha = teamIds["Team Alpha"];
+    const max = 2_147_483_647;
+    const over = max + 1;
+    const deadline = inDays(5);
+
+    // Controls: the largest INT4 value is an unknown team, and an assigned team is accepted.
+    const atMax = await createForTeams(tokens.supervisor1, { teamIds: [max], title: `${PREFIX}INT4 max`, deadline });
+    expect(atMax.status).toBe(404);
+    const ok = await createForTeams(tokens.supervisor1, { teamIds: [alpha], title: `${PREFIX}INT4 control`, deadline });
+    expect(ok.status).toBe(201);
+
+    // Soft assertions, so that one run reports every failing input.
+    const title = `${PREFIX}INT4 over`;
+    for (const ids of [[over], [alpha, over], [over, alpha], [1e20], [Number.MAX_VALUE]]) {
+      const res = await createForTeams(tokens.supervisor1, { teamIds: ids, title, deadline });
+      expect.soft(res.status, JSON.stringify(ids)).toBe(404);
+      expect.soft(res.body).toEqual({ error: { code: "NOT_FOUND", message: "Resource not found" } });
+    }
+
+    // The check order is unchanged: 401, 403, teamIds format (400), scope (404), fields (400).
+    const blankTitle = await createForTeams(tokens.supervisor1, { teamIds: [over], title: "   ", deadline });
+    expect.soft(blankTitle.status, "too-large ID with a blank title").toBe(404);
+
+    const twice = await createForTeams(tokens.supervisor1, { teamIds: [over, over], title, deadline });
+    expect.soft(twice.status).toBe(400);
+    expect.soft(twice.body.error.details).toEqual({ teamIds: "DUPLICATE" });
+
+    const tooMany = Array.from({ length: 21 }, (_, i) => over + i);
+    const many = await createForTeams(tokens.supervisor1, { teamIds: tooMany, title, deadline });
+    expect.soft(many.status).toBe(400);
+    expect.soft(many.body.error.details).toEqual({ teamIds: "TOO_MANY" });
+
+    const asStudent = await createForTeams(tokens.student1, { teamIds: [over], title, deadline });
+    expect.soft(asStudent.status).toBe(403);
+    const noToken = await createForTeams(undefined, { teamIds: [over], title, deadline });
+    expect.soft(noToken.status).toBe(401);
+
+    expect(await rowsWithTitle(title)).toHaveLength(0);
+  });
+
+  it("TEST-06-11: team, milestone and submission route IDs above the INT4 maximum return 404 (#89)", async () => {
+    const alpha = teamIds["Team Alpha"];
+    const get = (path: string) => request(app).get(path).set("Authorization", `Bearer ${tokens.supervisor1}`);
+
+    // Positive controls: the same three routes answer 200 for records in scope.
+    const created = await createForTeams(tokens.supervisor1, { teamIds: [alpha], title: `${PREFIX}Route IDs`, deadline: inDays(5) });
+    expect(created.status).toBe(201);
+    const milestoneId = created.body.milestones[0].id;
+    const submitted = await request(app)
+      .post(`/api/milestones/${milestoneId}/submissions`)
+      .set("Authorization", `Bearer ${tokens.student1}`)
+      .send({ title: "Route ID control", link: "https://example.com/route-id" });
+    expect(submitted.status).toBe(201);
+
+    const records = { teams: alpha, milestones: milestoneId, submissions: submitted.body.submission.id };
+    for (const [resource, id] of Object.entries(records)) {
+      expect((await get(`/api/${resource}/${id}`)).status, resource).toBe(200);
+      const res = await get(`/api/${resource}/2147483648`);
+      expect(res.status, resource).toBe(404);
+      expect(res.body.error.code).toBe("NOT_FOUND");
+    }
   });
 });
