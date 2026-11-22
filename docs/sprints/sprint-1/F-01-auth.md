@@ -13,6 +13,7 @@
 | 0.5 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): reject NUL (`U+0000`) and unpaired UTF-16 surrogates in login `email`/`password` with `400 VALIDATION_ERROR` (`INVALID_CHARACTER`, `"Email or password contains an unsupported character"`), safely reject non-object JSON/non-JSON bodies (`400`), and link SDS §4 unreadable-request errors (`400`/`413`/`415`) |
 | 0.6 | 2026-11-22 | phet526 | Address PR #91 round-3 review: distinguish missing/non-JSON/array login body (`400 VALIDATION_ERROR`) from primitive JSON body including `null` (`400 BAD_REQUEST`) |
 | 0.7 | 2026-11-23 | phet526 | Defect #92 (`DEF-SERVER-ERR`): revise §2, §4, §6 (`AC-01-12..15`), and §7 (`TEST-01-15..18`) so `authenticate` forwards DB/unexpected errors to `500 INTERNAL_ERROR` (logging server-side), `logoutService` handles parallel requests for one `jti` idempotently (`204`), `loginService` runs dummy cost-10 `bcrypt.compare` for unknown emails, and malformed login JSON never logs raw request bodies/passwords |
+| 0.8 | 2026-11-23 | phet526 | Record Defect #92 (`DEF-SERVER-ERR`) RED (`c310768`, CI `45052861149`) → GREEN (`d888ee7`, test spy fix `ef503c9`, CI `45053582959`, `235 / 235` passed) verification evidence in §8.2 |
 
 ## 1. Linked requirements
 
@@ -164,3 +165,10 @@ Models added to `server/prisma/schema.prisma` with migration `f01_auth_teams`:
 - [x] Automated integration test `TEST-01-14` added in `server/tests/api/auth.api.test.ts` (seed already uses idempotent upserts; no `seed.ts` change required)
 - [x] Executed against PostgreSQL on `bbda76d`: `npm run build` OK, `npm test` (server **102 passed** across 12 files including `TEST-01-14`, client **21 passed** across 6 files), `npm run test:e2e` (**4 passed**), `python -m unittest discover -s deploy/tests` (**17 OK**); 0 failed, 0 skipped
 - [ ] PR reviewed and merged into `sprint-2`
+
+### 8.2 Defect `#92` (`DEF-SERVER-ERR`) verification
+
+- [x] Owner triage posted on `#92` (`issuecomment-7083244946`); `F-01` (`0.7`–`0.8`), `SDS` (`0.19`), and `docs/traceability.md` (`2.18`–`2.19`) updated
+- [x] TDD RED → GREEN on `fix/auth-and-error-status`:
+  - Contract (`2b6edd3`) → RED (`c310768`, tests only: local unit/socket checks `3 failed` on `TEST-01-15u`, `TEST-01-17u`, `TEST-92-01`; CI `45052861149` failed `6 failed | 165 passed (171)` with `TEST-01-18` passing immediately confirming `#91` stopped password logging — note `TEST-01-15` failed on `401` and left `prisma.user.findUnique` corrupted in `TEST-01-16`/`TEST-01-17` until fixed to spy on `getPrisma()` in `ef503c9`) → GREEN (`d888ee7` runtime fix + `ef503c9` `getPrisma` spy fix in `TEST-01-15`, local `npm run build` OK, server unit + `auth-timing.test.ts` + `static-errors.test.ts` `47/47`, `health.api.test.ts` `2/2`, client `42/42`, `deploy/tests` `17/17`; CI `45053582959`, `235 / 235` passed in `2m7s`: `deploy/tests` `17`, server `26` files / `171` passed, client `12` files / `42` passed, Playwright E2E `5` passed in `12.0s`, Docker build OK)
+- [ ] PR #99 reviewed by `@ILoveSiesta` and merged into `sprint-3`
