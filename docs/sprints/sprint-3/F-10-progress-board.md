@@ -4,12 +4,13 @@
 > tests (`test(F-10): ...`), then the implementation (`feat(F-10): ...`). Revise it with a new version row
 > rather than rewriting history. After merge, add the AC and test IDs to `docs/traceability.md`.
 >
-> **Status (v0.1):** contract only, written in #84 before the Deliverable 2 checkpoint (D2 §3.3). Implementation
+> **Status (v0.2):** contract only, written in #84 before the Deliverable 2 checkpoint (D2 §3.3). Implementation
 > follows after Deliverable 2 in its own Issue (contract → RED → GREEN); until then every test below is PLANNED.
 
 | Version | Date | Author(s) | Change |
 |---|---|---|---|
 | 0.1 | 2026-11-22 | ILoveSiesta | Initial contract for F-10 (#84) |
+| 0.2 | 2026-11-22 | ILoveSiesta | §2.2, §3, TEST-10-06: a student without a team sees the text the Student Dashboard already uses, "You are not assigned to a team yet." (v0.1 said "not in a team"); no behaviour change |
 
 ## 1. Linked requirements
 
@@ -31,7 +32,7 @@
 ### 2.2 Business rules, validation, failure and boundary cases
 
 - No input other than the token; query parameters are ignored (filtering is F-12).
-- A student without a team gets `200` with `teams: []` (UI: "You are not in a team yet.").
+- A student without a team gets `200` with `teams: []` (UI: "You are not assigned to a team yet.").
 - A supervisor without assigned teams gets `200` with `teams: []` (UI: "You are not assigned to any team yet.").
 - A team without milestones (for example a team just created with F-13) is still returned with `milestones: []`; in the supervisor matrix its row shows "No milestones yet".
 - Boundaries inherited from F-09: `now === deadline` → Not submitted; `now > deadline` with no submission → Overdue (inside and after the 7-day window); a resubmission after feedback returns to Submitted / Submitted late.
@@ -60,7 +61,7 @@ One `team.findMany({ where: scopeFilter(user), include: { milestones: { include:
 
 | Screen | Route | Content | States |
 |---|---|---|---|
-| Student progress board | `/student/board` (link "Progress board" on `/student`) | Team name; five sections in BR-12 order, each with a heading, a count and milestone cards (title, deadline via `formatDeadline`, status badge, link to `/student/milestones/:id`) | Loading (`.loading`); error (`.alert`, 401 → logout); no team (`.empty-state` "You are not in a team yet."); empty section shows "None" |
+| Student progress board | `/student/board` (link "Progress board" on `/student`) | Team name; five sections in BR-12 order, each with a heading, a count and milestone cards (title, deadline via `formatDeadline`, status badge, link to `/student/milestones/:id`) | Loading (`.loading`); error (`.alert`, 401 → logout); no team (`.empty-state` "You are not assigned to a team yet."); empty section shows "None" |
 | Supervisor progress board | `/supervisor/board` (link "Progress board" on `/supervisor`) | At ≥ 768 px: table, rows = teams, columns = milestone titles, cell = status badge(s) linking to `/supervisor/milestones/:id` or "—"; at < 768 px: one card per team listing "title — status badge" | Loading; error; no teams (`.empty-state` "You are not assigned to any team yet."); team row without milestones "No milestones yet" |
 
 - Badges reuse the F-09 mapping in `client/src/theme.css`: Reviewed `.badge-success`, Submitted `.badge`, Submitted late `.badge-warning`, Overdue `.badge-danger`, Not submitted `.badge-neutral`. New layout classes (for example `.board-grid`, `.board-table`) go into `theme.css`; no inline styles.
@@ -117,7 +118,7 @@ No schema change and no migration. Reads `Team`, `TeamMembership`, `SupervisorAs
 | TEST-10-03 | AC-10-03 | API + DB | Alpha milestone 10 d past deadline (inserted directly), no submission | `GET /api/board` and `GET /api/milestones/:id` as supervisor1 | Both `Overdue`; every board status equals the detail status | same file › TEST-10-03 |
 | TEST-10-04 | AC-10-04 | API + DB | Positive controls student1 / supervisor1 see Alpha; student3, supervisor2, no token | `GET /api/board` | student3 and supervisor2: no team with id Alpha and no Alpha milestone ids; no token: `401 UNAUTHENTICATED` | same file › TEST-10-04 |
 | TEST-10-05 | AC-10-05 | API + DB | New team with supervisor1 assigned and no milestones (inserted directly); a student user without membership; a supervisor without assignments | `GET /api/board` as each | `200`; empty team listed with `milestones: []`; `teams: []` for the other two | same file › TEST-10-05 |
-| TEST-10-06 | AC-10-01, AC-10-05, AC-10-06 | UI | Mocked API: student board with all five statuses; then `teams: []` | Render `/student/board` | Five group headings in BR-12 order with counts; each card links to `/student/milestones/:id`; empty data shows "You are not in a team yet." | `client/tests/ProgressBoard.test.tsx` › TEST-10-06 |
+| TEST-10-06 | AC-10-01, AC-10-05, AC-10-06 | UI | Mocked API: student board with all five statuses; then `teams: []` | Render `/student/board` | Five group headings in BR-12 order with counts; each card links to `/student/milestones/:id`; empty data shows "You are not assigned to a team yet." | `client/tests/ProgressBoard.test.tsx` › TEST-10-06 |
 | TEST-10-07 | AC-10-02, AC-10-05, AC-10-06 | UI | Mocked API: supervisor board with two teams, shared and team-only titles, one team without milestones | Render `/supervisor/board` | Matrix rows per team; "—" in empty cells; "No milestones yet" row; badges link to `/supervisor/milestones/:id` | same file › TEST-10-07 |
 | TEST-10-08 | AC-10-07 | E2E | Seeded data; Playwright at 375 × 812 and 1280 × 800 | Log in as student1 and supervisor1, open each board | `document.documentElement.scrollWidth <= window.innerWidth` on both boards at both sizes; status badges visible | `e2e/sprint3-board-report.spec.ts` › TEST-10-08 |
 
