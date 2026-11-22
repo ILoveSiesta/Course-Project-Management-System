@@ -63,11 +63,19 @@ export function createApp(options: AppOptions = {}): Express {
     });
   }
 
-  // Safe error handler: never leak stack traces or internal details to clients.
+  // Safe error handler: map known Express/body-parser request errors to 4xx without leaking internals.
+  // ORM/database and unknown errors still fall through to safe 500 INTERNAL_ERROR.
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof HttpError) {
       res.status(err.status).json({
         error: { code: err.code, message: err.message, ...(err.details ? { details: err.details } : {}) },
+      });
+      return;
+    }
+    const parsedErr = mapRequestParseError(err);
+    if (parsedErr) {
+      res.status(parsedErr.status).json({
+        error: { code: parsedErr.code, message: parsedErr.message },
       });
       return;
     }
@@ -76,6 +84,36 @@ export function createApp(options: AppOptions = {}): Express {
   });
 
   return app;
+}
+
+function mapRequestParseError(err: unknown): HttpError | null {
+  if (typeof err !== "object" || err === null) return null;
+  const candidate = err as { status?: unknown; statusCode?: unknown; type?: unknown };
+  const status = typeof candidate.status === "number" ? candidate.status : candidate.statusCode;
+  const type = typeof candidate.type === "string" ? candidate.type : "";
+
+  if (status === 413 && type === "entity.too.large") {
+    return new HttpError(413, "PAYLOAD_TOO_LARGE", "Request body is too large");
+  }
+  if (status === 415 && (type === "charset.unsupported" || type === "encoding.unsupported")) {
+    return new HttpError(415, "UNSUPPORTED_MEDIA_TYPE", "Unsupported charset or content encoding");
+  }
+  if (
+    status === 400 &&
+    (err instanceof SyntaxError ||
+      err instanceof URIError ||
+      type === "entity.parse.failed" ||
+      type === "request.size.invalid" ||
+      type === "request.aborted" ||
+      type === "stream.encoding.set")
+  ) {
+    return new HttpError(
+      400,
+      "BAD_REQUEST",
+      err instanceof URIError ? "Malformed URL parameter" : "Malformed JSON request body"
+    );
+  }
+  return null;
 }
 
 export const app = createApp({ clientDistDir: process.env.CLIENT_DIST_DIR || undefined });

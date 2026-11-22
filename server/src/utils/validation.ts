@@ -9,6 +9,29 @@ export interface MilestoneInput {
 const TITLE_MAX = 120;
 const DESCRIPTION_MAX = 2000;
 
+// Reject NUL (U+0000) and unpaired UTF-16 surrogates, which PostgreSQL UTF-8 rejects (SQLSTATE 22021).
+// Valid surrogate pairs (high 0xD800..0xDBFF followed by low 0xDC00..0xDFFF) are accepted.
+export function hasInvalidTextCharacters(value: string): boolean {
+  for (let i = 0; i < value.length; i += 1) {
+    const code = value.charCodeAt(i);
+    if (code === 0) return true;
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const next = i + 1 < value.length ? value.charCodeAt(i + 1) : -1;
+      if (next < 0xdc00 || next > 0xdfff) return true;
+      i += 1;
+    } else if (code >= 0xdc00 && code <= 0xdfff) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function isValidMilestoneDate(date: Date): boolean {
+  if (Number.isNaN(date.getTime())) return false;
+  const year = date.getUTCFullYear();
+  return year >= 1 && year <= 9999;
+}
+
 // BR-04: title 1–120 characters after trimming, optional description up to 2000 characters,
 // deadline strictly later than `now`. Collects every invalid field before rejecting.
 export function validateMilestoneInput(body: unknown, now: Date): MilestoneInput {
@@ -23,6 +46,7 @@ export function validateMilestoneInput(body: unknown, now: Date): MilestoneInput
   } else {
     title = input.title.trim();
     if (!title) details.title = "REQUIRED";
+    else if (hasInvalidTextCharacters(input.title)) details.title = "INVALID_CHARACTER";
     else if (title.length > TITLE_MAX) details.title = "TOO_LONG";
   }
 
@@ -30,6 +54,8 @@ export function validateMilestoneInput(body: unknown, now: Date): MilestoneInput
   if (input.description !== undefined && input.description !== null) {
     if (typeof input.description !== "string") {
       details.description = "INVALID_TYPE";
+    } else if (hasInvalidTextCharacters(input.description)) {
+      details.description = "INVALID_CHARACTER";
     } else if (input.description.length > DESCRIPTION_MAX) {
       details.description = "TOO_LONG";
     } else {
@@ -44,7 +70,7 @@ export function validateMilestoneInput(body: unknown, now: Date): MilestoneInput
     details.deadline = "INVALID_TYPE";
   } else {
     deadline = new Date(input.deadline);
-    if (Number.isNaN(deadline.getTime())) details.deadline = "INVALID_DATE";
+    if (!isValidMilestoneDate(deadline)) details.deadline = "INVALID_DATE";
     else if (deadline.getTime() <= now.getTime()) details.deadline = "MUST_BE_FUTURE";
   }
 
@@ -124,6 +150,7 @@ export function validateMilestoneUpdate(body: unknown): MilestoneUpdate {
     } else {
       const title = input.title.trim();
       if (!title) details.title = "REQUIRED";
+      else if (hasInvalidTextCharacters(input.title)) details.title = "INVALID_CHARACTER";
       else if (title.length > TITLE_MAX) details.title = "TOO_LONG";
       else update.title = title;
     }
@@ -134,6 +161,8 @@ export function validateMilestoneUpdate(body: unknown): MilestoneUpdate {
       update.description = null;
     } else if (typeof input.description !== "string") {
       details.description = "INVALID_TYPE";
+    } else if (hasInvalidTextCharacters(input.description)) {
+      details.description = "INVALID_CHARACTER";
     } else if (input.description.length > DESCRIPTION_MAX) {
       details.description = "TOO_LONG";
     } else {
@@ -146,7 +175,7 @@ export function validateMilestoneUpdate(body: unknown): MilestoneUpdate {
       details.deadline = "INVALID_TYPE";
     } else {
       const deadline = new Date(input.deadline);
-      if (Number.isNaN(deadline.getTime())) details.deadline = "INVALID_DATE";
+      if (!isValidMilestoneDate(deadline)) details.deadline = "INVALID_DATE";
       else update.deadline = deadline;
     }
   }
@@ -195,6 +224,9 @@ export function validateTeamName(body: unknown): string {
   const trimmed = raw.trim();
   if (!trimmed) {
     throw new HttpError(400, "VALIDATION_ERROR", "Invalid team", { name: "REQUIRED" });
+  }
+  if (hasInvalidTextCharacters(raw)) {
+    throw new HttpError(400, "VALIDATION_ERROR", "Invalid team", { name: "INVALID_CHARACTER" });
   }
   if (trimmed.length > TEAM_NAME_MAX) {
     throw new HttpError(400, "VALIDATION_ERROR", "Invalid team", { name: "TOO_LONG" });
