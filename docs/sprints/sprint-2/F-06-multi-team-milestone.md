@@ -9,6 +9,7 @@
 | 0.1 | 2026-11-21 | ILoveSiesta | Initial contract for F-06 (issue #63) |
 | 0.2 | 2026-11-21 | ILoveSiesta | Definition of Done filled with executed results; no behaviour change |
 | 0.3 | 2026-11-22 | ILoveSiesta | Defect #89 (`DEF-INT4`): §2 states that a team ID above the INT4 maximum `2147483647` is an unknown team (`404`, not a format error); AC-06-03 revised to say so; TEST-06-10, TEST-06-11 and §8.1 added. The rule itself is unchanged (v0.1 already required `404` for an unknown ID). Written before the regression tests |
+| 0.4 | 2026-11-22 | ILoveSiesta | §8.1 filled with executed RED, GREEN and regression results of #89; no rule change |
 
 ## 1. Linked requirements
 
@@ -114,9 +115,9 @@ No schema change and no migration: each team gets an ordinary `Milestone` row (F
 
 ### 8.1 Defect #89 (v0.3)
 
-- [ ] Contract revision committed before the tests
-- [ ] RED (tests only): TEST-06-10 fails with `expected 500 to be 404` for a too-large ID alone and mixed with an assigned team, and its controls pass
-- [ ] GREEN: TEST-06-10 passes and nothing is stored for a rejected list; TEST-06-11 passes
-- [ ] Build, `npm test`, `npm run test:e2e` and `deploy/tests` pass; CI green
-- [ ] Traceability updated
+- [x] Contract revision committed before the tests: v0.3 in `a4b2dbb`
+- [x] RED (tests only) `d76a7dc`: build OK; server 1 failed / 146 passed. TEST-06-10 failed with `expected 500 to be 404` for `[2147483648]`, `[Alpha, 2147483648]`, `[2147483648, Alpha]`, `[1e20]`, the largest double and a too-large ID with a blank title; its controls passed. TEST-06-11 passed at RED, as intended (route IDs were fixed in PR #88)
+- [x] GREEN `09a5408`: TEST-06-10 and TEST-06-11 pass; nothing is stored for a rejected list
+- [x] Local regression on `09a5408`: `npm run build` OK; `npm test` server 147 and client 33 passed, 0 failed, 0 skipped; `npm run test:e2e` 5 passed in each of three runs; `python -m unittest discover -s deploy/tests` 17 OK. CI `test-and-docker`: recorded on the PR
+- [x] Traceability updated (v2.11: FR-11, BR-02, NFR-05, §4). SRS, System SDS and features: no change needed (they already state 404 for an unknown team); no schema, migration or UI change
 - [ ] PR reviewed by phet526 (approve before merge) and merged into `sprint-3`
