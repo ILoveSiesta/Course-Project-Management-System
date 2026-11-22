@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { parseId } from "../../src/utils/httpError.js";
 import { validateAddMemberInput, validateTeamName } from "../../src/utils/validation.js";
 
 // F-13 (FR-07): pure validation boundary checks (STS TEST-13-11).
@@ -54,6 +55,22 @@ describe("F-13 team management validation", () => {
       expect(caught?.status).toBe(400);
       expect(caught?.code).toBe("VALIDATION_ERROR");
       expect(caught?.details?.studentId).toBe(expectedCode);
+    }
+  });
+
+  it("TEST-13-18 (unit): parseId accepts INT4 max (2147483647) and rejects overflow (2147483648) as 404", () => {
+    expect(parseId("1")).toBe(1);
+    expect(parseId("2147483647")).toBe(2147483647);
+
+    for (const raw of ["0", "-1", "1.5", "abc", "2147483648", "999999999999"]) {
+      let caught: { status?: number; code?: string } | undefined;
+      try {
+        parseId(raw);
+      } catch (err) {
+        caught = err as typeof caught;
+      }
+      expect(caught?.status).toBe(404);
+      expect(caught?.code).toBe("NOT_FOUND");
     }
   });
 });

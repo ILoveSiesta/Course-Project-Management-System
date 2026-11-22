@@ -57,7 +57,13 @@ describe("F-13 Team management API", () => {
   afterAll(async () => {
     const prisma = getPrisma();
     const teamsToDelete = await prisma.team.findMany({
-      where: { OR: [{ id: { in: createdTeamIds } }, { name: { startsWith: "F13 " } }] },
+      where: {
+        OR: [
+          { id: { in: createdTeamIds } },
+          { name: { startsWith: "F13 " } },
+          { name: { in: ["Team_Alpha", "Team%", "%", "F13 Web\\Api", "f13 web\\api"] } },
+        ],
+      },
       select: { id: true },
     });
     const extraTeamIds = teamsToDelete.map((t) => t.id);
@@ -444,5 +450,98 @@ describe("F-13 Team management API", () => {
       .send({ name: "F13 Positive Control" });
     expect(controlTeam.status).toBe(201);
     createdTeamIds.push(controlTeam.body.team.id);
+  });
+
+  it("TEST-13-16: treats _, % and \\ literally in team names while keeping backslash case-insensitive duplicate detection", async () => {
+    for (const literalName of ["Team_Alpha", "Team%", "%"]) {
+      const res = await request(app)
+        .post("/api/teams")
+        .set("Authorization", `Bearer ${tokens.supervisor1}`)
+        .send({ name: literalName });
+      expect(res.status).toBe(201);
+      createdTeamIds.push(res.body.team.id);
+      expect(res.body.team.name).toBe(literalName);
+    }
+
+    const slashFirst = await request(app)
+      .post("/api/teams")
+      .set("Authorization", `Bearer ${tokens.supervisor1}`)
+      .send({ name: "F13 Web\\Api" });
+    expect(slashFirst.status).toBe(201);
+    createdTeamIds.push(slashFirst.body.team.id);
+
+    const slashDup = await request(app)
+      .post("/api/teams")
+      .set("Authorization", `Bearer ${tokens.supervisor2}`)
+      .send({ name: "f13 web\\api" });
+    expect(slashDup.status).toBe(409);
+    expect(slashDup.body.error.code).toBe("TEAM_NAME_EXISTS");
+  });
+
+  it("TEST-13-17: concurrent case-variant team creation stores at most one team and returns 409 TEAM_NAME_EXISTS", async () => {
+    for (let i = 1; i <= 5; i++) {
+      const [r1, r2] = await Promise.all([
+        request(app)
+          .post("/api/teams")
+          .set("Authorization", `Bearer ${tokens.supervisor1}`)
+          .send({ name: `F13 Race Pair ${i}` }),
+        request(app)
+          .post("/api/teams")
+          .set("Authorization", `Bearer ${tokens.supervisor2}`)
+          .send({ name: `f13 race pair ${i}` }),
+      ]);
+
+      for (const r of [r1, r2]) {
+        if (r.status === 201 && r.body?.team?.id) createdTeamIds.push(r.body.team.id);
+      }
+
+      const statuses = [r1.status, r2.status].sort((a, b) => a - b);
+      expect(statuses).toEqual([201, 409]);
+      const conflict = r1.status === 409 ? r1 : r2;
+      expect(conflict.body.error.code).toBe("TEAM_NAME_EXISTS");
+
+      const rows = await getPrisma().$queryRaw<Array<{ id: number }>>`
+        SELECT id FROM "Team" WHERE lower(name) = lower(${`F13 Race Pair ${i}`})
+      `;
+      expect(rows).toHaveLength(1);
+    }
+  });
+
+  it("TEST-13-18: IDs above PostgreSQL INT4 max (2147483648) return 404 NOT_FOUND instead of 500", async () => {
+    const alphaId = teamIds["Team Alpha"];
+    const overflow = 2147483648;
+
+    const bodyOverflow = await request(app)
+      .post(`/api/teams/${alphaId}/members`)
+      .set("Authorization", `Bearer ${tokens.supervisor1}`)
+      .send({ studentId: overflow });
+    expect(bodyOverflow.status).toBe(404);
+    expect(bodyOverflow.body.error.code).toBe("NOT_FOUND");
+
+    const delOverflow = await request(app)
+      .delete(`/api/teams/${alphaId}/members/${overflow}`)
+      .set("Authorization", `Bearer ${tokens.supervisor1}`);
+    expect(delOverflow.status).toBe(404);
+    expect(delOverflow.body.error.code).toBe("NOT_FOUND");
+
+    const teamParamOverflow = await request(app)
+      .post(`/api/teams/${overflow}/members`)
+      .set("Authorization", `Bearer ${tokens.supervisor1}`)
+      .send({ studentId: userIds.freeB });
+    expect(teamParamOverflow.status).toBe(404);
+    expect(teamParamOverflow.body.error.code).toBe("NOT_FOUND");
+
+    // Controls
+    const unknownControl = await request(app)
+      .post(`/api/teams/${alphaId}/members`)
+      .set("Authorization", `Bearer ${tokens.supervisor1}`)
+      .send({ studentId: 999999 });
+    expect(unknownControl.status).toBe(404);
+
+    const zeroInvalid = await request(app)
+      .post(`/api/teams/${alphaId}/members`)
+      .set("Authorization", `Bearer ${tokens.supervisor1}`)
+      .send({ studentId: 0 });
+    expect(zeroInvalid.status).toBe(400);
   });
 });
