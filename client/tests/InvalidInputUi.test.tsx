@@ -20,7 +20,7 @@ const milestone = {
   teamId: 1,
   title: "SRS draft",
   description: "First version",
-  deadline: "2026-12-20T16:59:00.000Z",
+  deadline: new Date(Date.now() + 30 * 86_400_000).toISOString(),
   createdAt: "2026-11-05T03:00:00.000Z",
   createdBy: { id: 7, name: "Supervisor One" },
 };

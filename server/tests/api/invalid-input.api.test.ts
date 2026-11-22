@@ -8,7 +8,7 @@ import { getPrisma } from "../../src/prisma.js";
 import { seed } from "../../prisma/seed.js";
 
 const DEMO_PASSWORD = process.env.SEED_DEMO_PASSWORD || "demo-password";
-const FUTURE_DEADLINE = "2026-12-28T16:59:00.000Z";
+const FUTURE_DEADLINE = new Date(Date.now() + 30 * 86_400_000).toISOString();
 
 const tokens: Record<string, string> = {};
 const teamIds: Record<string, number> = {};
@@ -159,6 +159,20 @@ describe("Defect #90 (DEF-BAD-INPUT): unreadable requests, NUL/unpaired surrogat
       .send('"text"');
     expect(primitiveMilestone.status).toBe(400);
     assertSafeError(primitiveMilestone.body, "BAD_REQUEST");
+
+    const nullLogin = await request(app)
+      .post("/api/auth/login")
+      .set("Content-Type", "application/json")
+      .send("null");
+    expect(nullLogin.status).toBe(400);
+    assertSafeError(nullLogin.body, "BAD_REQUEST");
+
+    const arrayLogin = await request(app)
+      .post("/api/auth/login")
+      .set("Content-Type", "application/json")
+      .send("[]");
+    expect(arrayLogin.status).toBe(400);
+    assertSafeError(arrayLogin.body, "VALIDATION_ERROR");
 
     const nonJsonLogin = await request(app)
       .post("/api/auth/login")
@@ -563,6 +577,11 @@ describe("Defect #90 (DEF-BAD-INPUT): unreadable requests, NUL/unpaired surrogat
           "Content-Encoding": "deflate",
         },
         Buffer.from("not-deflate"),
+      ],
+      [
+        "/api/auth/login",
+        { "Content-Type": "application/json", "Content-Encoding": "deflate" },
+        zlib.deflateSync(Buffer.from("{}"), { dictionary: Buffer.from("cpms") }),
       ],
     ];
 
