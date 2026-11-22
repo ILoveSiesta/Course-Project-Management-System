@@ -26,7 +26,7 @@ async function login(email: string): Promise<string> {
 describe("F-13 Team management API", () => {
   beforeAll(async () => {
     await seed();
-    for (const name of ["student1", "student2", "student3", "supervisor1", "supervisor2"]) {
+    for (const name of ["student1", "student2", "student3", "student4", "supervisor1", "supervisor2"]) {
       const email = `${name}@cpms.test`;
       tokens[name] = await login(email);
       const u = await getPrisma().user.findUniqueOrThrow({ where: { email } });
@@ -92,7 +92,20 @@ describe("F-13 Team management API", () => {
       await prisma.teamMembership.deleteMany({ where: { studentId: { in: createdUserIds } } });
       await prisma.user.deleteMany({ where: { id: { in: createdUserIds } } });
     }
-    // Restore any seeded student memberships moved during BR-14 tests.
+    // Restore baseline memberships for any seeded students moved/removed during BR-14 / AC-13-12 tests,
+    // because seed() only sets memberships when a student user is first created.
+    for (const [key, teamName] of [
+      ["student1", "Team Alpha"],
+      ["student2", "Team Alpha"],
+      ["student3", "Team Beta"],
+      ["student4", "Team Beta"],
+    ] as const) {
+      await prisma.teamMembership.upsert({
+        where: { studentId: userIds[key] },
+        update: { teamId: teamIds[teamName] },
+        create: { teamId: teamIds[teamName], studentId: userIds[key] },
+      });
+    }
     await seed();
   });
 
@@ -543,5 +556,94 @@ describe("F-13 Team management API", () => {
       .set("Authorization", `Bearer ${tokens.supervisor1}`)
       .send({ studentId: 0 });
     expect(zeroInvalid.status).toBe(400);
+  });
+
+  it("TEST-13-19: AC-13-12 member moves and removals survive re-running seed()", async () => {
+    const prisma = getPrisma();
+    const alphaId = teamIds["Team Alpha"];
+    const betaId = teamIds["Team Beta"];
+
+    // Ensure baseline precondition even if run standalone after TEST-13-09.
+    await prisma.teamMembership.upsert({
+      where: { studentId: userIds.student2 },
+      update: { teamId: alphaId },
+      create: { teamId: alphaId, studentId: userIds.student2 },
+    });
+    await prisma.teamMembership.upsert({
+      where: { studentId: userIds.student4 },
+      update: { teamId: betaId },
+      create: { teamId: betaId, studentId: userIds.student4 },
+    });
+
+    const newTeamRes = await request(app)
+      .post("/api/teams")
+      .set("Authorization", `Bearer ${tokens.supervisor1}`)
+      .send({ name: "F13 Seed Persistence Team" });
+    expect(newTeamRes.status).toBe(201);
+    const newTeamId: number = newTeamRes.body.team.id;
+    createdTeamIds.push(newTeamId);
+
+    const alphaMsRes = await request(app)
+      .post(`/api/teams/${alphaId}/milestones`)
+      .set("Authorization", `Bearer ${tokens.supervisor1}`)
+      .send({ title: "F13 Seed Alpha MS", deadline: new Date(Date.now() + 4 * DAY).toISOString() });
+    expect(alphaMsRes.status).toBe(201);
+    const alphaMsId: number = alphaMsRes.body.milestone.id;
+    createdMilestoneIds.push(alphaMsId);
+
+    const newMsRes = await request(app)
+      .post(`/api/teams/${newTeamId}/milestones`)
+      .set("Authorization", `Bearer ${tokens.supervisor1}`)
+      .send({ title: "F13 Seed New Team MS", deadline: new Date(Date.now() + 4 * DAY).toISOString() });
+    expect(newMsRes.status).toBe(201);
+    const newMsId: number = newMsRes.body.milestone.id;
+    createdMilestoneIds.push(newMsId);
+
+    // Move student2 Alpha -> newTeam, and remove student4 from Beta
+    expect(
+      (
+        await request(app)
+          .delete(`/api/teams/${alphaId}/members/${userIds.student2}`)
+          .set("Authorization", `Bearer ${tokens.supervisor1}`)
+      ).status
+    ).toBe(200);
+    expect(
+      (
+        await request(app)
+          .post(`/api/teams/${newTeamId}/members`)
+          .set("Authorization", `Bearer ${tokens.supervisor1}`)
+          .send({ studentId: userIds.student2 })
+      ).status
+    ).toBe(201);
+    expect(
+      (
+        await request(app)
+          .delete(`/api/teams/${betaId}/members/${userIds.student4}`)
+          .set("Authorization", `Bearer ${tokens.supervisor1}`)
+      ).status
+    ).toBe(200);
+
+    // Re-run seed() as executed on release by cpms-migrate
+    await seed();
+
+    const s2Teams = await request(app).get("/api/teams").set("Authorization", `Bearer ${tokens.student2}`);
+    expect(s2Teams.status).toBe(200);
+    expect(s2Teams.body.teams.map((t: { id: number }) => t.id)).toEqual([newTeamId]);
+
+    expect(
+      (await request(app).get(`/api/milestones/${alphaMsId}`).set("Authorization", `Bearer ${tokens.student2}`)).status
+    ).toBe(404);
+    expect(
+      (await request(app).get(`/api/milestones/${newMsId}`).set("Authorization", `Bearer ${tokens.student2}`)).status
+    ).toBe(200);
+
+    const s4Teams = await request(app).get("/api/teams").set("Authorization", `Bearer ${tokens.student4}`);
+    expect(s4Teams.status).toBe(200);
+    expect(s4Teams.body.teams).toEqual([]);
+
+    const avail = await request(app)
+      .get("/api/teams/available-students")
+      .set("Authorization", `Bearer ${tokens.supervisor1}`);
+    expect(avail.body.students.map((s: { id: number }) => s.id)).toContain(userIds.student4);
   });
 });
