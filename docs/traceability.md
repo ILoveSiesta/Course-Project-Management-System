@@ -25,6 +25,7 @@
 | 2.1 | 2026-11-21 | phet526 | F-07 AC/tests and results on the feature branch (commit `9751f0f`, #64): FR-15; F-07 rows added to BR-01, BR-02, BR-06, BR-09, NFR-02, NFR-03 (renumbered from 1.10 after F-08 PR #76 took 2.0) |
 | 2.2 | 2026-11-21 | phet526 | F-09 AC/tests and results on the feature branch (commit `31949c8`, #67): FR-20, BR-12; F-09 access tests added to NFR-02, NFR-03 (renumbered after F-08 PR #76 took 2.0 and F-07 PR #75 took 2.1) |
 | 2.3 | 2026-11-22 | ILoveSiesta | Sprint 3 contracts F-10, F-11, F-12 (#84): planned AC and test IDs for FR-21, FR-22, FR-23, NFR-10 (measurement plan in the F-11 contract) and NFR-11; all PLANNED (contracts only, implementation after Deliverable 2) |
+| 2.4 | 2026-11-22 | ILoveSiesta | §4: F-10 and F-12 contracts revised to v0.2 (#84); AC and test IDs unchanged, rows stay PLANNED |
 
 Feature and responsibility IDs refer to `docs/features.md`.
 
@@ -119,7 +120,7 @@ Result values: **PASS** · **FAIL** · **SKIPPED** · **INCOMPLETE** · **PLANNE
 - BR-05 was revised by CHG-03 (Lab 7, #59). The v0.1 rule's PASS results stay recorded; the revised rule (AC-03-04 rev., AC-03-14..AC-03-18) failed on the pre-change code at RED `f5deaf7` and passes on GREEN `8259688` (feature branch; accepted release and deployed revision recorded at the release). Impact analysis: `docs/labs/lab-07/change-impact.md`.
 - NFR-05 is partly verified (404 and F-01 validation/auth error shapes). 5xx cases come with later features.
 - F-13 / FR-07 (team management) is planned for Sprint 3 as decided in D-06.
-- F-10, F-11 and F-12 have contracts with AC and STS IDs (#84, contracts v0.1 in `docs/sprints/sprint-3/`); they are implemented after Deliverable 2, so their FR-21, FR-22, FR-23, NFR-10 and NFR-11 rows stay PLANNED. Their 401/403/404 tests (TEST-10-04, TEST-11-05, TEST-12-05, TEST-12-06) are added to NFR-02 and NFR-03 when they pass.
+- F-10, F-11 and F-12 have contracts with AC and STS IDs (#84, contracts F-10 v0.2, F-11 v0.1 and F-12 v0.2 in `docs/sprints/sprint-3/`); they are implemented after Deliverable 2, so their FR-21, FR-22, FR-23, NFR-10 and NFR-11 rows stay PLANNED. Their 401/403/404 tests (TEST-10-04, TEST-11-05, TEST-12-05, TEST-12-06) are added to NFR-02 and NFR-03 when they pass.
 
 ## 5. Approved changes
 
