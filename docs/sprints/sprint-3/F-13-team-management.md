@@ -11,12 +11,13 @@
 | 0.3 | 2026-11-22 | phet526 | Address PR #88 review: scope TEST-13-15 member-row assertions to `.member-info` and add `beforeEach`/`afterEach` `ensureStudentTwoInAlpha` cleanup (`f894aa6`, CI `44934740519`) |
 | 0.4 | 2026-11-22 | phet526 | Clarify case-insensitive duplicate rule (`lower(name) = lower(:name)` under `pg_advisory_xact_lock`, avoiding `ILIKE` wildcards), INT4 upper bound (`> 2147483647` → `404`), and regression tests `TEST-13-16..18` |
 | 0.5 | 2026-11-22 | phet526 | Definition of Done updated with RED (`a1632b9`) → GREEN (`dd2e5db`) results (`CI 45000265755`, `198 / 198` passed) and `docs/traceability.md` (`2.5`) reference |
+| 0.6 | 2026-11-22 | phet526 | Add AC-13-12 / TEST-13-19 (`seed()` preserves member moves/removals across releases, `NFR-08`), link `NFR-08` in §1 & §5, and record full `a1632b9` RED counts |
 
 ## 1. Linked requirements
 
 - **FR:** FR-07 (a supervisor manages teams they supervise: create a team, add a student member, and remove a member)
 - **BR:** BR-10 (a student belongs to at most one team; rejected with `409` if already assigned), BR-14 (removing or moving a member keeps `Submission.submittedById` unchanged on existing submissions; removed student loses access to the old team), BR-02 (supervisor scope: assigned teams only for member management), BR-03 (supervisor-only operations → `403` for students)
-- **NFR:** NFR-02 (`401` on all new endpoints), NFR-03 (`403`/`404` without data disclosure), NFR-05 (safe JSON error shape), NFR-12 (UI shows field and rule rejection reasons)
+- **NFR:** NFR-02 (`401` on all new endpoints), NFR-03 (`403`/`404` without data disclosure), NFR-05 (safe JSON error shape), NFR-08 (member moves and removals survive re-execution of the release migration/seed job), NFR-12 (UI shows field and rule rejection reasons)
 - **Decisions:** D-04 (teams can have multiple assigned supervisors; creating a team assigns the creator), D-05 (a student belongs to at most one team), D-06 (supervisors manage teams and membership from Sprint 3 onward)
 
 ## 2. Feature-level design
@@ -90,6 +91,8 @@ Rule conflict examples (`409`):
 
 No schema change and no Prisma migration: `Team` (`name @unique`), `TeamMembership` (`studentId @unique`), `SupervisorAssignment` (`@@unique([teamId, supervisorId])`), and `Submission.submittedById` (`ON DELETE RESTRICT`) already exist from F-01 and F-03.
 
+Seed persistence (`NFR-08`): `server/prisma/seed.ts` creates the baseline teams first and creates each seeded student's baseline `TeamMembership` only inside that student's `user.upsert` `create` branch. When `seed` re-runs during deployments (`cpms-migrate`), existing accounts go through `update` without touching `TeamMembership`, so moved or removed memberships persist (`prisma migrate reset` restores the baseline demo layout).
+
 ## 6. Acceptance criteria
 
 | AC ID | Given / When / Then |
@@ -105,6 +108,7 @@ No schema change and no Prisma migration: `Team` (`name @unique`), `TeamMembersh
 | AC-13-09 | Given **Supervisor Dashboard** (`/supervisor`), when the supervisor submits a valid new team name, the new team card appears in **My teams** and persists; when the API returns `400` or `409`, the validation or rule message is shown (`NFR-12`). |
 | AC-13-10 | Given **Supervisor team detail** (`/supervisor/teams/:teamId`), when the supervisor selects an unassigned student and clicks **Add member**, the member appears in **Members** and leaves the picker; when they click **Remove** beside a member, the member leaves **Members** and returns to the picker; errors (`409`) show in `.alert`. |
 | AC-13-11 | Given a browser user journey (E2E on real PostgreSQL), a supervisor creates a new team, opens it, removes a student who has an existing submission on an earlier team, adds that student to the new team, creates a milestone, verifies reload persistence, and confirms the earlier team's submission still shows the original submitter (`BR-14`). |
+| AC-13-12 | Given existing seeded students whose memberships were moved (e.g. `student2` moved from Team Alpha to a new team) or removed (e.g. `student4` removed from Team Beta), when `seed()` / the release migration job re-runs, both changes survive: `student2` stays in the new team (still receiving `404` on Team Alpha milestones and `200` on the new team's milestone) and `student4` remains unassigned (`NFR-08`, `FR-07`, `BR-14`). |
 
 ## 7. Software Test Specification (STS)
 
@@ -128,6 +132,7 @@ No schema change and no Prisma migration: `Team` (`name @unique`), `TeamMembersh
 | TEST-13-16 | AC-13-01 | API + DB | `Team Alpha` seeded, `supervisor1` token | `POST /api/teams` with `Team_Alpha`, `Team%`, `%`, then `F13 Web\Api` followed by `f13 web\api` | `201` for each distinct name (`_`, `%`, `\` treated literally); second backslash variant rejected with `409 TEAM_NAME_EXISTS` | `server/tests/api/team-management.api.test.ts` › TEST-13-16 |
 | TEST-13-17 | AC-13-01 | Integration | `supervisor1`, `supervisor2` tokens | Concurrent `Promise.all` `POST /api/teams` for case variants `"F13 Race Pair"` and `"f13 race pair"` | Exactly one `201` and one `409 TEAM_NAME_EXISTS`; DB stores one row | same file › TEST-13-17 |
 | TEST-13-18 | AC-13-05, AC-13-06, AC-13-08 | API + Unit | `supervisor1`, Alpha team ID | `POST /teams/1/members` `{ studentId: 2147483648 }`, `DELETE /teams/1/members/2147483648`, `POST /teams/2147483648/members`; `parseId("2147483647")` / `parseId("2147483648")` | All three endpoints return `404 NOT_FOUND` (no `500`); `parseId` accepts `2147483647` and throws `404` on `2147483648` | same file › TEST-13-18; `server/tests/unit/team-management-validation.test.ts` |
+| TEST-13-19 | AC-13-12 | API + DB | Seeded `student2` (Alpha) & `student4` (Beta), new team + milestones | Move `student2` Alpha → new team and remove `student4` from Beta; run `seed()` again | Both membership changes survive `seed()`; `student2` still gets `404` on Alpha milestone and `200` on new-team milestone; `student4` remains in `available-students` | same file › TEST-13-19 |
 
 ## 8. Definition of Done and evidence
 

@@ -16,6 +16,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.10 | 2026-11-21 | phet526 | F-07 (#64): §3.1 dedicated Revision history screen (`/student/milestones/:id/history`, `/supervisor/milestones/:id/history`); §4.2 endpoint `GET /api/milestones/:milestoneId/history`; §5 row for viewing revision history |
 | 0.11 | 2026-11-21 | phet526 | F-09 (#67): §3.1 student My team and supervisor team detail show derived status badges on milestone lists; §4.2 milestone endpoints include derived `status` without storing it |
 | 0.12 | 2026-11-22 | phet526 | F-13 (#83): §3.1 supervisor dashboard team creation and supervisor team detail member add/remove; §4 errors `TEAM_NAME_EXISTS`, `STUDENT_ALREADY_IN_TEAM`; §4.3 F-13 team management endpoints; §5 updated row for team management (`403` for students) |
+| 0.13 | 2026-11-22 | phet526 | F-13 (#83) §2.4: `seed.ts` creates baseline student `TeamMembership` rows only when first creating each student account so F-13 membership changes survive release `cpms-migrate` re-seeds (`prisma migrate reset` restores demo layout) |
 
 Requirement IDs (FR/BR/NFR/D) refer to `docs/srs.md`. Feature contracts in `docs/sprints/sprint-N/` give the
 exact endpoint request/response shapes; this document defines the shared structure and conventions they follow.
@@ -129,7 +130,7 @@ Foreign keys use `ON DELETE RESTRICT`: no Sprint 1 operation deletes teams, mile
 
 - Each feature adds its models with one Prisma migration named after the feature, e.g. `prisma migrate dev --name f01_auth_teams`. Migrations are committed under `server/prisma/migrations/` and never edited after merge.
 - Deployments apply migrations with `prisma migrate deploy`.
-- `server/prisma/seed.ts` is **idempotent** (upserts by e-mail / team name) and creates synthetic data only:
+- `server/prisma/seed.ts` is **idempotent** (upserts by e-mail / team name) and creates synthetic data only. It creates the baseline teams first and inserts each student's baseline `TeamMembership` only inside that student account's `create` branch (`update` leaves memberships untouched), so supervisor-managed moves and removals (F-13) survive release `cpms-migrate` re-runs (`NFR-08`); `prisma migrate reset` restores the demo layout:
 
 | Team | Students | Supervisors |
 |---|---|---|
