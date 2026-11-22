@@ -4,12 +4,13 @@
 > tests (`test(F-12): ...`), then the implementation (`feat(F-12): ...`). Revise it with a new version row
 > rather than rewriting history. After merge, add the AC and test IDs to `docs/traceability.md`.
 >
-> **Status (v0.1):** contract only, written in #84 before the Deliverable 2 checkpoint (D2 §3.3). Implementation
+> **Status (v0.2):** contract only, written in #84 before the Deliverable 2 checkpoint (D2 §3.3). Implementation
 > follows after Deliverable 2 in its own Issue (contract → RED → GREEN); until then every test below is PLANNED.
 
 | Version | Date | Author(s) | Change |
 |---|---|---|---|
 | 0.1 | 2026-11-22 | ILoveSiesta | Initial contract for F-12 (#84) |
+| 0.2 | 2026-11-22 | ILoveSiesta | §2.2, AC-12-05, TEST-12-05: `teamId` / `milestoneId` above the INT4 maximum `2147483647` → `404 NOT_FOUND`, not `500` (same class of defect as #89); `400` format errors still come first |
 
 ## 1. Linked requirements
 
@@ -40,6 +41,7 @@ Check order (same precedent as F-06: request format before scope): `401` → `40
 
 - Unknown parameters are ignored. A parameter given twice is invalid (`400 INVALID_FILTER`).
 - **Scope:** a `teamId` that does not exist or is not assigned to the caller → `404 NOT_FOUND`; a `milestoneId` that does not exist or belongs to an unassigned team → `404 NOT_FOUND` (no disclosure, as in F-02).
+- **Upper bound:** a positive integer above `2147483647` (PostgreSQL INT4 maximum) is well-formed but cannot be an existing id, so `teamId` or `milestoneId` above it → `404 NOT_FOUND` like an unknown id. It is decided at the scope step without sending the value to the database (never `500`, see #89); a format error in any parameter is still reported first (`400`).
 - A valid in-scope `teamId` with an in-scope `milestoneId` of a different team → `200` with `submissions: []` (both filters are allowed; the combination matches nothing).
 - Without `teamId`/`milestoneId`, the list is always limited to assigned teams: a filter can narrow the list but never widen it.
 
@@ -111,7 +113,7 @@ No schema change and no migration. Reads `Submission`, `Milestone`, `Team`, `Sup
 | AC-12-02 | **Given** that data, **when** `teamId`, `milestoneId` and `status` are used alone and together, **then** only versions matching every given filter are returned (AND), and an in-scope team with a milestone of another team returns `200` with an empty list. |
 | AC-12-03 | **Given** a version with feedback, a late version without feedback and an on-time version without feedback, **when** listed, **then** their `status` is `Reviewed`, `Submitted late` and `Submitted`; an earlier version keeps its own status after a newer version is submitted (BR-09). |
 | AC-12-04 | **Given** `teamId=abc`, `milestoneId=0`, `status=Overdue` or `status=reviewed`, **when** requested, **then** `400 INVALID_FILTER` with a message naming the parameter and no `submissions` field. |
-| AC-12-05 | **Given** supervisor2 (not assigned to Alpha), **when** they request `teamId=<Alpha>` or `milestoneId=<Alpha milestone>`, **then** `404 NOT_FOUND` with no data; without filters, no Alpha version appears; the same requests by supervisor1 succeed (positive control). |
+| AC-12-05 | **Given** supervisor2 (not assigned to Alpha), **when** they request `teamId=<Alpha>` or `milestoneId=<Alpha milestone>`, **then** `404 NOT_FOUND` with no data; without filters, no Alpha version appears; the same requests by supervisor1 succeed (positive control). **Given** any supervisor, **when** `teamId` or `milestoneId` is above `2147483647`, **then** `404 NOT_FOUND` with no data (never `500`), unless another parameter is malformed (`400 INVALID_FILTER` first). |
 | AC-12-06 | **Given** student1, **when** they call the list (with or without filters), **then** `403 FORBIDDEN` with no data; **given** no token, **then** `401 UNAUTHENTICATED`. |
 | AC-12-07 | **Given** the submissions screen, **when** the supervisor chooses filters, **then** the URL query string holds them, the list reloads with only matching versions, a reload keeps the filters, an empty result shows "No submissions match these filters.", and a rejected filter shows the server's message (NFR-12). |
 | AC-12-08 | **Given** viewport widths of 375 px and 1280 px, **when** the screen is shown, **then** filters and results have no horizontal page scrolling (NFR-11). |
@@ -124,7 +126,7 @@ No schema change and no migration. Reads `Submission`, `Milestone`, `Team`, `Sup
 | TEST-12-02 | AC-12-02 | API + DB | Data of TEST-12-01 + feedback on A v1 | `?teamId=Alpha`, `?milestoneId=B`, `?status=Reviewed`, `?teamId=Alpha&status=Submitted`, `?teamId=Alpha&milestoneId=B` | Only matching rows each time; last request `200` with `[]` | same file › TEST-12-02 |
 | TEST-12-03 | AC-12-03 | API + DB | Alpha milestone with v1 + feedback, v2 late (deadline passed), another milestone v1 on time | List as supervisor1 | v1 `Reviewed`, v2 `Submitted late`, on-time v1 `Submitted`; v1 stays `Reviewed` after v2 exists | same file › TEST-12-03 |
 | TEST-12-04 | AC-12-04 | API + DB | supervisor1 | `?teamId=abc`, `?milestoneId=0`, `?status=Overdue`, `?status=Not%20submitted`, `?status=reviewed`, `?teamId=1&teamId=2` | `400 INVALID_FILTER` each time; message names the parameter; body has no `submissions` | same file › TEST-12-04 |
-| TEST-12-05 | AC-12-05 | API + DB | Positive control: supervisor1 `?teamId=Alpha` `200`; supervisor2 | supervisor2: `?teamId=Alpha`, `?milestoneId=<Alpha milestone>`, `?teamId=999999`, no filter | `404 NOT_FOUND` for the first three without data; no filter → no Alpha row | same file › TEST-12-05 |
+| TEST-12-05 | AC-12-05 | API + DB | Positive control: supervisor1 `?teamId=Alpha` and `?milestoneId=<Alpha milestone>` `200`; supervisor1 and supervisor2 | supervisor2: `?teamId=Alpha`, `?milestoneId=<Alpha milestone>`, `?teamId=999999`, no filter; supervisor1: each of `teamId` and `milestoneId` = `2147483647`, `2147483648`, `99999999999999999999`, then `?teamId=2147483648&status=Overdue` | supervisor2: `404 NOT_FOUND` for the first three without data, no filter → no Alpha row; supervisor1: `404 NOT_FOUND` for all six id requests (no `500`), the combined request `400 INVALID_FILTER` | same file › TEST-12-05 |
 | TEST-12-06 | AC-12-06 | API + DB | Positive control supervisor1 `200`; student1; no token | `GET /api/submissions` and `?teamId=Alpha` | student1 `403 FORBIDDEN` without data; no token `401 UNAUTHENTICATED` | same file › TEST-12-06 |
 | TEST-12-07 | AC-12-07 | UI | Mocked API: teams, milestones, list responses for each filter, an empty result and a `400 INVALID_FILTER` | Render `/supervisor/submissions?teamId=1`; change Status to Reviewed; then render with `?status=Overdue` | Team select preset from URL; URL becomes `?teamId=1&status=Reviewed` and only Reviewed rows show; empty-state text for `[]`; alert shows the 400 message | `client/tests/SubmissionFilter.test.tsx` › TEST-12-07 |
 | TEST-12-08 | AC-12-08 | E2E | Seeded data; Playwright at 375 × 812 and 1280 × 800 | Log in as supervisor1, open `/supervisor/submissions`, apply a team filter | No horizontal page scrolling at both sizes; filtered rows visible | `e2e/sprint3-board-report.spec.ts` › TEST-12-08 |
