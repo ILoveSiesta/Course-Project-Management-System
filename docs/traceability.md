@@ -34,6 +34,7 @@
 | 2.10 | 2026-11-22 | ILoveSiesta | §4: F-10 and F-12 contracts revised to v0.2 (#84); AC and test IDs unchanged, rows stay PLANNED (renumbered from 2.4 after F-13 PR #88 took 2.3–2.8) |
 | 2.11 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): record RED (`42ffd4b`, CI `45016373876`, `14 failed / 147 passed (161)`) → GREEN (`93f230f`, CI `45016665344`, `216 / 216` passed) regression results (`TEST-90-U01..U03`, `TEST-90-01..13`) under `NFR-05`, `NFR-12` and §4 |
 | 2.12 | 2026-11-22 | phet526 | Address PR #91 review: update NFR-05, NFR-12 and §4 with `TEST-90-14` (undecodable `gzip`/`deflate`), `TEST-90-04` (URL decode after `401`) and `client/tests/InvalidInputUi.test.tsx` (`TEST-90-UI01..06`): RED (`047d0ee` local UI `5 failed / 1 passed (6)`; `9c54f9c` CI `45031124782`, server `2 failed / 160 passed (162)`) → GREEN (`166f9f0`, CI `45031399500`, `223 / 223` passed) |
+| 2.13 | 2026-11-22 | phet526 | Address PR #91 round-3 review: add `Z_NEED_DICT` test case to `TEST-90-14`, extend `TEST-90-03` (`[]`/`null` login bodies), and derive deadlines in `invalid-input.api.test.ts` and `InvalidInputUi.test.tsx` from `Date.now() + 30d` (docs/tests only, no runtime change) |
 
 Feature and responsibility IDs refer to `docs/features.md`.
 

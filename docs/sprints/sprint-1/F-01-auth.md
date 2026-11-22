@@ -11,6 +11,7 @@
 | 0.3 | 2026-11-04 | phet526 | Addressed PR review: env validation without fallback, test DB auto-seed, test role guard independently, added expired token & schema constraint tests, client routing via react-router-dom |
 | 0.4 | 2026-11-21 | phet526 | Added `TEST-01-14` for `AC-01-10` (seed idempotency) and §8.1 follow-up checklist (#65) |
 | 0.5 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): reject NUL (`U+0000`) and unpaired UTF-16 surrogates in login `email`/`password` with `400 VALIDATION_ERROR` (`INVALID_CHARACTER`, `"Email or password contains an unsupported character"`), safely reject non-object JSON/non-JSON bodies (`400`), and link SDS §4 unreadable-request errors (`400`/`413`/`415`) |
+| 0.6 | 2026-11-22 | phet526 | Address PR #91 round-3 review: distinguish missing/non-JSON/array login body (`400 VALIDATION_ERROR`) from primitive JSON body including `null` (`400 BAD_REQUEST`) |
 
 ## 1. Linked requirements
 
@@ -27,7 +28,7 @@
   - **Logout:** A logged-in user sends `POST /api/auth/logout`. The system records the token's `jti` and expiration timestamp into `RevokedToken` and returns `204 No Content`. Any subsequent request using this token is rejected with `401 UNAUTHENTICATED`.
   - **Role Guard:** `requireRole(role)` middleware verifies `req.user.role`. If the role does not match the required role, it returns `403 FORBIDDEN` with no data.
 - **Business rules and validation:**
-  - Emails are normalized to lower-case and validated; missing or non-object request bodies return `400 VALIDATION_ERROR`.
+  - Emails are normalized to lower-case and validated; a missing, non-JSON, or array body returns `400 VALIDATION_ERROR`, whereas a primitive JSON body (including `null`) is rejected by the parser with `400 BAD_REQUEST`.
   - Both `email` and `password` reject NUL (`U+0000`) and unpaired UTF-16 surrogates per SDS §4 (`400 VALIDATION_ERROR`, `details.<field> = "INVALID_CHARACTER"`, message `"Email or password contains an unsupported character"`, NFR-12). Unreadable HTTP bodies/charsets follow SDS §4 (`400 BAD_REQUEST`, `413 PAYLOAD_TOO_LARGE`, `415 UNSUPPORTED_MEDIA_TYPE`).
   - Password must be provided and verified against the stored bcrypt hash. Plaintext passwords are never stored.
   - Error responses follow `{ error: { code, message, details? } }` with no leaked stack trace.
