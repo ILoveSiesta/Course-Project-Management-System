@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
 
 export const Login: React.FC = () => {
-  const { user, login } = useAuth();
+  const { user, login, notice } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,6 +34,11 @@ export const Login: React.FC = () => {
     <div className="card auth-card">
       <h2>Sign In</h2>
       <p className="muted">Use your course account to continue.</p>
+      {notice && !error && (
+        <div role="alert" className="alert">
+          {notice}
+        </div>
+      )}
       {error && (
         <div role="alert" className="alert">
           {error}

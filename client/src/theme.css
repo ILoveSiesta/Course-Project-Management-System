@@ -376,6 +376,12 @@ a:hover {
   color: var(--color-danger);
 }
 
+/* Alert inside a row, e.g. the header's logout error (#94 B3). */
+.alert-inline {
+  margin-bottom: 0;
+  padding: 6px 10px;
+}
+
 .loading {
   color: var(--color-muted);
 }

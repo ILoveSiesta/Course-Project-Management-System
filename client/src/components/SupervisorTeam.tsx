@@ -43,6 +43,8 @@ export const SupervisorTeam: React.FC = () => {
 
   // F-13: unassigned student picker and member add/remove state.
   const [availableStudents, setAvailableStudents] = useState<Person[]>([]);
+  // #94 B6 (F-13 v0.12): the list failed to load; "No unassigned students available" is only for an empty list.
+  const [studentsError, setStudentsError] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState("");
   const [memberError, setMemberError] = useState<string | null>(null);
   const [memberStatus, setMemberStatus] = useState<string | null>(null);
@@ -82,9 +84,14 @@ export const SupervisorTeam: React.FC = () => {
 
     getAvailableStudentsApi(token)
       .then((students) => {
-        if (active) setAvailableStudents(students);
+        if (!active) return;
+        setAvailableStudents(students);
+        setStudentsError(false);
       })
-      .catch(() => undefined);
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) return logout();
+        if (active) setStudentsError(true);
+      });
 
     return () => {
       active = false;
@@ -94,8 +101,14 @@ export const SupervisorTeam: React.FC = () => {
   const refreshAvailableStudents = () => {
     if (!token) return;
     getAvailableStudentsApi(token)
-      .then((students) => setAvailableStudents(students))
-      .catch(() => undefined);
+      .then((students) => {
+        setAvailableStudents(students);
+        setStudentsError(false);
+      })
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) return logout();
+        setStudentsError(true);
+      });
   };
 
   const handleAddMember = async (e: React.FormEvent) => {
@@ -203,6 +216,11 @@ export const SupervisorTeam: React.FC = () => {
           <TeamSummary team={team} onRemoveMember={handleRemoveMember} removingMemberId={removingMemberId}>
             {memberError && <p role="alert" className="alert">{memberError}</p>}
             {memberStatus && <p role="status" className="status-notice">{memberStatus}</p>}
+            {studentsError && (
+              <p role="alert" className="alert">
+                Could not load the list of unassigned students. Reload the page to try again.
+              </p>
+            )}
             <form onSubmit={handleAddMember} className="inline-form" noValidate>
               <div className="form-field">
                 <label htmlFor="add-member-student">Student</label>
@@ -210,10 +228,12 @@ export const SupervisorTeam: React.FC = () => {
                   id="add-member-student"
                   aria-label="Student"
                   value={selectedStudentId}
-                  disabled={availableStudents.length === 0 || isAddingMember}
+                  disabled={studentsError || availableStudents.length === 0 || isAddingMember}
                   onChange={(e) => setSelectedStudentId(e.target.value)}
                 >
-                  {availableStudents.length === 0 ? (
+                  {studentsError ? (
+                    <option value="">Could not load students</option>
+                  ) : availableStudents.length === 0 ? (
                     <option value="">No unassigned students available</option>
                   ) : (
                     <>
@@ -230,7 +250,7 @@ export const SupervisorTeam: React.FC = () => {
               <button
                 type="submit"
                 className="btn"
-                disabled={availableStudents.length === 0 || !selectedStudentId || isAddingMember}
+                disabled={studentsError || availableStudents.length === 0 || !selectedStudentId || isAddingMember}
               >
                 {isAddingMember ? "Adding…" : "Add member"}
               </button>
