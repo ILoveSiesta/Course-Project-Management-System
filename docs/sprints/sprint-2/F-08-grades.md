@@ -18,6 +18,7 @@
 | 0.10 | 2026-11-23 | ILoveSiesta | §8.2 Definition of Done filled with the #100 RED → GREEN results; no behaviour change |
 | 0.11 | 2026-11-23 | ILoveSiesta | Merge of `sprint-3` after #92 PR #99: §8.2 references traceability 2.21 and SDS 0.21 (renumbered from 2.18 and 0.19); no behaviour change |
 | 0.12 | 2026-11-23 | phet526 | Defect #102 (`DEF-MILESTONE-STATE`): revise §2, §3, §6 (`AC-08-13`), and §7 (`TEST-08-19..21`) so changing `:milestoneId` via Back/Forward / `history.go` on Supervisor milestone detail resets `milestone`, `submissions`, `gradeState`, `Edit milestone`, and `Grade` / `Feedback` child form state immediately to `"Loading…"` until the new milestone loads |
+| 0.13 | 2026-11-23 | phet526 | Record Defect #102 (`DEF-MILESTONE-STATE`) RED (`70315e0`, client `4 failed / 57 passed (61)`) → GREEN (`b1a8eff`, CI `45125687400`, `293 / 293` passed) verification evidence in §8.3 |
 
 ## 1. Linked requirements
 
@@ -188,3 +189,10 @@ Existing tests that render the milestone pages (`Submissions.test.tsx`, `Feedbac
 - [x] #100 probe (built client, throwaway database): on `9b05789` both stale cases released `60` / v1 and `95` / v2 while the card showed `80` / v2; on `cf7161b` nothing is released, the card shows the `GRADE_CHANGED` message and the reloaded `60 / 100 (graded on Version 1)` with the form filled, and the next release publishes `60` / v1
 - [x] `docs/traceability.md` updated (2.21; first written as 2.18, renumbered after #92 PR #99 took 2.18–2.20; SDS 0.19 likewise became 0.21)
 - [ ] PR reviewed by `@phet526` and merged into `sprint-3`; re-tested on the release that contains the fix (#85)
+
+### 8.3 Defect `#102` (`DEF-MILESTONE-STATE`) verification
+
+- [x] Owner triage posted on `#102` (`issuecomment-7093464318`, including Sprint 1 F-03/F-04 and F-05/Lab 7 check); `F-08` (`0.12`–`0.13`), `F-03` (`0.7`–`0.8`), `F-05` (`0.7`), `SDS` §3.2 (`0.24`), and `docs/traceability.md` (`2.23`–`2.24`) updated
+- [x] TDD RED → GREEN on `fix/supervisor-milestone-state` (from `sprint-3` @ `326e66a`):
+  - Contract (`0d2d932`) → RED (`70315e0`, tests only: `npm --prefix server run build` & `npm --prefix client run build` OK; `npm --prefix client test -- --run` **4 failed | 57 passed (61)** across `TEST-08-19`, `TEST-08-20`, `TEST-08-21`, `TEST-03-29`, failing on stale `Milestone B` / `70 / 100` instead of `"Loading…"`, kept `Score: 95` across equal stored grades, open `Edit milestone` form `"Edited B title"`, and stale `Student Milestone B` form) → GREEN (`b1a8eff`, key inner page content by route param `milestoneId` / `teamId`: local `npm --prefix server run build` & `npm --prefix client run build` OK, client **16 files / 61 passed**, server `tests/unit` + `health.api.test.ts` **16 files / 81 passed**, `deploy/tests` **17 / 17 OK**; CI `45125687400`, **293 / 293 passed** in `2m29s`: `deploy/tests` `17`, server `30` files / `210` passed, client `16` files / `61` passed, Playwright E2E `5` passed in `13.1s`, Docker build OK)
+- [ ] PR reviewed by `@ILoveSiesta` and merged into `sprint-3`; re-tested on the release that contains the fix (#85)
