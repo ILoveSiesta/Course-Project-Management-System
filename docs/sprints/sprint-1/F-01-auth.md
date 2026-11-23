@@ -15,6 +15,7 @@
 | 0.7 | 2026-11-23 | phet526 | Defect #92 (`DEF-SERVER-ERR`): revise §2, §4, §6 (`AC-01-12..15`), and §7 (`TEST-01-15..18`) so `authenticate` forwards DB/unexpected errors to `500 INTERNAL_ERROR` (logging server-side), `logoutService` handles parallel requests for one `jti` idempotently (`204`), `loginService` runs dummy cost-10 `bcrypt.compare` for unknown emails, and malformed login JSON never logs raw request bodies/passwords |
 | 0.8 | 2026-11-23 | phet526 | Record Defect #92 (`DEF-SERVER-ERR`) RED (`c310768`, CI `45052861149`) → GREEN (`d888ee7`, test spy fix `ef503c9`, CI `45053582959`, `235 / 235` passed) verification evidence in §8.2 |
 | 0.9 | 2026-11-23 | phet526 | Address PR #99 review: revise §2, §6 (`AC-01-13`), and §7 (`TEST-01-16`) so concurrent HTTP `POST /api/auth/logout` requests for one token each return `204` or `401 UNAUTHENTICATED` (at least one `204`, never `500`), and add deterministic `logoutService` concurrency spec `TEST-01-16s` |
+| 0.10 | 2026-11-23 | phet526 | Record clean pre-fix `9b05789 -- server/src` RED verification against `9eabab2` tests (local unit `3 failed`; CI `45108984909` server `7 failed / 165 passed (172)`) and 3 consecutive CI GREEN passes on `9eabab2` (`45108602555`, `45108892694`, `45109129623`, `236 / 236` passed) in §8.2 |
 
 ## 1. Linked requirements
 
@@ -170,7 +171,12 @@ Models added to `server/prisma/schema.prisma` with migration `f01_auth_teams`:
 
 ### 8.2 Defect `#92` (`DEF-SERVER-ERR`) verification
 
-- [x] Owner triage posted on `#92` (`issuecomment-7083244946`); `F-01` (`0.7`–`0.8`), `SDS` (`0.19`), and `docs/traceability.md` (`2.18`–`2.19`) updated
-- [x] TDD RED → GREEN on `fix/auth-and-error-status`:
-  - Contract (`2b6edd3`) → RED (`c310768`, tests only: local unit/socket checks `3 failed` on `TEST-01-15u`, `TEST-01-17u`, `TEST-92-01`; CI `45052861149` failed `6 failed | 165 passed (171)` with `TEST-01-18` passing immediately confirming `#91` stopped password logging — note `TEST-01-15` failed on `401` and left `prisma.user.findUnique` corrupted in `TEST-01-16`/`TEST-01-17` until fixed to spy on `getPrisma()` in `ef503c9`) → GREEN (`d888ee7` runtime fix + `ef503c9` `getPrisma` spy fix in `TEST-01-15`, local `npm run build` OK, server unit + `auth-timing.test.ts` + `static-errors.test.ts` `47/47`, `health.api.test.ts` `2/2`, client `42/42`, `deploy/tests` `17/17`; CI `45053582959`, `235 / 235` passed in `2m7s`: `deploy/tests` `17`, server `26` files / `171` passed, client `12` files / `42` passed, Playwright E2E `5` passed in `12.0s`, Docker build OK)
+- [x] Owner triage posted on `#92` (`issuecomment-7083244946`); `F-01` (`0.7`–`0.10`), `SDS` (`0.19`–`0.20`), and `docs/traceability.md` (`2.18`–`2.20`) updated
+- [x] Initial TDD RED → GREEN on `fix/auth-and-error-status`:
+  - Contract (`2b6edd3`) → initial RED (`c310768`, CI `45052861149` `6 failed | 165 passed (171)`) → runtime fix (`d888ee7`) + `getPrisma` spy fix (`ef503c9`, CI `45053582959`, `235 / 235` passed)
+- [x] PR #99 round-1 review verification (`f127555` → `9eabab2`):
+  - **Pre-fix RED check of final `9eabab2` tests against `9b05789 -- server/src`:**
+    - Local (`git checkout 9b05789 -- server/src; npx --prefix server vitest run tests/unit/auth-timing.test.ts tests/unit/static-errors.test.ts`): `3 failed` (`TEST-01-15u` expected `401` to be `500`, `TEST-01-17u` `compare` called `0` times, `TEST-92-01` expected `500` to be `416`)
+    - PostgreSQL CI (`45108984909`, dispatched from temporary check commit `cbe098e` before deleting branch): server `3 failed | 23 passed (26)` files, `7 failed | 165 passed (172)` tests — `TEST-01-15` (`401` vs `500`), `TEST-01-16` (`500` vs `[204, 401]`), `TEST-01-16s` (`4` rejected `logoutService` calls vs `0`), `TEST-01-17` (`2.40 ms` vs `>= 24.71 ms`), `TEST-01-15u` (`401` vs `500`), `TEST-01-17u` (`0` vs `1`), `TEST-92-01` (`500` vs `416`), with `TEST-01-18` passing immediately confirming `#91` log safety
+  - **GREEN (`9eabab2`):** local `npm --prefix server run build` OK, `npm --prefix client run build` OK, `npm --prefix client test -- --run` `42 / 42`, `tests/unit` + `health.api.test.ts` `49 / 49`, `deploy/tests` `17 / 17`; 3 consecutive CI passes (`45108602555` in `2m32s`, `45108892694`, `45109129623` in `2m13s`): `236 / 236` passed (`deploy/tests` `17`, server `26` files / `172` passed including `20` in `auth.api.test.ts`, client `12` files / `42` passed, Playwright E2E `5` passed in `15.6s`, Docker build OK)
 - [ ] PR #99 reviewed by `@ILoveSiesta` and merged into `sprint-3`
