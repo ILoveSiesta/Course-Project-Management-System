@@ -103,7 +103,7 @@ export function AppRoutes() {
       <footer className="app-footer">
         <span data-testid="api-status">API: {status}</span>
         <span className="app-footer-release" data-testid="release-version">
-          CPMS v0.2.0
+          CPMS v0.3.0
         </span>
       </footer>
     </>
