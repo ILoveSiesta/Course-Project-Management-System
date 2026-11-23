@@ -30,9 +30,14 @@ function fieldMessage(field: string, code: string): string {
   return FIELD_MESSAGES[code] ?? code;
 }
 
+// Keyed by milestoneId so Back/Forward navigation never carries previous milestone/form state (#102).
 export const StudentMilestone: React.FC = () => {
-  const { token, logout } = useAuth();
   const milestoneId = Number(useParams().milestoneId);
+  return <StudentMilestoneContent key={milestoneId} milestoneId={milestoneId} />;
+};
+
+const StudentMilestoneContent: React.FC<{ milestoneId: number }> = ({ milestoneId }) => {
+  const { token, logout } = useAuth();
 
   const [milestone, setMilestone] = useState<Milestone | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);

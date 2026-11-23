@@ -27,6 +27,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.21 | 2026-11-23 | ILoveSiesta | Defect #100 (`DEF-GRADE-STALE`): §4 add `409 GRADE_CHANGED` (release naming a grade other than the stored one); §4.2 the release request carries the shown `{ score, version }` (first written as 0.19 in `66f0d93`; renumbered after #92 PR #99 took 0.19–0.20) |
 | 0.22 | 2026-11-23 | ILoveSiesta | Defect #94 group A (`DEF-DEADLINE`): §4 milestone `deadline` must be an ISO 8601 date-time with a required zone and a real calendar date; impossible dates, date-only values, values without a zone and other strings → `INVALID_DATE` (F-02 v0.5, F-05 v0.5) |
 | 0.23 | 2026-11-23 | ILoveSiesta | Defect #94 group B (`DEF-CLIENT-SESSION`): §3.2 session ended / session check failed / logout failed / connection error states (F-01 v0.12, F-13 v0.12) |
+| 0.24 | 2026-11-23 | phet526 | Defect #102 (`DEF-MILESTONE-STATE`): §3.2 require detail pages keyed by a route parameter (`:milestoneId` / `:teamId`, including Supervisor/Student milestone detail, Grade card, Edit milestone, Feedback, Revision history, and Supervisor team detail) to reset page and child-form state to Loading immediately when the route parameter changes |
 
 Requirement IDs (FR/BR/NFR/D) refer to `docs/srs.md`. Feature contracts in `docs/sprints/sprint-N/` give the
 exact endpoint request/response shapes; this document defines the shared structure and conventions they follow.
@@ -188,6 +189,7 @@ other role redirects to the user's own home.
 | Session check failed | `/api/auth/me` fails for another reason (network, non-JSON, 5xx): keep the token, show "Could not check your session. Check your connection and try again." with **Try again** (#94) |
 | Logout failed | `POST /api/auth/logout` fails (network, 5xx): stay signed in, keep the token, header alert "Could not log out. Check your connection and try again."; a 401 counts as signed out (#94) |
 | Connection error | Network failure: "Cannot reach the server. Check your connection and try again."; non-JSON error response: "The server is not available right now (HTTP <status>). Please try again later."; JSON errors keep the API message (#94) |
+| Route parameter change | Navigating between records on the same route pattern (e.g. Back/Forward or `history.go` between two `:milestoneId` or `:teamId` pages) resets displayed record data, open subforms, form inputs, field/form errors, and alerts immediately to Loading until the new record loads so actions cannot display or target another record (#102) |
 | 403 / 404 | A "Not found or not allowed" page; never shows partial data |
 | Times | Displayed in Asia/Bangkok with the zone shown (A-04) |
 | Visual style | One shared stylesheet, `client/src/theme.css`, defines colour tokens, typography and reusable classes (app header/main/footer, `card`, `badge`, `form-field` with `has-error`, `field-error`, `btn`/`btn-secondary`, `alert`, `empty-state`, `milestone-list`). Components use these classes, not inline styles, so every feature looks consistent. Responsive verification at 375 px / 1280 px remains Sprint 3 (SR-06, NFR-11). |

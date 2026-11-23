@@ -21,9 +21,14 @@ import { localDeadlineToIso, milestoneFieldMessage as fieldMessage } from "../mi
 
 const byDeadline = (a: Milestone, b: Milestone) => a.deadline.localeCompare(b.deadline) || a.id - b.id;
 
+// Keyed by teamId so Back/Forward navigation clears previous team and create/member forms while loading (#102).
 export const SupervisorTeam: React.FC = () => {
-  const { token, logout } = useAuth();
   const teamId = Number(useParams().teamId);
+  return <SupervisorTeamContent key={teamId} teamId={teamId} />;
+};
+
+const SupervisorTeamContent: React.FC<{ teamId: number }> = ({ teamId }) => {
+  const { token, logout } = useAuth();
 
   const [team, setTeam] = useState<Team | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);

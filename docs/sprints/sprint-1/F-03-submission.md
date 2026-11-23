@@ -12,6 +12,8 @@
 | 0.4 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): reject NUL (`U+0000`) and unpaired UTF-16 surrogates in submission `title`, `description` and `link` (`INVALID_CHARACTER`, `"Contains an unsupported character"`), linking SDS §4 |
 | 0.5 | 2026-11-23 | ILoveSiesta | Defect #94 group C (`DEF-F03-CONTRACT`): BR-08 `link` must start with `http://` or `https://` followed by a host (C1: `https:example.com`, `https:/example.com` were accepted and opened inside CPMS); §3 student page shows the team name as §2 already required (C2); §5 corrected: `daysLate >= 0` is guaranteed by the service, no database CHECK exists or is added (C3); AC-03-09 revised, AC-03-19 new; TEST-03-26..TEST-03-28 new; §8.2 added. Written before the regression tests |
 | 0.6 | 2026-11-23 | ILoveSiesta | §8.2 filled with executed RED, GREEN and regression results of #94 group C; no rule change |
+| 0.7 | 2026-11-23 | phet526 | Defect #102 (`DEF-MILESTONE-STATE`): revise §3, §6 (`AC-03-20`), and §7 (`TEST-03-29`) so changing `:milestoneId` via Back/Forward / `history.go` on `/student/milestones/:milestoneId` (and `/supervisor/milestones/:milestoneId`) resets displayed milestone, submissions, team name, errors, and submission form inputs immediately to `"Loading…"` until the new milestone loads |
+| 0.8 | 2026-11-23 | phet526 | Record Defect #102 (`DEF-MILESTONE-STATE`) RED (`70315e0`, `TEST-03-29` failed on stale `Student Milestone B` instead of `"Loading…"`) → GREEN (`b1a8eff`, CI `45125687400`, `293 / 293` passed) verification evidence in §8.3 |
 
 ## 1. Linked requirements
 
@@ -63,6 +65,7 @@
 
 - Deadlines and submission times are formatted in Asia/Bangkok time, e.g. `8 Nov 2026, 23:59 (ICT)` (A-04).
 - **Team name (v0.5, #94 C2):** loaded with the existing F-02 read `GET /api/teams/:teamId` using the milestone's `teamId` (no API change). If that read fails, the line is left out and the rest of the page (details, versions, form) still works; a `401` logs out as for every call.
+- **Route parameter change (v0.7, #102):** navigating between two milestones via Back/Forward or `history.go` resets the displayed milestone, submissions, team name, grade card, errors, and submission form fields immediately to `"Loading…"` until the new milestone loads so submissions cannot display or target the wrong milestone.
 - Field error texts: `REQUIRED` → "Required"; `INVALID_URL` → "Link must be an http or https URL"; `TOO_LONG` → "Too long (max N characters)"; `INVALID_TYPE` → "Invalid value"; `INVALID_CHARACTER` → "Contains an unsupported character".
 - Submission versions display:
   - Header: `Version N`
@@ -166,6 +169,7 @@ Constraints:
 | **AC-03-17** (new, v0.2) | **Given** a milestone whose late window has closed, **when** an assigned supervisor extends the deadline (F-05) so that the new `deadline + 7 × 24 h` is in the future and the student submits, **then** `201` with `daysLate` calculated from the new deadline. |
 | **AC-03-18** (new, v0.2) | **Given** a student on `/student/milestones/:id` for a milestone whose late window has closed and fewer than 3 versions, **when** the page loads, **then** the submit form is replaced by "Late submissions are accepted up to 7 days after the deadline" and the existing versions are still listed; **when** the API answers `409 SUBMISSION_WINDOW_CLOSED`, **then** its message is shown in an alert. |
 | **AC-03-19** (new, v0.5) | **Given** a student on `/student/milestones/:id`, **when** the page loads, **then** the milestone card shows "Team: <team name>"; **when** the team read fails, **then** the milestone, versions and form are still shown. |
+| **AC-03-20** (new, v0.7) | **Given** a student navigating between milestones B and A via Back/Forward or `history.go` on `/student/milestones/:id`, **when** the route changes to A while A loads, **then** B's details and submission form disappear immediately and `"Loading…"` is shown (`0` submissions sent to A), and once A loads, A's details and empty form fields appear. (#102) |
 
 ## 7. Software Test Specification (STS)
 
@@ -200,6 +204,7 @@ Constraints:
 | `TEST-03-26` | AC-03-09 | Unit | — | `validateSubmissionInput` with `https:example.com/doc`, `https:/example.com/doc`, `https:///example.com`, `http:\\example.com`, `https://`, `https://?q`; controls `https://example.com/doc`, `HTTP://EXAMPLE.COM/a`, `  https://example.com/x  ` | Each invalid value → `details.link = "INVALID_URL"`; controls accepted (trimmed) | `server/tests/unit/submission-link.test.ts` › TEST-03-26 |
 | `TEST-03-27` | AC-03-09 | API + DB | student1 token; milestone on Alpha with a future deadline | POST with link `https:example.com/doc`, then `https:/example.com/doc`; control `https://example.com/doc` | `400 VALIDATION_ERROR` `INVALID_URL` and no version stored for both; control `201` with the link stored as sent | `server/tests/api/submission-link.api.test.ts` › TEST-03-27 |
 | `TEST-03-28` | AC-03-19 | UI | Mocked API: milestone `teamId` 1, team "Team Alpha"; second case: team read answers 500 | Render `/student/milestones/1` | "Team: Team Alpha" in the milestone card; with 500 the title, versions and submit form are still shown | `client/tests/StudentMilestoneTeam.test.tsx` › TEST-03-28 |
+| `TEST-03-29` | AC-03-20 | UI | Mocked API: student; milestones A and B; deferred fetch on returning to A | Navigate `/student` → A → Back → B, type draft title/link, then `window.history.go(-2)` to A while A loads; then resolve A | Immediately on `history.go(-2)`, B's title and **Submit work** disappear and `"Loading…"` shows; after A resolves, A's title shows with empty **Submission title** and **Link** | `client/tests/RouteStateReset.test.tsx` › TEST-03-29 |
 
 **Revised existing tests (v0.2).** `TEST-03-15` and `TEST-03-16` render a milestone with the fixed deadline `2026-11-08T16:59:00.000Z`. Once the window rule exists, a run after 2026-11-15 would hide the form for a reason unrelated to those tests. The test file therefore sets a fake clock (`vi.useFakeTimers({ toFake: ["Date"] })`, `vi.setSystemTime("2026-11-09T00:00:00.000Z")`) so both tests keep checking what they checked before; their assertions are unchanged. `TEST-03-05` (deadline 2 days ago) stays inside the window and is unchanged. No other existing test is changed, skipped or weakened.
 
@@ -227,3 +232,8 @@ Constraints:
 - [x] RED: `9430b8c` (tests only) on the pre-fix code: server **5 failed / 205 passed (210)** — TEST-03-26 `https:example.com/doc`, `https:/example.com/doc`, `https:///example.com`, `http:\\example.com` `expected undefined to be 'INVALID_URL'`, TEST-03-27 `expected 201 to be 400`; client **1 failed / 46 passed (47)** — TEST-03-28 "Team: Team Alpha" not found. Passing at RED as guards: `https://`, `https://?q`, `https:// example.com`, the accepted controls and the team-read-failure case of TEST-03-28
 - [x] GREEN: `898447f` — `ABSOLUTE_HTTP_URL` check in `server/src/utils/submissionValidation.ts`; team name via `getTeamApi` in `StudentMilestone.tsx`; the same tests pass; full regression on `a0f56b6`: `npm run build` OK; `npm test` server **210 passed** (30 files), client **57 passed** (15 files); `npm run test:e2e` **5 passed** ×3 on a temporary database (ports 3197/5197); `python -m unittest discover -s deploy/tests` **17 OK**; 0 failed, 0 skipped
 - [ ] PR reviewed by phet526 (approve before merge) and merged into `sprint-3`
+
+### 8.3 Defect `#102` (`DEF-MILESTONE-STATE`, v0.7) verification
+
+- [x] Contract v0.7 (`0d2d932`) → RED (`70315e0`: `TEST-03-29` failed with stale `Student Milestone B` form instead of `"Loading…"`, client `4 failed / 57 passed (61)`) → GREEN (`b1a8eff`: key `StudentMilestoneContent` by `milestoneId`, CI `45125687400`, `293 / 293` passed; local client `61 / 61`)
+- [ ] PR reviewed by `@ILoveSiesta` and merged into `sprint-3`; recorded in `#85`
