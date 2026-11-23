@@ -15,6 +15,7 @@
 | 0.7 | 2026-11-22 | phet526 | Update §8.1 DoD with PR #97 traceability refs (`2.14`, `2.15`), labeled CI `45034210203` client counts, and round-2 `DEF-GRADE-RELEASE` (#93) RED (`25b0e18`) → GREEN (`36d0d99`, CI `45044529526`, `226 / 226` passed) evidence |
 | 0.8 | 2026-11-23 | phet526 | Address PR #97 round-2 review (`97c8364`): align §7 STS `TEST-08-12` (separate version-only `PUT { score: 80, version: 1 }` and score-only `PUT { score: 92, version: 1 }` saves) and `TEST-08-14` (failed 500 Save re-enables inputs while keeping **Release grade** disabled) |
 | 0.9 | 2026-11-23 | ILoveSiesta | Defect #100 (`DEF-GRADE-STALE`): the release request carries the grade the page shows (`{ score, version }`), checked against the stored grade under the milestone lock; a mismatch gets `409 GRADE_CHANGED` and nothing is released, and the card shows the reason and reloads the current grade. Revise §2, §3, §4, §6 (`AC-08-11`, `AC-08-12`; release requests in AC-08-03, AC-08-04, AC-08-05, AC-08-06, AC-08-08 now carry the shown grade) and §7 (`TEST-08-15..18`; release calls in TEST-08-03..06, TEST-08-09, TEST-08-12, TEST-08-14 send the shown grade with unchanged expected results) |
+| 0.10 | 2026-11-23 | ILoveSiesta | §8.2 Definition of Done filled with the #100 RED → GREEN results; no behaviour change |
 
 ## 1. Linked requirements
 
@@ -177,6 +178,7 @@ Existing tests that render the milestone pages (`Submissions.test.tsx`, `Feedbac
 ### 8.2 Defect `#100` (`DEF-GRADE-STALE`) verification
 
 - [x] Owner triage posted on `#100` (`issuecomment-7091087353`); contract `0.9` and SDS §4 revised before the tests
-- [ ] TDD RED (tests only) fails for the reported behaviour → GREEN; build, `npm test`, `npm run test:e2e`, `deploy/tests` pass; the #100 probe releases nothing in both stale cases
-- [ ] `docs/traceability.md` updated
+- [x] TDD RED → GREEN on `fix/F-08-stale-grade-release` (from `sprint-3` @ `9b05789`): contract `66f0d93` → RED `5faff1d` (tests only; `npm run build` OK; server `3 failed / 164 passed (167)`: TEST-08-15 `expected 200 to be 409`, TEST-08-16 `expected 200 to be 400`, TEST-08-17 `save 200 release 200 stored 60 released true` (the old grade's release published the new grade); client `4 failed / 39 passed (43)`: TEST-08-09, TEST-08-12, TEST-08-14, TEST-08-18 `expected [ undefined ] to deeply equal [ { score, version } ]` because the release had no body) → GREEN `cf7161b`: `npm run build` OK, server `167 passed`, client `43 passed`, `npm run test:e2e` `5 passed` three times, `deploy/tests` `17 OK`; 0 failed, 0 skipped. TEST-08-17 saw both lock orders in one run (6 × save first → release 409 `GRADE_CHANGED`, nothing released; 4 × release first → released `80` / v2, save 409)
+- [x] #100 probe (built client, throwaway database): on `9b05789` both stale cases released `60` / v1 and `95` / v2 while the card showed `80` / v2; on `cf7161b` nothing is released, the card shows the `GRADE_CHANGED` message and the reloaded `60 / 100 (graded on Version 1)` with the form filled, and the next release publishes `60` / v1
+- [x] `docs/traceability.md` updated (2.18)
 - [ ] PR reviewed by `@phet526` and merged into `sprint-3`; re-tested on the release that contains the fix (#85)
