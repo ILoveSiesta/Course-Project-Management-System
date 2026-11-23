@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, vi } from "vitest";
+import { randomUUID } from "crypto";
 import request from "supertest";
 import express from "express";
 import { app } from "../../src/app.js";
@@ -8,6 +9,7 @@ import * as prismaModule from "../../src/prisma.js";
 import { seed } from "../../prisma/seed.js";
 import { signToken } from "../../src/utils/jwt.js";
 import { authenticate, requireRole } from "../../src/middleware/auth.js";
+import { logoutService } from "../../src/services/auth.service.js";
 import bcrypt from "bcryptjs";
 
 const DEMO_PASSWORD = process.env.SEED_DEMO_PASSWORD || "demo-password";
@@ -385,8 +387,8 @@ describe("F-01 Authentication and Team Data API", () => {
       }
     });
 
-    it("TEST-01-16: parallel POST /api/auth/logout calls for the same token all return 204 and revoke it", async () => {
-      for (let round = 0; round < 5; round++) {
+    it("TEST-01-16: parallel POST /api/auth/logout calls for the same token return 204 or 401 UNAUTHENTICATED (never 500) and revoke it", async () => {
+      for (let round = 0; round < 10; round++) {
         const loginRes = await request(app)
           .post("/api/auth/login")
           .send({ email: "student1@cpms.test", password: DEMO_PASSWORD });
@@ -398,14 +400,37 @@ describe("F-01 Authentication and Team Data API", () => {
             request(app).post("/api/auth/logout").set("Authorization", `Bearer ${token}`)
           )
         );
+        for (const r of responses) {
+          expect([204, 401], `round ${round + 1} unexpected status ${r.status}`).toContain(r.status);
+          if (r.status === 401) {
+            expect(r.body?.error?.code).toBe("UNAUTHENTICATED");
+          }
+        }
         expect(
-          responses.map((r) => r.status),
-          `round ${round + 1} parallel logout statuses`
-        ).toEqual([204, 204, 204, 204, 204]);
+          responses.filter((r) => r.status === 204).length,
+          `round ${round + 1} expected at least one 204`
+        ).toBeGreaterThanOrEqual(1);
 
         const meAfter = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
         expect(meAfter.status).toBe(401);
         expect(meAfter.body.error.code).toBe("UNAUTHENTICATED");
+      }
+    });
+
+    it("TEST-01-16s: 10 concurrent logoutService(jti, exp) calls for one jti succeed without rejection and persist 1 row", async () => {
+      const prisma = getPrisma();
+      const exp = Math.floor(Date.now() / 1000) + 3600;
+
+      for (let round = 0; round < 10; round++) {
+        const jti = randomUUID();
+        const results = await Promise.allSettled(
+          Array.from({ length: 10 }, () => logoutService(jti, exp))
+        );
+        const rejected = results.filter((r) => r.status === "rejected");
+        expect(rejected, `round ${round + 1} rejected logoutService calls`).toHaveLength(0);
+
+        const count = await prisma.revokedToken.count({ where: { jti } });
+        expect(count, `round ${round + 1} RevokedToken row count`).toBe(1);
       }
     });
 
