@@ -51,8 +51,11 @@ function withToken(req: request.Test, token: string | undefined) {
 const getGrade = (id: number, token?: string) => withToken(request(app).get(`/api/milestones/${id}/grade`), token);
 const putGrade = (id: number, token: string | undefined, body: unknown) =>
   withToken(request(app).put(`/api/milestones/${id}/grade`), token).send(body as object);
-const release = (id: number, token?: string) =>
-  withToken(request(app).post(`/api/milestones/${id}/grade/release`), token);
+// Contract 0.9 (#100): the release body is the grade the page shows. `undefined` sends no body.
+const release = (id: number, token: string | undefined, shown: unknown) => {
+  const req = withToken(request(app).post(`/api/milestones/${id}/grade/release`), token);
+  return shown === undefined ? req : req.send(shown as object);
+};
 
 const gradeRows = (milestoneId: number) =>
   getPrisma().$queryRaw<GradeRow[]>`
@@ -144,7 +147,7 @@ describe("F-08 Grades and grade release API", () => {
     const m = await milestoneWithVersions("Team Alpha", "student1", 1, "release");
     expect((await putGrade(m.id, tokens.supervisor1, { score: 85, version: 1 })).status).toBe(200);
 
-    const res = await release(m.id, tokens.supervisor1);
+    const res = await release(m.id, tokens.supervisor1, { score: 85, version: 1 });
     expect(res.status).toBe(200);
     expect(res.body.released).toBe(true);
     expect(res.body.grade.score).toBe(85);
@@ -152,7 +155,7 @@ describe("F-08 Grades and grade release API", () => {
     expect(stored).not.toBeNull();
     expect(new Date(res.body.releasedAt).getTime()).toBe(stored!.getTime());
 
-    const again = await release(m.id, tokens.supervisor1);
+    const again = await release(m.id, tokens.supervisor1, { score: 85, version: 1 });
     expect(again.status).toBe(409);
     expect(again.body.error.code).toBe("GRADE_RELEASED");
     expect((await releasedAt(m.id))!.getTime()).toBe(stored!.getTime());
@@ -165,7 +168,7 @@ describe("F-08 Grades and grade release API", () => {
 
   it("TEST-08-04: release without a grade and a grade without a submission get 409 and store nothing", async () => {
     const ungraded = await milestoneWithVersions("Team Alpha", "student1", 1, "no grade");
-    const noGrade = await release(ungraded.id, tokens.supervisor1);
+    const noGrade = await release(ungraded.id, tokens.supervisor1, { score: 80, version: 1 });
     expect(noGrade.status).toBe(409);
     expect(noGrade.body.error.code).toBe("NO_GRADE");
     expect(await releasedAt(ungraded.id)).toBeNull();
@@ -191,7 +194,7 @@ describe("F-08 Grades and grade release API", () => {
     expect(supervisorView.status).toBe(200);
     expect(supervisorView.body).toMatchObject({ grade: { score: 85, version: 1 }, released: false });
 
-    expect((await release(m.id, tokens.supervisor1)).status).toBe(200);
+    expect((await release(m.id, tokens.supervisor1, { score: 85, version: 1 })).status).toBe(200);
     const shown = await getGrade(m.id, tokens.student1);
     expect(shown.status).toBe(200);
     expect(shown.body).toMatchObject({ grade: { score: 85, version: 1 }, released: true });
@@ -203,7 +206,7 @@ describe("F-08 Grades and grade release API", () => {
     const beta = await milestoneWithVersions("Team Beta", "student3", 1, "access beta");
     const body = { score: 75, version: 1 };
 
-    for (const res of [await putGrade(alpha.id, tokens.student1, body), await release(alpha.id, tokens.student1)]) {
+    for (const res of [await putGrade(alpha.id, tokens.student1, body), await release(alpha.id, tokens.student1, body)]) {
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe("FORBIDDEN");
     }
@@ -211,7 +214,7 @@ describe("F-08 Grades and grade release API", () => {
     for (const res of [
       await getGrade(alpha.id, tokens.supervisor2),
       await putGrade(alpha.id, tokens.supervisor2, body),
-      await release(alpha.id, tokens.supervisor2),
+      await release(alpha.id, tokens.supervisor2, body),
       await getGrade(alpha.id, tokens.student3),
     ]) {
       expect(res.status).toBe(404);
@@ -219,7 +222,7 @@ describe("F-08 Grades and grade release API", () => {
       expect(res.body.grade).toBeUndefined();
     }
 
-    for (const res of [await getGrade(alpha.id), await putGrade(alpha.id, undefined, body), await release(alpha.id)]) {
+    for (const res of [await getGrade(alpha.id), await putGrade(alpha.id, undefined, body), await release(alpha.id, undefined, body)]) {
       expect(res.status).toBe(401);
       expect(res.body.error.code).toBe("UNAUTHENTICATED");
     }
@@ -260,5 +263,88 @@ describe("F-08 Grades and grade release API", () => {
 
     // Positive control: a valid grade on the same milestone.
     expect((await putGrade(m.id, tokens.supervisor1, { score: 50, version: 1 })).status).toBe(200);
+  });
+
+  // Defect #100 (DEF-GRADE-STALE): the release names the grade the page shows (contract 0.9, AC-08-11).
+  it("TEST-08-15: a release naming a grade other than the stored one gets 409 GRADE_CHANGED and releases nothing", async () => {
+    const m = await milestoneWithVersions("Team Alpha", "student1", 2, "stale release");
+    expect((await putGrade(m.id, tokens.supervisor1, { score: 80, version: 2 })).status).toBe(200);
+
+    for (const shown of [
+      { score: 60, version: 2 },
+      { score: 80, version: 1 },
+      { score: 60, version: 1 },
+    ]) {
+      const res = await release(m.id, tokens.supervisor1, shown);
+      expect(res.status, JSON.stringify(shown)).toBe(409);
+      expect(res.body).toEqual({ error: { code: "GRADE_CHANGED", message: "The grade was changed after this page was loaded. Check the current grade, then release it again" } });
+      expect(await releasedAt(m.id)).toBeNull();
+    }
+
+    // Control: the grade that is stored is released.
+    const ok = await release(m.id, tokens.supervisor1, { score: 80, version: 2 });
+    expect(ok.status).toBe(200);
+    expect(ok.body).toMatchObject({ grade: { score: 80, version: 2 }, released: true });
+
+    // GRADE_RELEASED and NO_GRADE come before GRADE_CHANGED.
+    const after = await release(m.id, tokens.supervisor1, { score: 60, version: 1 });
+    expect(after.status).toBe(409);
+    expect(after.body.error.code).toBe("GRADE_RELEASED");
+    const ungraded = await milestoneWithVersions("Team Alpha", "student1", 1, "stale release no grade");
+    const noGrade = await release(ungraded.id, tokens.supervisor1, { score: 80, version: 1 });
+    expect(noGrade.status).toBe(409);
+    expect(noGrade.body.error.code).toBe("NO_GRADE");
+  });
+
+  it("TEST-08-16: a release without a valid shown grade gets 400 VALIDATION_ERROR and releases nothing", async () => {
+    const m = await milestoneWithVersions("Team Alpha", "student1", 2, "release body");
+    expect((await putGrade(m.id, tokens.supervisor1, { score: 80, version: 2 })).status).toBe(200);
+
+    const cases: Array<[unknown, Record<string, string>]> = [
+      [undefined, { score: "REQUIRED", version: "REQUIRED" }],
+      [{}, { score: "REQUIRED", version: "REQUIRED" }],
+      [{ score: "80", version: 2 }, { score: "INVALID_TYPE" }],
+      [{ score: 101, version: 2 }, { score: "OUT_OF_RANGE" }],
+      [{ score: 80, version: 0 }, { version: "INVALID_TYPE" }],
+    ];
+    for (const [body, details] of cases) {
+      const res = await release(m.id, tokens.supervisor1, body);
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(res.body.error.code).toBe("VALIDATION_ERROR");
+      expect(res.body.error.details).toEqual(details);
+      expect(await releasedAt(m.id)).toBeNull();
+    }
+  });
+
+  it("TEST-08-17: a save racing with a release of the old grade never releases the new grade", async () => {
+    const outcomes: string[] = [];
+    for (let round = 0; round < 10; round++) {
+      const m = await milestoneWithVersions("Team Alpha", "student1", 2, `release race ${round}`);
+      expect((await putGrade(m.id, tokens.supervisor1, { score: 80, version: 2 })).status).toBe(200);
+
+      const [saved, released] = await Promise.all([
+        putGrade(m.id, tokens.supervisor1, { score: 60, version: 1 }),
+        release(m.id, tokens.supervisor1, { score: 80, version: 2 }),
+      ]);
+      const [row] = await gradeRows(m.id);
+      const isReleased = (await releasedAt(m.id)) !== null;
+      const outcome = `save ${saved.status} release ${released.status} stored ${row.score} released ${isReleased}`;
+      outcomes.push(outcome);
+
+      if (released.status === 200) {
+        // Release won the lock: the named grade is published and the save is rejected.
+        expect(released.body.grade, outcome).toMatchObject({ score: 80, version: 2 });
+        expect(saved.status, outcome).toBe(409);
+        expect(saved.body.error.code, outcome).toBe("GRADE_RELEASED");
+        expect(row.score, outcome).toBe(80);
+      } else {
+        // Save won the lock: the release is rejected and nothing is published.
+        expect(released.status, outcome).toBe(409);
+        expect(released.body.error.code, outcome).toBe("GRADE_CHANGED");
+        expect(saved.status, outcome).toBe(200);
+        expect(isReleased, outcome).toBe(false);
+      }
+    }
+    console.log(`TEST-08-17 outcomes: ${JSON.stringify(outcomes)}`);
   });
 });

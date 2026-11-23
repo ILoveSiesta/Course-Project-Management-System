@@ -308,9 +308,15 @@ export async function saveGradeApi(
   return toGradeState(data);
 }
 
-export async function releaseGradeApi(token: string, milestoneId: number): Promise<GradeState> {
+// `shown` is the grade the page displays; the server releases only if it is still the stored grade (#100).
+export async function releaseGradeApi(
+  token: string,
+  milestoneId: number,
+  shown: { score: number; version: number }
+): Promise<GradeState> {
   const data = await apiRequest<Partial<GradeState>>(token, `/milestones/${milestoneId}/grade/release`, {
     method: "POST",
+    body: JSON.stringify(shown),
   });
   return toGradeState(data);
 }

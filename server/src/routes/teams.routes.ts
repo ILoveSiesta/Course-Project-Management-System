@@ -87,7 +87,7 @@ milestonesRouter.put("/:milestoneId/grade", requireRole("SUPERVISOR"), handle(as
 }));
 
 milestonesRouter.post("/:milestoneId/grade/release", requireRole("SUPERVISOR"), handle(async (req, res) => {
-  res.json(await releaseGrade(req.user!, parseId(req.params.milestoneId)));
+  res.json(await releaseGrade(req.user!, parseId(req.params.milestoneId), req.body));
 }));
 
 milestonesRouter.get("/:milestoneId/submissions", handle(async (req, res) => {

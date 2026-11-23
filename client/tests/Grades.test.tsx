@@ -70,6 +70,13 @@ function startAt(path: string) {
   window.history.pushState({}, "Test", path);
 }
 
+// Contract 0.9 (#100): bodies of the release requests sent so far (undefined = no body).
+function releaseBodies(fetchMock: ReturnType<typeof vi.fn>) {
+  return fetchMock.mock.calls
+    .filter(([url, init]) => String(url).endsWith("/api/milestones/10/grade/release") && init?.method === "POST")
+    .map(([, init]) => (init?.body === undefined ? undefined : JSON.parse(String(init.body))));
+}
+
 describe("F-08 Grades UI", () => {
   beforeEach(() => {
     sessionStorage.clear();
@@ -107,6 +114,7 @@ describe("F-08 Grades UI", () => {
 
     fireEvent.click(within(card).getByRole("button", { name: "Release grade" }));
     expect(await within(card).findByText(/^Released:/)).toBeInTheDocument();
+    expect(releaseBodies(fetchMock)).toEqual([{ score: 85, version: 2 }]);
     expect(within(card).queryByRole("button", { name: "Save grade" })).not.toBeInTheDocument();
     expect(within(card).queryByRole("button", { name: "Release grade" })).not.toBeInTheDocument();
   });
@@ -243,6 +251,7 @@ describe("F-08 Grades UI", () => {
     expect(await within(card).findByText(/^Released:/)).toBeInTheDocument();
     expect(within(card).getByText("92 / 100 (graded on Version 1)")).toBeInTheDocument();
     expect(releaseCalls).toBe(1);
+    expect(releaseBodies(fetchMock)).toEqual([{ score: 92, version: 1 }]);
   });
 
   it("TEST-08-13: treats numerically equivalent score strings as unchanged before and after Save, while empty on stored 0 stays disabled", async () => {
@@ -393,7 +402,49 @@ describe("F-08 Grades UI", () => {
     expect(within(card).getByRole("button", { name: "Save grade" })).toBeDisabled();
     expect(within(card).getByRole("button", { name: "Release grade" })).toBeDisabled();
 
+    expect(releaseBodies(fetchMock)).toEqual([{ score: 95, version: 2 }]);
+
     resolveRelease({ status: 200, body: graded(95, 2, true) });
     expect(await within(card).findByText(/^Released:/)).toBeInTheDocument();
+  });
+
+  it("TEST-08-18: a release of a grade changed elsewhere shows the reason and the current grade, then releases that grade", async () => {
+    let stored: unknown = graded(80, 2);
+    let releases = 0;
+    const fetchMock = mockApi(supervisor, (url, init) => {
+      if (url.endsWith("/api/milestones/10/grade/release") && init?.method === "POST") {
+        releases += 1;
+        if (releases === 1) {
+          // Another session saved 60 on Version 1 after this page loaded.
+          stored = graded(60, 1);
+          return { status: 409, body: { error: { code: "GRADE_CHANGED", message: "The grade was changed after this page was loaded. Check the current grade, then release it again" } } };
+        }
+        stored = graded(60, 1, true);
+        return { status: 200, body: stored };
+      }
+      if (url.endsWith("/api/milestones/10/grade")) return { status: 200, body: stored };
+    });
+    startAt("/supervisor/milestones/10");
+    render(<App />);
+
+    const card = await screen.findByRole("region", { name: "Grade" });
+    expect(await within(card).findByText("80 / 100 (graded on Version 2)")).toBeInTheDocument();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Release grade" }));
+    expect(await within(card).findByRole("alert")).toHaveTextContent("The grade was changed after this page was loaded. Check the current grade, then release it again");
+    expect(releaseBodies(fetchMock)).toEqual([{ score: 80, version: 2 }]);
+
+    expect(await within(card).findByText("60 / 100 (graded on Version 1)")).toBeInTheDocument();
+    expect(within(card).getByText("Not released")).toBeInTheDocument();
+    expect(within(card).queryByText(/^Released:/)).not.toBeInTheDocument();
+    expect(within(card).getByLabelText("Score")).toHaveValue(60);
+    expect(within(card).getByLabelText("Graded version")).toHaveValue("1");
+
+    fireEvent.click(within(card).getByRole("button", { name: "Release grade" }));
+    expect(await within(card).findByText(/^Released:/)).toBeInTheDocument();
+    expect(releaseBodies(fetchMock)).toEqual([
+      { score: 80, version: 2 },
+      { score: 60, version: 1 },
+    ]);
   });
 });
