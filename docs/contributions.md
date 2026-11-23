@@ -7,8 +7,9 @@
 | 0.3 | 2026-11-14 | phet526 | Lab 5 contributions (issues #18–#22; PRs #23–#25, #39–#45, and final release) |
 | 0.4 | 2026-11-21 | ILoveSiesta | Lab 6 contributions as in the Lab 6 report §D.5 (issues #48, #49, #52, #54, #56; PRs #50, #51, #53, #55, #57, #58) (#60) |
 | 0.5 | 2026-11-21 | ILoveSiesta | Sprint 2 and Lab 7 contributions so far (issues #59, #60, #62–#68, #79; PRs #61, #69, #71–#78) (#79) |
+| 0.6 | 2026-11-23 | ILoveSiesta | `v0.2.0` release and post-deployment checks completed; Sprint 3 and the defect fixes up to the release candidate `v0.3.0` (issues #70, #81, #83–#85, #89, #90, #92–#94, #100, #102, #103, #107; PRs #80, #82, #86–#88, #91, #97–#99, #101, #104–#106) (#107) |
 
-Sources: GitHub issues and PRs (author, reviewer, merged by) and `git log` on `sprint-1` (Sprint 1 and Lab 6) and `lab5-staging` / `main` (Lab 5). Both students
+Sources: GitHub issues and PRs (author, reviewer, merged by) and `git log` on `sprint-1` (Sprint 1 and Lab 6), `lab5-staging` / `main` (Lab 5), `sprint-2` (Sprint 2, Lab 7 change) and `sprint-3` (Sprint 3, Lab 7 records). Both students
 worked on requirements/design, tests, implementation and review; issues alternated between
 them, and the student who did not write an issue reviewed its PR.
 
@@ -36,10 +37,10 @@ them, and the student who did not write an issue reviewed its PR.
 | Part D | Reviewed PR #55 (ran RED/GREEN, E2E, checked 1280/375 px) and merged it; RED/GREEN footer in PR #57; opened release PR #58, tag `v0.1.2`; retested YMOM #60/#59 | Wrote RED `044ea2a` and GREEN `d4590dc` (PR #55); reviewed and merged PR #57 and PR #58; checked Deploy demo and the URL after deployment |
 | Pair work | Decided the YMOM acceptance together before sending it; coordinated test times and deployment notices with the partner team; produced the Lab 6 report PDF | (same) |
 
-## Sprint 2 and Lab 7 (up to the `v0.2.0` release preparation)
+## Sprint 2 and Lab 7 change (`v0.2.0`)
 
-Source: GitHub issues #59–#68, #79 and PRs #61, #69, #71–#78 (author, reviewer, merged by) on `sprint-2`. Lab 7 metrics,
-release readiness and retrospective (#70, phet526) follow after the `v0.2.0` deployment.
+Source: GitHub issues #59–#68, #79 and PRs #61, #69, #71–#78, #80 (author, reviewer, merged by) on `sprint-2` and `main`. The Lab 7
+metrics, release readiness and retrospective (#70) are in the Sprint 3 table below.
 
 | Work | ILoveSiesta | phet526 |
 |---|---|---|
@@ -48,7 +49,24 @@ release readiness and retrospective (#70, phet526) follow after the `v0.2.0` dep
 | Tests and implementation (TDD) | F-05 (#62, PR #69), F-06 (#63, PR #73), F-08 (#66, PR #76): tests-only RED commit, then implementation | F-07 (#64, PR #75), F-09 (#67, PR #77): tests-only RED commit, then implementation; TEST-01-14 for AC-01-10 (#65, PR #74) |
 | Reviews | PR #74 (mutation check of TEST-01-14, approve, merge); PR #75 (request changes for the Edit milestone layout and the revision numbers, then approve, merge); PR #77 (RED re-run, long-title layout check at 1024/375 px, approve, merge) | Reviewed, approved and merged PR #69, #71, #72, #73, #76 |
 | Lab 7 change #59 (BR-05 7-day window) | Wrote the change request, sent it and the clarification to the TA, recorded the approval; contract revision and impact analysis (PR #71); RED → GREEN (PR #72) | Reviewed the contract revision before any code (PR #71) and the RED → GREEN PR (PR #72), and merged both |
-| Release | #79 (PR #78): footer `CPMS v0.2.0` RED → GREEN, Sprint 2 completion table (`docs/sprints/sprint-2/README.md`), regression on the release-prep commit; #68: release PR to `main` and deployment checks | Reviews PR #78 and the release PR to `main` |
+| Release | #79 (PR #78): footer `CPMS v0.2.0` RED → GREEN, Sprint 2 completion table (`docs/sprints/sprint-2/README.md`), regression on the release-prep commit; #68: release PR #80 to `main`, tag `v0.2.0`, signed-in post-deployment checks PD-01..PD-18 (comment 7065312117 in #68) | Reviewed and merged PR #78 and the release PR #80; Lab 7 post-deployment checks on `v0.2.0` (milestone 22 inserted with the TA's approval, `409 SUBMISSION_WINDOW_CLOSED`, preserved Sprint 1 path; #59) |
 | Pair work | Planned the Sprint 2 split and the order of the parallel PRs; resolved revision-number conflicts between parallel PRs (the author who merged later renumbered) | (same) |
+
+## Sprint 3, Lab 7 records and defect fixes (up to the `v0.3.0` release preparation)
+
+Source: GitHub issues #70, #81, #83–#85, #89, #90, #92–#94, #100, #102, #103, #107 and PRs #82, #86–#88, #91, #97–#99,
+#101, #104–#106 (author, reviewer, merged by) on `sprint-3`. Every PR was approved by the other student before it was merged.
+
+| Work | ILoveSiesta | phet526 |
+|---|---|---|
+| Setup | #81 PR #82: `sprint-3` staging, CI trigger, plan v0.7 | Reviewed and merged PR #82 |
+| Sprint 3 contracts | F-10, F-11, F-12 contracts with AC and STS, including the NFR-10 measurement plan (#84, PR #87) | Reviewed and merged PR #87, with notes for the F-11/F-12 implementation; F-13 contract (#83) |
+| Sprint 3 implementation (TDD) | — | F-13 team management (#83, PR #88): contract → RED → implementation, and RED → fix rounds for the review findings |
+| Lab 7 records | Reviewed PR #86 (2× request changes for the metric snapshot, CI counts and interpretation, then approve) and merged it | Metrics, release readiness, technical debt and retrospective (#70, PR #86) |
+| Whole-system audit | Audited `v0.2.0` / `sprint-3` and opened the defect issues #92–#94 | — |
+| Defect fixes (triage, contract revision, RED → GREEN) | #89 (PR #98), #94 three IDs (PR #104), #100 (PR #101), #103 (PR #106) | #90 (PR #91), #92 (PR #99), #93 (PR #97), #102 (PR #105) |
+| Reviews | PR #88 (5× request changes, then approve); PR #91 (3×), PR #97 (2×), PR #99 (2×), PR #105 (2×), each then approved; merged all of them | Reviewed, approved and merged PR #98, #101, #104, #106 |
+| Release candidate | #107: footer `CPMS v0.3.0` RED → GREEN, change register, Sprint 3 README and remaining-work plan, SRS/features/SDS/traceability updates, regression; #85: release PR and deployment | Reviews #107 and the release PR; signed-in post-deployment checks on `v0.3.0` (#85) |
+| Pair work | Agreed the split of the defect issues and the order of the parallel PRs; renumbered document revisions when parallel PRs collided (the author who merged later renumbered) | (same) |
 
 AI assistance is declared in [`ai-use.md`](ai-use.md).

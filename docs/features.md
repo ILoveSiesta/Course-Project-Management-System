@@ -20,29 +20,31 @@
 | 1.6 | 2026-11-21 | phet526 | F-09 status updated to Implemented (#67) |
 | 1.7 | 2026-11-22 | phet526 | F-13 status updated to Implemented (#83) |
 | 1.8 | 2026-11-22 | ILoveSiesta | F-10, F-11, F-12: contracts written (#84), status Contract; implementation after Deliverable 2 (renumbered from 1.7 after F-13 PR #88 took 1.7) |
+| 1.9 | 2026-11-23 | ILoveSiesta | Release candidate `v0.3.0` (#107): statuses use the defined values with their evidence (Sprint 1 accepted in Lab 6, Sprint 2 tested and released in `v0.2.0`, F-13 tested, F-10..F-12 planned with contracts); intro no longer says Sprint 2–3 are unspecified |
 
-Requirement IDs refer to `docs/srs.md`. Sprint 1 features have GitHub issues and engineering contracts in
-`docs/sprints/sprint-1/`. Sprint 2–3 features are allocated now and specified in their sprint.
+Requirement IDs refer to `docs/srs.md`. Every feature has a GitHub issue and an engineering contract in
+`docs/sprints/sprint-1/`, `docs/sprints/sprint-2/` or `docs/sprints/sprint-3/`. Defect fixes are listed in
+`docs/change-register.md`.
 
-Status values: **Planned** · **In progress** · **Implemented** · **Tested** · **Accepted**
+Status values: **Planned** (contract only) · **In progress** · **Implemented** (merged) · **Tested** (STS tests pass on the release candidate) · **Accepted** (independent acceptance on a deployed release)
 
 ## 1. Product features
 
 | Feature | Name | Description | Requirements | Depends on | Sprint | Issue | Status |
 |---|---|---|---|---|---|---|---|
-| F-01 | Authentication and team data | Login, logout, current user, role guard; models User, Team, TeamMembership, SupervisorAssignment, RevokedToken; seed data | FR-01–FR-04, BR-10 (seed), NFR-01, NFR-04 | — | 1 | #2 | Implemented |
-| F-02 | Team view and milestone creation | Student sees own team; supervisor lists assigned teams; supervisor creates milestones for assigned teams; milestone lists | FR-05, FR-06, FR-08, FR-09, BR-01–BR-04 | F-01 | 1 | #3 | Implemented |
-| F-03 | Submission and versions | Student submits title/description/link; resubmission creates versions (max 3); late flag and days late; late submissions accepted for at most 7 days (CHG-03); view submissions | FR-12–FR-14, BR-01, BR-02, BR-05–BR-08, NFR-06 | F-02 | 1 (CHG-03: Lab 7) | #4; #59 | Implemented (7-day window: `8259688`, #59) |
-| F-04 | Feedback | Supervisor records append-only feedback on a submission version; team sees feedback | FR-16, FR-17, BR-01–BR-03, BR-09 | F-03 | 1 | #5 | Implemented |
-| F-05 | Milestone editing and deadline extension | Edit title/description; extend deadline only | FR-10, BR-13 | F-02 | 2 | #62 | Implemented |
-| F-06 | Milestone for several teams | Create the same milestone for several assigned teams in one action | FR-11, BR-04 | F-02 | 2 | #63 | Implemented |
-| F-07 | Revision history | Full version history per team–milestone with feedback on each version | FR-15, BR-09 | F-03, F-04 | 2 | #64 | Implemented |
-| F-08 | Grades and release | Record a grade per team–milestone; release grades; students see released grades only | FR-18, FR-19, BR-11 | F-03 | 2 | #66 | Implemented |
-| F-09 | Team–milestone status | Derived status (Not submitted, Overdue, Submitted, Submitted late, Reviewed) shown on lists | FR-20, BR-12 | F-03, F-04 | 2 | #67 | Implemented |
-| F-10 | Progress board | Student: own team's milestones by status; supervisor: teams × milestones board | FR-21 | F-09 | 3 | #84 (contract) | Contract (`docs/sprints/sprint-3/F-10-progress-board.md`); implementation after D2 |
-| F-11 | Supervisor summary report | Per-team counts by status, late submissions, average released grade | FR-22, NFR-10 | F-08, F-09 | 3 | #84 (contract) | Contract (`docs/sprints/sprint-3/F-11-summary-report.md`, includes the NFR-10 measurement plan); implementation after D2 |
-| F-12 | Submission filtering | Filter supervisor submission list by team, milestone and status | FR-23 | F-09 | 3 | #84 (contract) | Contract (`docs/sprints/sprint-3/F-12-submission-filter.md`); implementation after D2 |
-| F-13 | Team management | Supervisor creates teams they supervise and manages members (D-06) | FR-07, BR-10, BR-14 | F-01 | 3 | #83 | Implemented |
+| F-01 | Authentication and team data | Login, logout, current user, role guard; models User, Team, TeamMembership, SupervisorAssignment, RevokedToken; seed data | FR-01–FR-04, BR-10 (seed), NFR-01, NFR-04 | — | 1 | #2 | Accepted (Sprint 1 slice, partner UAT on `v0.1.2`) |
+| F-02 | Team view and milestone creation | Student sees own team; supervisor lists assigned teams; supervisor creates milestones for assigned teams; milestone lists | FR-05, FR-06, FR-08, FR-09, BR-01–BR-04 | F-01 | 1 | #3 | Accepted (Sprint 1 slice, partner UAT on `v0.1.2`) |
+| F-03 | Submission and versions | Student submits title/description/link; resubmission creates versions (max 3); late flag and days late; late submissions accepted for at most 7 days (CHG-03); view submissions | FR-12–FR-14, BR-01, BR-02, BR-05–BR-08, NFR-06 | F-02 | 1 (CHG-03: Lab 7) | #4; #59 | Accepted (Sprint 1 slice, partner UAT on `v0.1.2`); 7-day window tested and released in `v0.2.0` (#59) |
+| F-04 | Feedback | Supervisor records append-only feedback on a submission version; team sees feedback | FR-16, FR-17, BR-01–BR-03, BR-09 | F-03 | 1 | #5 | Accepted (Sprint 1 slice, partner UAT on `v0.1.2`) |
+| F-05 | Milestone editing and deadline extension | Edit title/description; extend deadline only | FR-10, BR-13 | F-02 | 2 | #62 | Tested (released `v0.2.0`) |
+| F-06 | Milestone for several teams | Create the same milestone for several assigned teams in one action | FR-11, BR-04 | F-02 | 2 | #63 | Tested (released `v0.2.0`) |
+| F-07 | Revision history | Full version history per team–milestone with feedback on each version | FR-15, BR-09 | F-03, F-04 | 2 | #64 | Tested (released `v0.2.0`) |
+| F-08 | Grades and release | Record a grade per team–milestone; release grades; students see released grades only | FR-18, FR-19, BR-11 | F-03 | 2 | #66 | Tested (released `v0.2.0`) |
+| F-09 | Team–milestone status | Derived status (Not submitted, Overdue, Submitted, Submitted late, Reviewed) shown on lists | FR-20, BR-12 | F-03, F-04 | 2 | #67 | Tested (released `v0.2.0`) |
+| F-10 | Progress board | Student: own team's milestones by status; supervisor: teams × milestones board | FR-21 | F-09 | 3 | #84 (contract) | Planned (contract `docs/sprints/sprint-3/F-10-progress-board.md` v0.2); implementation after D2 |
+| F-11 | Supervisor summary report | Per-team counts by status, late submissions, average released grade | FR-22, NFR-10 | F-08, F-09 | 3 | #84 (contract) | Planned (contract `docs/sprints/sprint-3/F-11-summary-report.md` v0.1, includes the NFR-10 measurement plan); implementation after D2 |
+| F-12 | Submission filtering | Filter supervisor submission list by team, milestone and status | FR-23 | F-09 | 3 | #84 (contract) | Planned (contract `docs/sprints/sprint-3/F-12-submission-filter.md` v0.2); implementation after D2 |
+| F-13 | Team management | Supervisor creates teams they supervise and manages members (D-06) | FR-07, BR-10, BR-14 | F-01 | 3 | #83 | Tested (released in `v0.3.0`, #85) |
 
 ## 2. System responsibilities (cross-cutting)
 
