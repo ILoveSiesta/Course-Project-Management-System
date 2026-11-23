@@ -70,6 +70,13 @@ function startAt(path: string) {
   window.history.pushState({}, "Test", path);
 }
 
+// Contract 0.9 (#100): bodies of the release requests sent so far (undefined = no body).
+function releaseBodies(fetchMock: ReturnType<typeof vi.fn>) {
+  return fetchMock.mock.calls
+    .filter(([url, init]) => String(url).endsWith("/api/milestones/10/grade/release") && init?.method === "POST")
+    .map(([, init]) => (init?.body === undefined ? undefined : JSON.parse(String(init.body))));
+}
+
 describe("F-08 Grades UI", () => {
   beforeEach(() => {
     sessionStorage.clear();
@@ -107,6 +114,7 @@ describe("F-08 Grades UI", () => {
 
     fireEvent.click(within(card).getByRole("button", { name: "Release grade" }));
     expect(await within(card).findByText(/^Released:/)).toBeInTheDocument();
+    expect(releaseBodies(fetchMock)).toEqual([{ score: 85, version: 2 }]);
     expect(within(card).queryByRole("button", { name: "Save grade" })).not.toBeInTheDocument();
     expect(within(card).queryByRole("button", { name: "Release grade" })).not.toBeInTheDocument();
   });
@@ -159,5 +167,284 @@ describe("F-08 Grades UI", () => {
 
     const shownCard = await screen.findByRole("region", { name: "Grade" });
     expect(await within(shownCard).findByText("85 / 100 (graded on Version 1)")).toBeInTheDocument();
+  });
+
+  it("TEST-08-12: disables Release grade with a notice after .form-actions while Score (incl. empty) or Graded version has unsaved changes", async () => {
+    let current = { score: 80, version: 2, released: false };
+    let releaseCalls = 0;
+    const fetchMock = mockApi(supervisor, (url, init) => {
+      if (url.endsWith("/api/milestones/10/grade") && init?.method === "PUT") {
+        const sent = JSON.parse(String(init.body));
+        current = { score: sent.score, version: sent.version, released: false };
+        return { status: 200, body: graded(current.score, current.version, current.released) };
+      }
+      if (url.endsWith("/api/milestones/10/grade/release") && init?.method === "POST") {
+        releaseCalls += 1;
+        current = { ...current, released: true };
+        return { status: 200, body: graded(current.score, current.version, current.released) };
+      }
+      if (url.endsWith("/api/milestones/10/grade")) {
+        return { status: 200, body: graded(current.score, current.version, current.released) };
+      }
+    });
+    startAt("/supervisor/milestones/10");
+    render(<App />);
+
+    const card = await screen.findByRole("region", { name: "Grade" });
+    expect(await within(card).findByText("80 / 100 (graded on Version 2)")).toBeInTheDocument();
+
+    const releaseButton = within(card).getByRole("button", { name: "Release grade" });
+    expect(releaseButton).toBeEnabled();
+    expect(within(card).queryByText("Save the grade before releasing")).not.toBeInTheDocument();
+
+    // Changed score disables Release grade and renders notice after .form-actions in DOM order
+    fireEvent.change(within(card).getByLabelText("Score"), { target: { value: "95" } });
+    expect(within(card).getByRole("button", { name: "Release grade" })).toBeDisabled();
+    expect(within(card).getByRole("button", { name: "Save grade" })).toBeEnabled();
+    const actions = releaseButton.closest(".form-actions");
+    const notice = within(card).getByText("Save the grade before releasing");
+    expect(actions).not.toBeNull();
+    expect(actions!.compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(within(card).getByRole("button", { name: "Release grade" }));
+    expect(releaseCalls).toBe(0);
+
+    // Clearing Score to empty keeps Release grade disabled with the notice
+    fireEvent.change(within(card).getByLabelText("Score"), { target: { value: "" } });
+    expect(within(card).getByRole("button", { name: "Release grade" })).toBeDisabled();
+    expect(within(card).getByText("Save the grade before releasing")).toBeInTheDocument();
+    fireEvent.click(within(card).getByRole("button", { name: "Release grade" }));
+    expect(releaseCalls).toBe(0);
+
+    // Reverting back to the stored score re-enables Release grade
+    fireEvent.change(within(card).getByLabelText("Score"), { target: { value: "80" } });
+    expect(within(card).getByRole("button", { name: "Release grade" })).toBeEnabled();
+    expect(within(card).queryByText("Save the grade before releasing")).not.toBeInTheDocument();
+
+    // Changed graded version also disables Release grade
+    fireEvent.change(within(card).getByLabelText("Graded version"), { target: { value: "1" } });
+    expect(within(card).getByRole("button", { name: "Release grade" })).toBeDisabled();
+    expect(within(card).getByText("Save the grade before releasing")).toBeInTheDocument();
+    fireEvent.click(within(card).getByRole("button", { name: "Release grade" }));
+    expect(releaseCalls).toBe(0);
+
+    // Version-only change: Save grade stays enabled, sends stored score + new version, and re-enables Release grade
+    expect(within(card).getByRole("button", { name: "Save grade" })).toBeEnabled();
+    fireEvent.click(within(card).getByRole("button", { name: "Save grade" }));
+    expect(await within(card).findByText("80 / 100 (graded on Version 1)")).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Release grade" })).toBeEnabled();
+    expect(within(card).queryByText("Save the grade before releasing")).not.toBeInTheDocument();
+
+    // Score-only change: saving sends typed score + stored version, re-enables Release grade, and releases the saved grade
+    fireEvent.change(within(card).getByLabelText("Score"), { target: { value: "92" } });
+    fireEvent.click(within(card).getByRole("button", { name: "Save grade" }));
+    expect(await within(card).findByText("92 / 100 (graded on Version 1)")).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Release grade" })).toBeEnabled();
+    expect(within(card).queryByText("Save the grade before releasing")).not.toBeInTheDocument();
+
+    const puts = fetchMock.mock.calls.filter(([, init]) => init?.method === "PUT");
+    expect(puts.map(([, init]) => JSON.parse(String(init!.body)))).toEqual([
+      { score: 80, version: 1 },
+      { score: 92, version: 1 },
+    ]);
+
+    fireEvent.click(within(card).getByRole("button", { name: "Release grade" }));
+    expect(await within(card).findByText(/^Released:/)).toBeInTheDocument();
+    expect(within(card).getByText("92 / 100 (graded on Version 1)")).toBeInTheDocument();
+    expect(releaseCalls).toBe(1);
+    expect(releaseBodies(fetchMock)).toEqual([{ score: 92, version: 1 }]);
+  });
+
+  it("TEST-08-13: treats numerically equivalent score strings as unchanged before and after Save, while empty on stored 0 stays disabled", async () => {
+    let current = { score: 80, version: 2, released: false };
+    const fetchMock = mockApi(supervisor, (url, init) => {
+      if (url.endsWith("/api/milestones/10/grade") && init?.method === "PUT") {
+        const sent = JSON.parse(String(init.body));
+        current = { score: sent.score, version: sent.version, released: false };
+        return { status: 200, body: graded(current.score, current.version, current.released) };
+      }
+      if (url.endsWith("/api/milestones/10/grade")) {
+        return { status: 200, body: graded(current.score, current.version, current.released) };
+      }
+    });
+    startAt("/supervisor/milestones/10");
+    render(<App />);
+
+    const card = await screen.findByRole("region", { name: "Grade" });
+    expect(await within(card).findByText("80 / 100 (graded on Version 2)")).toBeInTheDocument();
+
+    for (const equiv of ["80.0", "8e1", "080"]) {
+      fireEvent.change(within(card).getByLabelText("Score"), { target: { value: equiv } });
+      expect(within(card).getByRole("button", { name: "Release grade" })).toBeEnabled();
+      expect(within(card).queryByText("Save the grade before releasing")).not.toBeInTheDocument();
+    }
+
+    fireEvent.click(within(card).getByRole("button", { name: "Save grade" }));
+    expect(await within(card).findByText("80 / 100 (graded on Version 2)")).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Release grade" })).toBeEnabled();
+    expect(within(card).queryByText("Save the grade before releasing")).not.toBeInTheDocument();
+    const putCall = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(JSON.parse(String(putCall![1]!.body))).toEqual({ score: 80, version: 2 });
+
+    cleanup();
+    sessionStorage.clear();
+    let zeroReleases = 0;
+    mockApi(supervisor, (url, init) => {
+      if (url.endsWith("/api/milestones/10/grade/release") && init?.method === "POST") {
+        zeroReleases += 1;
+        return { status: 200, body: graded(0, 2, true) };
+      }
+      if (url.endsWith("/api/milestones/10/grade")) {
+        return { status: 200, body: graded(0, 2, false) };
+      }
+    });
+    startAt("/supervisor/milestones/10");
+    render(<App />);
+
+    const zeroCard = await screen.findByRole("region", { name: "Grade" });
+    expect(await within(zeroCard).findByText("0 / 100 (graded on Version 2)")).toBeInTheDocument();
+
+    for (const equivZero of ["00", "-0"]) {
+      fireEvent.change(within(zeroCard).getByLabelText("Score"), { target: { value: equivZero } });
+      expect(within(zeroCard).getByRole("button", { name: "Release grade" })).toBeEnabled();
+      expect(within(zeroCard).queryByText("Save the grade before releasing")).not.toBeInTheDocument();
+    }
+
+    fireEvent.change(within(zeroCard).getByLabelText("Score"), { target: { value: "" } });
+    expect(within(zeroCard).getByRole("button", { name: "Release grade" })).toBeDisabled();
+    expect(within(zeroCard).getByText("Save the grade before releasing")).toBeInTheDocument();
+    fireEvent.click(within(zeroCard).getByRole("button", { name: "Release grade" }));
+    expect(zeroReleases).toBe(0);
+  });
+
+  it("TEST-08-14: disables Score and Graded version inputs and keeps failed saves disabled during/after requests", async () => {
+    let resolveSave!: (res: MockResponse) => void;
+    let resolveRelease!: (res: MockResponse) => void;
+    let saveAttempt = 0;
+
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      if (url.endsWith("/api/milestones/10/grade") && init?.method === "PUT") {
+        saveAttempt += 1;
+        return new Promise((resolve) => {
+          resolveSave = (res) =>
+            resolve({
+              ok: res.status >= 200 && res.status < 300,
+              status: res.status,
+              json: async () => res.body,
+            });
+        });
+      }
+      if (url.endsWith("/api/milestones/10/grade/release") && init?.method === "POST") {
+        return new Promise((resolve) => {
+          resolveRelease = (res) =>
+            resolve({
+              ok: res.status >= 200 && res.status < 300,
+              status: res.status,
+              json: async () => res.body,
+            });
+        });
+      }
+      const res: MockResponse = url.includes("/api/auth/me")
+        ? { status: 200, body: { user: supervisor } }
+        : url.endsWith("/api/milestones/10") && !init?.method
+          ? { status: 200, body: { milestone } }
+          : url.endsWith("/api/milestones/10/submissions") && !init?.method
+            ? { status: 200, body: { submissions: [version(1), version(2)] } }
+            : url.endsWith("/api/milestones/10/grade")
+              ? { status: 200, body: graded(80, 2) }
+              : { status: 200, body: { status: "ok" } };
+      return Promise.resolve({
+        ok: res.status >= 200 && res.status < 300,
+        status: res.status,
+        json: async () => res.body,
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    startAt("/supervisor/milestones/10");
+    render(<App />);
+
+    const card = await screen.findByRole("region", { name: "Grade" });
+    expect(await within(card).findByText("80 / 100 (graded on Version 2)")).toBeInTheDocument();
+
+    // Edit Score to 95 and click Save grade -> both inputs and buttons must stay disabled while PUT is in flight
+    fireEvent.change(within(card).getByLabelText("Score"), { target: { value: "95" } });
+    fireEvent.click(within(card).getByRole("button", { name: "Save grade" }));
+
+    expect(within(card).getByLabelText("Score")).toBeDisabled();
+    expect(within(card).getByLabelText("Graded version")).toBeDisabled();
+    expect(within(card).getByRole("button", { name: "Save grade" })).toBeDisabled();
+    expect(within(card).getByRole("button", { name: "Release grade" })).toBeDisabled();
+
+    // Failed save leaves form edited and Release grade disabled
+    resolveSave({
+      status: 500,
+      body: { error: { code: "INTERNAL_ERROR", message: "Unexpected server error" } },
+    });
+    expect(await within(card).findByRole("alert")).toHaveTextContent("Unexpected server error");
+    expect(within(card).getByLabelText("Score")).toBeEnabled();
+    expect(within(card).getByLabelText("Graded version")).toBeEnabled();
+    expect(within(card).getByRole("button", { name: "Save grade" })).toBeEnabled();
+    expect(within(card).getByRole("button", { name: "Release grade" })).toBeDisabled();
+
+    // Successful save re-enables Release grade, then Release grade disables both inputs while POST is in flight
+    fireEvent.click(within(card).getByRole("button", { name: "Save grade" }));
+    expect(saveAttempt).toBe(2);
+    expect(within(card).getByLabelText("Score")).toBeDisabled();
+    expect(within(card).getByLabelText("Graded version")).toBeDisabled();
+
+    resolveSave({ status: 200, body: graded(95, 2) });
+    expect(await within(card).findByText("95 / 100 (graded on Version 2)")).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Release grade" })).toBeEnabled();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Release grade" }));
+    expect(within(card).getByLabelText("Score")).toBeDisabled();
+    expect(within(card).getByLabelText("Graded version")).toBeDisabled();
+    expect(within(card).getByRole("button", { name: "Save grade" })).toBeDisabled();
+    expect(within(card).getByRole("button", { name: "Release grade" })).toBeDisabled();
+
+    expect(releaseBodies(fetchMock)).toEqual([{ score: 95, version: 2 }]);
+
+    resolveRelease({ status: 200, body: graded(95, 2, true) });
+    expect(await within(card).findByText(/^Released:/)).toBeInTheDocument();
+  });
+
+  it("TEST-08-18: a release of a grade changed elsewhere shows the reason and the current grade, then releases that grade", async () => {
+    let stored: unknown = graded(80, 2);
+    let releases = 0;
+    const fetchMock = mockApi(supervisor, (url, init) => {
+      if (url.endsWith("/api/milestones/10/grade/release") && init?.method === "POST") {
+        releases += 1;
+        if (releases === 1) {
+          // Another session saved 60 on Version 1 after this page loaded.
+          stored = graded(60, 1);
+          return { status: 409, body: { error: { code: "GRADE_CHANGED", message: "The grade was changed after this page was loaded. Check the current grade, then release it again" } } };
+        }
+        stored = graded(60, 1, true);
+        return { status: 200, body: stored };
+      }
+      if (url.endsWith("/api/milestones/10/grade")) return { status: 200, body: stored };
+    });
+    startAt("/supervisor/milestones/10");
+    render(<App />);
+
+    const card = await screen.findByRole("region", { name: "Grade" });
+    expect(await within(card).findByText("80 / 100 (graded on Version 2)")).toBeInTheDocument();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Release grade" }));
+    expect(await within(card).findByRole("alert")).toHaveTextContent("The grade was changed after this page was loaded. Check the current grade, then release it again");
+    expect(releaseBodies(fetchMock)).toEqual([{ score: 80, version: 2 }]);
+
+    expect(await within(card).findByText("60 / 100 (graded on Version 1)")).toBeInTheDocument();
+    expect(within(card).getByText("Not released")).toBeInTheDocument();
+    expect(within(card).queryByText(/^Released:/)).not.toBeInTheDocument();
+    expect(within(card).getByLabelText("Score")).toHaveValue(60);
+    expect(within(card).getByLabelText("Graded version")).toHaveValue("1");
+
+    fireEvent.click(within(card).getByRole("button", { name: "Release grade" }));
+    expect(await within(card).findByText(/^Released:/)).toBeInTheDocument();
+    expect(releaseBodies(fetchMock)).toEqual([
+      { score: 80, version: 2 },
+      { score: 60, version: 1 },
+    ]);
   });
 });

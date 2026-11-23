@@ -1,4 +1,5 @@
 import { HttpError } from "./httpError.js";
+import { hasInvalidTextCharacters } from "./validation.js";
 
 export interface SubmissionInput {
   title: string;
@@ -10,6 +11,9 @@ const TITLE_MAX = 120;
 const DESCRIPTION_MAX = 2000;
 const LINK_MAX = 2048;
 const DAY_MS = 24 * 60 * 60 * 1000;
+// #94 C1 (F-03 v0.5 BR-08): "http://" or "https://" followed by the start of a host. `new URL()` alone repairs
+// "https:example.com", but the stored text is used as href and a browser would resolve it relative to CPMS.
+const ABSOLUTE_HTTP_URL = /^https?:\/\/[^/\\?#\s]/i;
 
 // BR-05: Submissions at or before deadline have daysLate = 0.
 // Submissions after deadline have daysLate = ceil((submittedAt - deadline) / 24 h).
@@ -41,6 +45,7 @@ export function validateSubmissionInput(body: unknown): SubmissionInput {
   } else {
     title = input.title.trim();
     if (!title) details.title = "REQUIRED";
+    else if (hasInvalidTextCharacters(input.title)) details.title = "INVALID_CHARACTER";
     else if (title.length > TITLE_MAX) details.title = "TOO_LONG";
   }
 
@@ -48,6 +53,8 @@ export function validateSubmissionInput(body: unknown): SubmissionInput {
   if (input.description !== undefined && input.description !== null) {
     if (typeof input.description !== "string") {
       details.description = "INVALID_TYPE";
+    } else if (hasInvalidTextCharacters(input.description)) {
+      details.description = "INVALID_CHARACTER";
     } else if (input.description.length > DESCRIPTION_MAX) {
       details.description = "TOO_LONG";
     } else {
@@ -64,8 +71,12 @@ export function validateSubmissionInput(body: unknown): SubmissionInput {
     link = input.link.trim();
     if (!link) {
       details.link = "REQUIRED";
+    } else if (hasInvalidTextCharacters(input.link)) {
+      details.link = "INVALID_CHARACTER";
     } else if (link.length > LINK_MAX) {
       details.link = "TOO_LONG";
+    } else if (!ABSOLUTE_HTTP_URL.test(link)) {
+      details.link = "INVALID_URL";
     } else {
       try {
         const parsed = new URL(link);

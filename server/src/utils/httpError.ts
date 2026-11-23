@@ -12,9 +12,11 @@ export class HttpError extends Error {
 
 export const notFound = () => new HttpError(404, "NOT_FOUND", "Resource not found");
 
-// Route IDs must be positive integers; anything else is treated as a record that does not exist.
+export const PG_INT4_MAX = 2_147_483_647;
+
+// Route IDs must be positive 32-bit integers; anything else is treated as a record that does not exist.
 export function parseId(raw: string): number {
   const id = Number(raw);
-  if (!Number.isInteger(id) || id <= 0) throw notFound();
+  if (!Number.isInteger(id) || id <= 0 || id > PG_INT4_MAX) throw notFound();
   return id;
 }

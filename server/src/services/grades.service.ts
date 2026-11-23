@@ -91,9 +91,12 @@ export async function saveGrade(user: AuthenticatedUser, milestoneId: number, bo
   });
 }
 
-// Release order: 404 scope → 409 GRADE_RELEASED → 409 NO_GRADE. Irreversible; the first release time is kept.
-export async function releaseGrade(user: AuthenticatedUser, milestoneId: number) {
+// Release order: 404 scope → 400 shown-grade format → 409 GRADE_RELEASED → 409 NO_GRADE → 409 GRADE_CHANGED.
+// Irreversible; the first release time is kept. The body names the grade the page shows (#100): it is compared with
+// the stored grade under the milestone lock, so a release never publishes a grade the supervisor did not see.
+export async function releaseGrade(user: AuthenticatedUser, milestoneId: number, body: unknown) {
   await findMilestoneInScope(user, milestoneId);
+  const shown = validateGradeInput(body);
 
   return getPrisma().$transaction(async (tx) => {
     const releasedAt = await lockMilestone(tx, milestoneId);
@@ -101,6 +104,9 @@ export async function releaseGrade(user: AuthenticatedUser, milestoneId: number)
 
     const grade = await tx.grade.findUnique({ where: { milestoneId }, include: gradeInclude });
     if (!grade) throw new HttpError(409, "NO_GRADE", "Record a grade before releasing");
+    if (grade.score !== shown.score || grade.submission.version !== shown.version) {
+      throw new HttpError(409, "GRADE_CHANGED", "The grade was changed after this page was loaded. Check the current grade, then release it again");
+    }
 
     const milestone = await tx.milestone.update({
       where: { id: milestoneId },

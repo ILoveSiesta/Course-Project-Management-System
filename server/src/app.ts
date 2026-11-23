@@ -63,19 +63,113 @@ export function createApp(options: AppOptions = {}): Express {
     });
   }
 
-  // Safe error handler: never leak stack traces or internal details to clients.
-  app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  // Safe error handler: map known Express/body-parser request errors and exposed static-file 4xx errors
+  // without leaking internals. ORM/database and unknown errors still fall through to safe 500 INTERNAL_ERROR.
+  app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof HttpError) {
       res.status(err.status).json({
         error: { code: err.code, message: err.message, ...(err.details ? { details: err.details } : {}) },
       });
       return;
     }
+    const parsedErr = mapRequestParseError(err);
+    if (parsedErr) {
+      res.status(parsedErr.status).json({
+        error: { code: parsedErr.code, message: parsedErr.message },
+      });
+      return;
+    }
+    if (options.clientDistDir && !isApiPath(req.path)) {
+      const staticErr = mapStaticClientError(err);
+      if (staticErr) {
+        if (staticErr.headers) {
+          for (const [key, value] of Object.entries(staticErr.headers)) {
+            res.setHeader(key, value);
+          }
+        }
+        res.status(staticErr.status).type("text/plain").send(staticErr.message);
+        return;
+      }
+    }
     console.error(err);
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Unexpected server error" } });
   });
 
   return app;
+}
+
+function mapRequestParseError(err: unknown): HttpError | null {
+  if (typeof err !== "object" || err === null) return null;
+  const candidate = err as { status?: unknown; statusCode?: unknown; type?: unknown; code?: unknown };
+  const status = typeof candidate.status === "number" ? candidate.status : candidate.statusCode;
+  const type = typeof candidate.type === "string" ? candidate.type : "";
+  const code = typeof candidate.code === "string" ? candidate.code : "";
+
+  if (status === 413 && type === "entity.too.large") {
+    return new HttpError(413, "PAYLOAD_TOO_LARGE", "Request body is too large");
+  }
+  if (status === 415 && (type === "charset.unsupported" || type === "encoding.unsupported")) {
+    return new HttpError(415, "UNSUPPORTED_MEDIA_TYPE", "Unsupported charset or content encoding");
+  }
+
+  const isJsonParseError = err instanceof SyntaxError || type === "entity.parse.failed";
+  const isZlibStreamError = code === "Z_DATA_ERROR" || code === "Z_BUF_ERROR" || code === "Z_NEED_DICT";
+  if (
+    status === 400 &&
+    (isJsonParseError ||
+      err instanceof URIError ||
+      type === "request.size.invalid" ||
+      type === "request.aborted" ||
+      type === "stream.encoding.set" ||
+      isZlibStreamError)
+  ) {
+    const message =
+      err instanceof URIError
+        ? "Malformed URL parameter"
+        : isJsonParseError
+          ? "Malformed JSON request body"
+          : "Request body could not be read";
+    return new HttpError(400, "BAD_REQUEST", message);
+  }
+  return null;
+}
+
+function isApiPath(reqPath: string): boolean {
+  return reqPath === "/api" || reqPath.startsWith("/api/");
+}
+
+const STATIC_STATUS_MESSAGES: Record<number, string> = {
+  400: "Bad Request",
+  403: "Forbidden",
+  404: "Not Found",
+  405: "Method Not Allowed",
+  411: "Length Required",
+  412: "Precondition Failed",
+  414: "URI Too Long",
+  416: "Range Not Satisfiable",
+};
+
+function mapStaticClientError(
+  err: unknown
+): { status: number; message: string; headers?: Record<string, string> } | null {
+  if (!(err instanceof Error)) return null;
+  const candidate = err as { status?: unknown; statusCode?: unknown; expose?: unknown; headers?: unknown };
+  const status = typeof candidate.status === "number" ? candidate.status : candidate.statusCode;
+  if (typeof status !== "number" || status < 400 || status >= 500 || candidate.expose !== true) {
+    return null;
+  }
+  const safeHeaders: Record<string, string> = {};
+  if (candidate.headers && typeof candidate.headers === "object") {
+    const contentRange = (candidate.headers as Record<string, unknown>)["Content-Range"];
+    if (typeof contentRange === "string") {
+      safeHeaders["Content-Range"] = contentRange;
+    }
+  }
+  return {
+    status,
+    message: STATIC_STATUS_MESSAGES[status] ?? "Bad Request",
+    headers: Object.keys(safeHeaders).length > 0 ? safeHeaders : undefined,
+  };
 }
 
 export const app = createApp({ clientDistDir: process.env.CLIENT_DIST_DIR || undefined });

@@ -14,31 +14,15 @@ export interface UserProfile {
 }
 
 export async function loginApi(email: string, password: string): Promise<{ token: string; user: UserProfile }> {
-  const res = await fetch(`${API_URL}/auth/login`, {
+  return sendRequest<{ token: string; user: UserProfile }>("/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
-
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data?.error?.message || "Login failed");
-  }
-
-  return data;
 }
 
 export async function getMeApi(token: string): Promise<{ user: UserProfile }> {
-  const res = await fetch(`${API_URL}/auth/me`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data?.error?.message || "Failed to fetch user");
-  }
-
-  return data;
+  return sendRequest<{ user: UserProfile }>("/auth/me", { headers: { Authorization: `Bearer ${token}` } });
 }
 
 // --- F-02: teams and milestones ---
@@ -123,17 +107,41 @@ export class ApiError extends Error {
   }
 }
 
+// #94 B5 (F-01 v0.12, SDS §3.2): fixed texts instead of "Failed to fetch", "Request failed" or JSON parser messages.
+export const NETWORK_ERROR_MESSAGE = "Cannot reach the server. Check your connection and try again.";
+export function serverUnavailableMessage(status: number): string {
+  return `The server is not available right now (HTTP ${status}). Please try again later.`;
+}
+
+// Sends a request and returns the JSON body. Every failure is an ApiError: status 0 / NETWORK_ERROR when the
+// server cannot be reached, the API error when the body has one, otherwise SERVER_UNAVAILABLE with the status.
+async function sendRequest<T>(path: string, init: RequestInit): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, init);
+  } catch {
+    throw new ApiError(0, "NETWORK_ERROR", NETWORK_ERROR_MESSAGE);
+  }
+  if (res.status === 204) return undefined as T;
+  let data: unknown;
+  try {
+    data = await res.json();
+  } catch {
+    data = undefined;
+  }
+  if (!res.ok) {
+    const err = (data as { error?: { code?: string; message?: string; details?: Record<string, string> } } | undefined)?.error;
+    if (err?.message) throw new ApiError(res.status, err.code ?? "UNKNOWN", err.message, err.details);
+    throw new ApiError(res.status, "SERVER_UNAVAILABLE", serverUnavailableMessage(res.status));
+  }
+  return (data ?? {}) as T;
+}
+
 async function apiRequest<T>(token: string, path: string, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  return sendRequest<T>(path, {
     ...init,
     headers: { Authorization: `Bearer ${token}`, ...(init.body ? { "Content-Type": "application/json" } : {}) },
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const err = data?.error ?? {};
-    throw new ApiError(res.status, err.code ?? "UNKNOWN", err.message ?? "Request failed", err.details);
-  }
-  return data as T;
 }
 
 export async function getTeamsApi(token: string): Promise<Team[]> {
@@ -143,6 +151,36 @@ export async function getTeamsApi(token: string): Promise<Team[]> {
 
 export async function getTeamApi(token: string, teamId: number): Promise<Team> {
   const data = await apiRequest<{ team: Team }>(token, `/teams/${teamId}`);
+  return data.team;
+}
+
+// --- F-13: supervisor team creation and member management ---
+
+export async function createTeamApi(token: string, name: string): Promise<Team> {
+  const data = await apiRequest<{ team: Team }>(token, "/teams", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+  return data.team;
+}
+
+export async function getAvailableStudentsApi(token: string): Promise<Person[]> {
+  const data = await apiRequest<{ students?: Person[] }>(token, "/teams/available-students");
+  return data.students ?? [];
+}
+
+export async function addTeamMemberApi(token: string, teamId: number, studentId: number): Promise<Team> {
+  const data = await apiRequest<{ team: Team }>(token, `/teams/${teamId}/members`, {
+    method: "POST",
+    body: JSON.stringify({ studentId }),
+  });
+  return data.team;
+}
+
+export async function removeTeamMemberApi(token: string, teamId: number, studentId: number): Promise<Team> {
+  const data = await apiRequest<{ team: Team }>(token, `/teams/${teamId}/members/${studentId}`, {
+    method: "DELETE",
+  });
   return data.team;
 }
 
@@ -278,9 +316,15 @@ export async function saveGradeApi(
   return toGradeState(data);
 }
 
-export async function releaseGradeApi(token: string, milestoneId: number): Promise<GradeState> {
+// `shown` is the grade the page displays; the server releases only if it is still the stored grade (#100).
+export async function releaseGradeApi(
+  token: string,
+  milestoneId: number,
+  shown: { score: number; version: number }
+): Promise<GradeState> {
   const data = await apiRequest<Partial<GradeState>>(token, `/milestones/${milestoneId}/grade/release`, {
     method: "POST",
+    body: JSON.stringify(shown),
   });
   return toGradeState(data);
 }
@@ -293,9 +337,7 @@ export async function createFeedbackApi(token: string, submissionId: number, com
   return data.feedback;
 }
 
+// Throws ApiError when the token could not be revoked (#94 B3); a 401 means it is already invalid.
 export async function logoutApi(token: string): Promise<void> {
-  await fetch(`${API_URL}/auth/logout`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  await sendRequest<void>("/auth/logout", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
 }

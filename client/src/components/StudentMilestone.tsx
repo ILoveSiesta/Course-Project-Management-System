@@ -8,6 +8,7 @@ import {
   Submission,
   createSubmissionApi,
   getGradeApi,
+  getTeamApi,
   getMilestoneApi,
   getMilestoneSubmissionsApi,
 } from "../api.js";
@@ -20,6 +21,7 @@ const FIELD_MESSAGES: Record<string, string> = {
   REQUIRED: "Required",
   INVALID_URL: "Link must be an http or https URL",
   INVALID_TYPE: "Invalid value",
+  INVALID_CHARACTER: "Contains an unsupported character",
 };
 const MAX_LENGTH: Record<string, number> = { title: 120, description: 2000, link: 2048 };
 
@@ -28,9 +30,14 @@ function fieldMessage(field: string, code: string): string {
   return FIELD_MESSAGES[code] ?? code;
 }
 
+// Keyed by milestoneId so Back/Forward navigation never carries previous milestone/form state (#102).
 export const StudentMilestone: React.FC = () => {
-  const { token, logout } = useAuth();
   const milestoneId = Number(useParams().milestoneId);
+  return <StudentMilestoneContent key={milestoneId} milestoneId={milestoneId} />;
+};
+
+const StudentMilestoneContent: React.FC<{ milestoneId: number }> = ({ milestoneId }) => {
+  const { token, logout } = useAuth();
 
   const [milestone, setMilestone] = useState<Milestone | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -44,6 +51,8 @@ export const StudentMilestone: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [gradeState, setGradeState] = useState<GradeState | null>(null);
+  // #94 C2 (F-03 v0.5 §3): team name from the existing F-02 read; optional, the page works without it.
+  const [teamName, setTeamName] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -58,6 +67,13 @@ export const StudentMilestone: React.FC = () => {
         if (!active) return;
         setMilestone(m);
         setSubmissions(subs);
+        getTeamApi(token, m.teamId)
+          .then((team) => {
+            if (active && team?.name) setTeamName(team.name);
+          })
+          .catch((err) => {
+            if (err instanceof ApiError && err.status === 401) logout();
+          });
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) return logout();
         if (!active) return;
@@ -134,6 +150,7 @@ export const StudentMilestone: React.FC = () => {
         <>
           <section className="card">
             <h2>{milestone.title}</h2>
+            {teamName && <p className="milestone-meta">Team: {teamName}</p>}
             <div className="milestone-meta">
               Due: <span>{formatDeadline(milestone.deadline)}</span>
             </div>

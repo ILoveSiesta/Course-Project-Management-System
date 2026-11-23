@@ -4,22 +4,31 @@ import { useAuth } from "../context/AuthContext.js";
 import {
   ApiError,
   Milestone,
+  Person,
   Team,
+  addTeamMemberApi,
   createMilestoneApi,
   createMilestoneForTeamsApi,
+  getAvailableStudentsApi,
   getTeamApi,
   getTeamMilestonesApi,
   getTeamsApi,
+  removeTeamMemberApi,
 } from "../api.js";
 import { MilestoneList, TeamSummary } from "./TeamDetails.js";
-import { milestoneFieldMessage as fieldMessage } from "../milestoneFields.js";
+import { localDeadlineToIso, milestoneFieldMessage as fieldMessage } from "../milestoneFields.js";
 
 
 const byDeadline = (a: Milestone, b: Milestone) => a.deadline.localeCompare(b.deadline) || a.id - b.id;
 
+// Keyed by teamId so Back/Forward navigation clears previous team and create/member forms while loading (#102).
 export const SupervisorTeam: React.FC = () => {
-  const { token, logout } = useAuth();
   const teamId = Number(useParams().teamId);
+  return <SupervisorTeamContent key={teamId} teamId={teamId} />;
+};
+
+const SupervisorTeamContent: React.FC<{ teamId: number }> = ({ teamId }) => {
+  const { token, logout } = useAuth();
 
   const [team, setTeam] = useState<Team | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
@@ -36,6 +45,16 @@ export const SupervisorTeam: React.FC = () => {
   const [assignedTeams, setAssignedTeams] = useState<Team[]>([]);
   const [otherTeamIds, setOtherTeamIds] = useState<number[]>([]);
   const [createdFor, setCreatedFor] = useState<string | null>(null);
+
+  // F-13: unassigned student picker and member add/remove state.
+  const [availableStudents, setAvailableStudents] = useState<Person[]>([]);
+  // #94 B6 (F-13 v0.12): the list failed to load; "No unassigned students available" is only for an empty list.
+  const [studentsError, setStudentsError] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [memberError, setMemberError] = useState<string | null>(null);
+  const [memberStatus, setMemberStatus] = useState<string | null>(null);
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [removingMemberId, setRemovingMemberId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -68,10 +87,76 @@ export const SupervisorTeam: React.FC = () => {
       })
       .catch(() => undefined);
 
+    getAvailableStudentsApi(token)
+      .then((students) => {
+        if (!active) return;
+        setAvailableStudents(students);
+        setStudentsError(false);
+      })
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) return logout();
+        if (active) setStudentsError(true);
+      });
+
     return () => {
       active = false;
     };
   }, [token, teamId]); // logout is recreated each render; it is only called on 401
+
+  const refreshAvailableStudents = () => {
+    if (!token) return;
+    getAvailableStudentsApi(token)
+      .then((students) => {
+        setAvailableStudents(students);
+        setStudentsError(false);
+      })
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) return logout();
+        setStudentsError(true);
+      });
+  };
+
+  const handleAddMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !selectedStudentId) return;
+    setMemberError(null);
+    setMemberStatus(null);
+    setIsAddingMember(true);
+
+    const picked = availableStudents.find((s) => s.id === Number(selectedStudentId));
+    try {
+      const updated = await addTeamMemberApi(token, teamId, Number(selectedStudentId));
+      setTeam(updated);
+      setSelectedStudentId("");
+      setMemberStatus(picked ? `Added ${picked.name} to the team.` : "Added student to the team.");
+      refreshAvailableStudents();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return logout();
+      setMemberError(err instanceof Error ? err.message : "Could not add member");
+      if (err instanceof ApiError && err.status === 409) refreshAvailableStudents();
+    } finally {
+      setIsAddingMember(false);
+    }
+  };
+
+  const handleRemoveMember = async (member: Person) => {
+    if (!token) return;
+    setMemberError(null);
+    setMemberStatus(null);
+    setRemovingMemberId(member.id);
+
+    try {
+      const updated = await removeTeamMemberApi(token, teamId, member.id);
+      setTeam(updated);
+      setMemberStatus(`Removed ${member.name} from the team.`);
+      refreshAvailableStudents();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return logout();
+      setMemberError(err instanceof Error ? err.message : "Could not remove member");
+    } finally {
+      setRemovingMemberId(null);
+    }
+  };
 
   const toggleTeam = (id: number) =>
     setOtherTeamIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
@@ -82,11 +167,17 @@ export const SupervisorTeam: React.FC = () => {
     setFieldErrors({});
     setFormError(null);
     setCreatedFor(null);
+
+    // datetime-local has no zone: it is read in the browser's time zone and sent as UTC.
+    const deadlineIso = deadline ? localDeadlineToIso(deadline) : "";
+    if (deadlineIso === null) {
+      setFieldErrors({ deadline: "INVALID_DATE" });
+      return;
+    }
     setIsSaving(true);
 
     try {
-      // datetime-local has no zone: it is read in the browser's time zone and sent as UTC.
-      const draft = { title, description, deadline: deadline ? new Date(deadline).toISOString() : "" };
+      const draft = { title, description, deadline: deadlineIso };
       if (otherTeamIds.length === 0) {
         const created = await createMilestoneApi(token, teamId, draft);
         setMilestones((list) => [...list, created].sort(byDeadline));
@@ -127,7 +218,49 @@ export const SupervisorTeam: React.FC = () => {
       {loadError && <p role="alert" className="alert">{loadError}</p>}
       {team && (
         <>
-          <TeamSummary team={team} />
+          <TeamSummary team={team} onRemoveMember={handleRemoveMember} removingMemberId={removingMemberId}>
+            {memberError && <p role="alert" className="alert">{memberError}</p>}
+            {memberStatus && <p role="status" className="status-notice">{memberStatus}</p>}
+            {studentsError && (
+              <p role="alert" className="alert">
+                Could not load the list of unassigned students. Reload the page to try again.
+              </p>
+            )}
+            <form onSubmit={handleAddMember} className="inline-form" noValidate>
+              <div className="form-field">
+                <label htmlFor="add-member-student">Student</label>
+                <select
+                  id="add-member-student"
+                  aria-label="Student"
+                  value={selectedStudentId}
+                  disabled={studentsError || availableStudents.length === 0 || isAddingMember}
+                  onChange={(e) => setSelectedStudentId(e.target.value)}
+                >
+                  {studentsError ? (
+                    <option value="">Could not load students</option>
+                  ) : availableStudents.length === 0 ? (
+                    <option value="">No unassigned students available</option>
+                  ) : (
+                    <>
+                      <option value="">Select a student…</option>
+                      {availableStudents.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {`${s.name} (${s.email})`}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+              </div>
+              <button
+                type="submit"
+                className="btn"
+                disabled={studentsError || availableStudents.length === 0 || !selectedStudentId || isAddingMember}
+              >
+                {isAddingMember ? "Adding…" : "Add member"}
+              </button>
+            </form>
+          </TeamSummary>
 
           <section className="card">
             <h3>Milestones</h3>

@@ -17,32 +17,7 @@ export function demoPasswordFrom(env: Record<string, string | undefined>): strin
 export async function seed() {
   const passwordHash = await bcrypt.hash(demoPasswordFrom(process.env), 10);
 
-  // 1. Create or upsert users
-  const studentsData = [
-    { email: "student1@cpms.test", name: "Student One", role: Role.STUDENT },
-    { email: "student2@cpms.test", name: "Student Two", role: Role.STUDENT },
-    { email: "student3@cpms.test", name: "Student Three", role: Role.STUDENT },
-    { email: "student4@cpms.test", name: "Student Four", role: Role.STUDENT },
-    { email: "student5@cpms.test", name: "Student Five", role: Role.STUDENT },
-    { email: "student6@cpms.test", name: "Student Six", role: Role.STUDENT },
-  ];
-
-  const supervisorsData = [
-    { email: "supervisor1@cpms.test", name: "Supervisor One", role: Role.SUPERVISOR },
-    { email: "supervisor2@cpms.test", name: "Supervisor Two", role: Role.SUPERVISOR },
-  ];
-
-  const users: Record<string, any> = {};
-
-  for (const s of [...studentsData, ...supervisorsData]) {
-    users[s.email] = await prisma.user.upsert({
-      where: { email: s.email },
-      update: { name: s.name, role: s.role, passwordHash },
-      create: { email: s.email, name: s.name, role: s.role, passwordHash },
-    });
-  }
-
-  // 2. Create or upsert teams
+  // 1. Create or upsert baseline teams first so student creation can link baseline memberships.
   const teamNames = ["Team Alpha", "Team Beta", "Team Gamma"];
   const teams: Record<string, any> = {};
 
@@ -54,23 +29,44 @@ export async function seed() {
     });
   }
 
-  // 3. Team Memberships (student belongs to at most one team)
-  const memberships = [
-    { team: "Team Alpha", studentEmail: "student1@cpms.test" },
-    { team: "Team Alpha", studentEmail: "student2@cpms.test" },
-    { team: "Team Beta", studentEmail: "student3@cpms.test" },
-    { team: "Team Beta", studentEmail: "student4@cpms.test" },
-    { team: "Team Gamma", studentEmail: "student5@cpms.test" },
-    { team: "Team Gamma", studentEmail: "student6@cpms.test" },
+  // 2. Create or upsert users.
+  // Baseline team memberships are created ONLY when the student account is first created so
+  // supervisor-managed moves and removals (F-13, AC-13-12) survive cpms-migrate re-runs on deploy.
+  const studentsData = [
+    { email: "student1@cpms.test", name: "Student One", team: "Team Alpha" },
+    { email: "student2@cpms.test", name: "Student Two", team: "Team Alpha" },
+    { email: "student3@cpms.test", name: "Student Three", team: "Team Beta" },
+    { email: "student4@cpms.test", name: "Student Four", team: "Team Beta" },
+    { email: "student5@cpms.test", name: "Student Five", team: "Team Gamma" },
+    { email: "student6@cpms.test", name: "Student Six", team: "Team Gamma" },
   ];
 
-  for (const m of memberships) {
-    const student = users[m.studentEmail];
-    const team = teams[m.team];
-    await prisma.teamMembership.upsert({
-      where: { studentId: student.id },
-      update: { teamId: team.id },
-      create: { teamId: team.id, studentId: student.id },
+  const supervisorsData = [
+    { email: "supervisor1@cpms.test", name: "Supervisor One" },
+    { email: "supervisor2@cpms.test", name: "Supervisor Two" },
+  ];
+
+  const users: Record<string, any> = {};
+
+  for (const s of studentsData) {
+    users[s.email] = await prisma.user.upsert({
+      where: { email: s.email },
+      update: { name: s.name, role: Role.STUDENT, passwordHash },
+      create: {
+        email: s.email,
+        name: s.name,
+        role: Role.STUDENT,
+        passwordHash,
+        memberships: { create: { teamId: teams[s.team].id } },
+      },
+    });
+  }
+
+  for (const sup of supervisorsData) {
+    users[sup.email] = await prisma.user.upsert({
+      where: { email: sup.email },
+      update: { name: sup.name, role: Role.SUPERVISOR, passwordHash },
+      create: { email: sup.email, name: sup.name, role: Role.SUPERVISOR, passwordHash },
     });
   }
 

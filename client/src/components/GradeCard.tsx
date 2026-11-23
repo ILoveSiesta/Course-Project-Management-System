@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ApiError, GradeState, Submission, releaseGradeApi, saveGradeApi } from "../api.js";
+import { ApiError, GradeState, Submission, getGradeApi, releaseGradeApi, saveGradeApi } from "../api.js";
 import { formatDeadline } from "../format.js";
 
 // F-08 Grade card (contract docs/sprints/sprint-2/F-08-grades.md §3).
@@ -50,8 +50,8 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
   onUnauthorized,
 }) => {
   const latestVersion = submissions.reduce((max, s) => Math.max(max, s.version), 0);
-  const [score, setScore] = useState("");
-  const [version, setVersion] = useState("");
+  const [score, setScore] = useState(() => (state.grade ? String(state.grade.score) : ""));
+  const [version, setVersion] = useState(() => String(state.grade?.version ?? latestVersion));
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
@@ -61,6 +61,10 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
     setScore(state.grade ? String(state.grade.score) : "");
     setVersion(String(state.grade?.version ?? latestVersion));
   }, [state.grade?.score, state.grade?.version, latestVersion]);
+
+  const hasUnsavedChanges =
+    state.grade !== null &&
+    (score.trim() === "" || Number(score) !== state.grade.score || version !== String(state.grade.version));
 
   const handleError = (err: unknown) => {
     if (err instanceof ApiError && err.status === 401) return onUnauthorized();
@@ -88,13 +92,23 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
   };
 
   const release = async () => {
+    if (hasUnsavedChanges || !state.grade) return;
     setFieldErrors({});
     setFormError(null);
     setIsBusy(true);
     try {
-      onChange(await releaseGradeApi(token, milestoneId));
+      // Release the grade the card shows, not the form values (#100).
+      onChange(await releaseGradeApi(token, milestoneId, { score: state.grade.score, version: state.grade.version }));
     } catch (err) {
       handleError(err);
+      // The stored grade changed after this page loaded: show the current grade so it can be checked first.
+      if (err instanceof ApiError && err.code === "GRADE_CHANGED") {
+        try {
+          onChange(await getGradeApi(token, milestoneId));
+        } catch (reloadErr) {
+          if (reloadErr instanceof ApiError && reloadErr.status === 401) onUnauthorized();
+        }
+      }
     } finally {
       setIsBusy(false);
     }
@@ -120,7 +134,6 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
       ) : (
         <>
           {state.grade && <p className="muted">Not released</p>}
-          {formError && <p role="alert" className="alert">{formError}</p>}
           <form onSubmit={save} noValidate>
             <div className={fieldClass("score")}>
               <label htmlFor="grade-score">Score</label>
@@ -130,6 +143,7 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
                 min={0}
                 max={100}
                 step={1}
+                disabled={isBusy}
                 value={score}
                 onChange={(e) => setScore(e.target.value)}
               />
@@ -137,7 +151,12 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
             </div>
             <div className={fieldClass("version")}>
               <label htmlFor="grade-version">Graded version</label>
-              <select id="grade-version" value={version} onChange={(e) => setVersion(e.target.value)}>
+              <select
+                id="grade-version"
+                disabled={isBusy}
+                value={version}
+                onChange={(e) => setVersion(e.target.value)}
+              >
                 {submissions.map((s) => (
                   <option key={s.id} value={String(s.version)}>
                     Version {s.version}
@@ -146,16 +165,29 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
               </select>
               {errorFor("version")}
             </div>
-            <div className="form-actions">
+            {/* #103: one row at every width, and messages below it, so a double-click on Save grade
+                can never land on Release grade (a release cannot be undone, G4). */}
+            <div className="form-actions grade-actions">
               <button type="submit" className="btn" disabled={isBusy}>
                 Save grade
               </button>
               {state.grade && (
-                <button type="button" className="btn btn-secondary" disabled={isBusy} onClick={release}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={isBusy || hasUnsavedChanges}
+                  onClick={release}
+                >
                   Release grade
                 </button>
               )}
             </div>
+            {formError && <p role="alert" className="alert grade-alert">{formError}</p>}
+            {hasUnsavedChanges && (
+              <p className="muted" role="status">
+                Save the grade before releasing
+              </p>
+            )}
           </form>
         </>
       )}

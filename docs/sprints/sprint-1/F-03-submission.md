@@ -9,6 +9,11 @@
 | 0.1 | 2026-11-06 | phet526 | Initial contract for F-03 (issue #4) |
 | 0.2 | 2026-11-21 | ILoveSiesta | Lab 7 change request #59 (CHG-03, approved by TA Kantapat Suwannahong 2026-11-21): BR-05 late window of 7 × 24 h. Changed: §1, §2 (BR-05, check order), §3 (closed-window notice), §4 (`409 SUBMISSION_WINDOW_CLOSED`), §5 (no data change, stated), §6 (AC-03-04 revised; AC-03-14..AC-03-18 new), §7 (TEST-03-18..TEST-03-25 new; TEST-03-15/16 fixture clock revised), §8.1 (DoD of the change). Written and reviewed before any implementation commit. Impact analysis: `docs/labs/lab-07/change-impact.md` |
 | 0.3 | 2026-11-21 | ILoveSiesta | §8.1 filled with executed RED/GREEN/regression results (#59). TEST-03-22 precondition corrected from "now − 1 d" to "now − 23 h" before the test commit: an extension to exactly 1 day back makes the next submission slightly more than 24 h late, which BR-05 rounds up to 2 days. No rule change |
+| 0.4 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): reject NUL (`U+0000`) and unpaired UTF-16 surrogates in submission `title`, `description` and `link` (`INVALID_CHARACTER`, `"Contains an unsupported character"`), linking SDS §4 |
+| 0.5 | 2026-11-23 | ILoveSiesta | Defect #94 group C (`DEF-F03-CONTRACT`): BR-08 `link` must start with `http://` or `https://` followed by a host (C1: `https:example.com`, `https:/example.com` were accepted and opened inside CPMS); §3 student page shows the team name as §2 already required (C2); §5 corrected: `daysLate >= 0` is guaranteed by the service, no database CHECK exists or is added (C3); AC-03-09 revised, AC-03-19 new; TEST-03-26..TEST-03-28 new; §8.2 added. Written before the regression tests |
+| 0.6 | 2026-11-23 | ILoveSiesta | §8.2 filled with executed RED, GREEN and regression results of #94 group C; no rule change |
+| 0.7 | 2026-11-23 | phet526 | Defect #102 (`DEF-MILESTONE-STATE`): revise §3, §6 (`AC-03-20`), and §7 (`TEST-03-29`) so changing `:milestoneId` via Back/Forward / `history.go` on `/student/milestones/:milestoneId` (and `/supervisor/milestones/:milestoneId`) resets displayed milestone, submissions, team name, errors, and submission form inputs immediately to `"Loading…"` until the new milestone loads |
+| 0.8 | 2026-11-23 | phet526 | Record Defect #102 (`DEF-MILESTONE-STATE`) RED (`70315e0`, `TEST-03-29` failed on stale `Student Milestone B` instead of `"Loading…"`) → GREEN (`b1a8eff`, CI `45125687400`, `293 / 293` passed) verification evidence in §8.3 |
 
 ## 1. Linked requirements
 
@@ -40,10 +45,11 @@
     - When `count >= 3`, submitting throws `409 VERSION_LIMIT_REACHED` with message "Maximum of 3 versions reached for this milestone".
     - **Order of the two 409 rules (v0.2):** inside the transaction the version limit is checked **before** the late window, so a team with 3 versions keeps getting `VERSION_LIMIT_REACHED` (Sprint 1 behaviour unchanged) even after the window has closed.
     - Concurrency safety (NFR-06): creation runs inside a database transaction (`prisma.$transaction`) with a row lock (`FOR UPDATE` on `Milestone`) and a database unique constraint `@@unique([milestoneId, version])` preventing race conditions or duplicate version numbers.
-  - **BR-08 (Field validation):**
-    - `title`: required, trimmed, 1–120 characters (`REQUIRED`, `TOO_LONG`).
-    - `description`: optional; empty string is stored as `null`; at most 2000 characters (`TOO_LONG`, `INVALID_TYPE`).
-    - `link`: required, valid absolute `http` or `https` URL, at most 2048 characters (`REQUIRED`, `TOO_LONG`, `INVALID_URL`, `INVALID_TYPE`).
+  - **BR-08 (Field validation, shared rules in SDS §4):**
+    - `title`: required, trimmed, 1–120 characters, no NUL (`U+0000`) or unpaired UTF-16 surrogates (`REQUIRED`, `INVALID_CHARACTER`, `TOO_LONG`, `INVALID_TYPE`).
+    - `description`: optional; empty string is stored as `null`; at most 2000 characters, no NUL or unpaired UTF-16 surrogates (`INVALID_CHARACTER`, `TOO_LONG`, `INVALID_TYPE`).
+    - `link`: required, valid absolute `http` or `https` URL, at most 2048 characters, no NUL or unpaired UTF-16 surrogates (`REQUIRED`, `INVALID_CHARACTER`, `TOO_LONG`, `INVALID_URL`, `INVALID_TYPE`).
+      - **Absolute (v0.5, #94 C1):** after trimming, the link must start with `http://` or `https://` (any letter case) and the next character must begin a host (not `/`, `\`, `?`, `#` or whitespace), and `new URL(link)` must succeed. `https:example.com/doc`, `https:/example.com/doc`, `https:///example.com` and `http:\\example.com` → `INVALID_URL`. Reason: `new URL()` repairs these values, but the stored text is used as `href` and a browser resolves a same-scheme value without `//` relative to the CPMS page. The stored value is the trimmed text the student sent (unchanged rule).
 - **Access and check order (SDS §4–§5):**
   - Check order: authenticate (401) → role (403) → record scope (404) → validation (400) → business rule (409: version limit, then late window). A closed window never changes the 401/403/404/400 answers.
   - Student: may view submissions and submit work only for milestones belonging to their own team (`memberships: { some: { studentId: user.id } }`).
@@ -54,10 +60,13 @@
 
 | Screen | Route | Content | States |
 |---|---|---|---|
-| Student milestone detail | `/student/milestones/:milestoneId` | Back to My team link; milestone title, deadline (ICT), description; submission versions list; submit/resubmit form | Loading; not found/not allowed; empty submissions ("No submissions yet"); field errors under inputs; disabled submit button while saving; version limit reached notice ("Maximum of 3 versions reached"); late window closed notice ("Late submissions are accepted up to 7 days after the deadline", v0.2) |
+| Student milestone detail | `/student/milestones/:milestoneId` | Back to My team link; milestone title, **team name** (v0.5, #94 C2: "Team: <name>", as §2 requires), deadline (ICT), description; submission versions list; submit/resubmit form | Loading; not found/not allowed; empty submissions ("No submissions yet"); field errors under inputs; disabled submit button while saving; version limit reached notice ("Maximum of 3 versions reached"); late window closed notice ("Late submissions are accepted up to 7 days after the deadline", v0.2) |
 | Supervisor milestone detail | `/supervisor/milestones/:milestoneId` | Back to team link; milestone title, deadline (ICT), description; submission versions list with submitter name, link, late badge | Loading; not found/not allowed; empty submissions ("No submissions yet") |
 
 - Deadlines and submission times are formatted in Asia/Bangkok time, e.g. `8 Nov 2026, 23:59 (ICT)` (A-04).
+- **Team name (v0.5, #94 C2):** loaded with the existing F-02 read `GET /api/teams/:teamId` using the milestone's `teamId` (no API change). If that read fails, the line is left out and the rest of the page (details, versions, form) still works; a `401` logs out as for every call.
+- **Route parameter change (v0.7, #102):** navigating between two milestones via Back/Forward or `history.go` resets the displayed milestone, submissions, team name, grade card, errors, and submission form fields immediately to `"Loading…"` until the new milestone loads so submissions cannot display or target the wrong milestone.
+- Field error texts: `REQUIRED` → "Required"; `INVALID_URL` → "Link must be an http or https URL"; `TOO_LONG` → "Too long (max N characters)"; `INVALID_TYPE` → "Invalid value"; `INVALID_CHARACTER` → "Contains an unsupported character".
 - Submission versions display:
   - Header: `Version N`
   - Badge: `.badge.badge-success` "On time" if `daysLate === 0`; `.badge.badge-warning` `Late (+N d)` if `daysLate > 0`.
@@ -113,7 +122,9 @@ v0.2 changes no route, request or success shape. `GET` endpoints are not affecte
 
 ## 5. Data specification
 
-**v0.2: no data change.** The late window is computed from the existing `Milestone.deadline` and the submission time; no column, constraint or migration is added, and existing `daysLate` values are not recalculated (the `>= 0` check stays; no `<= 7` constraint is added because pre-change rows may exceed 7).
+**v0.2: no data change.** The late window is computed from the existing `Milestone.deadline` and the submission time; no column, constraint or migration is added, and existing `daysLate` values are not recalculated (no `<= 7` constraint is added because pre-change rows may exceed 7).
+
+**v0.5 correction (#94 C3):** earlier revisions listed `daysLate` as "not null, >= 0" and said "the `>= 0` check stays", but no migration has ever created a CHECK constraint for it (a freshly migrated database has only `Grade_score_range`). The documented schema now describes what exists: `daysLate` is `not null`; the value is never negative because the service always computes it with `calculateDaysLate` (`0` at or before the deadline, `>= 1` after; TEST-03-04) and no endpoint accepts it from the client. No migration is added: no stored row can be negative and a constraint would add a release step without a behaviour change.
 
 
 New model `Submission` with migration `f03_submissions`:
@@ -128,7 +139,7 @@ New model `Submission` with migration `f03_submissions`:
 | `description` | VARCHAR(2000) | nullable |
 | `link` | VARCHAR(2048) | not null |
 | `submittedAt` | TIMESTAMPTZ(3) | default now() |
-| `daysLate` | Int | not null, >= 0 |
+| `daysLate` | Int | not null (never negative: computed by the service, no database CHECK — v0.5) |
 
 Constraints:
 - `@@unique([milestoneId, version])`
@@ -147,7 +158,7 @@ Constraints:
 | **AC-03-06** | **Given** supervisor1, **when** calling `GET /api/milestones/:id/submissions` for assigned team milestone, **then** return `200` with submissions list. |
 | **AC-03-07** | **Given** an out-of-scope user (student of another team or unassigned supervisor), **when** accessing submissions endpoint or single submission, **then** return `404 NOT_FOUND` and no data. |
 | **AC-03-08** | **Given** a supervisor, **when** calling `POST /api/milestones/:id/submissions`, **then** return `403 FORBIDDEN` before any scope or validation check. |
-| **AC-03-09** | **Given** invalid fields (missing/blank/121-char title, 2001-char description, missing/invalid/2049-char link), **when** student submits, **then** return `400 VALIDATION_ERROR` with per-field `details`, and nothing is stored. |
+| **AC-03-09** | **Given** invalid fields (missing/blank/121-char title, 2001-char description, missing/invalid/2049-char link), **when** student submits, **then** return `400 VALIDATION_ERROR` with per-field `details`, and nothing is stored. *(rev. v0.5, #94)* An invalid link includes a value without `//` after the scheme or without a host (`https:example.com/doc`, `https:/example.com/doc`); `https://example.com/doc` and `HTTP://EXAMPLE.COM/a` are accepted. |
 | **AC-03-10** | **Given** no token, **when** any F-03 endpoint is called, **then** return `401 UNAUTHENTICATED`. |
 | **AC-03-11** | **Given** 10 concurrent submission requests for the same milestone, **then** all requests serialize safely, producing unique sequential versions up to 3, and the rest receive `409 VERSION_LIMIT_REACHED` without database constraint errors or duplicate versions. |
 | **AC-03-12** | **Given** student on `/student/milestones/:id`, **when** page loads, **then** show milestone details, submissions list with ICT timestamps and late badge, and submission form; when 3 versions exist, show "Maximum of 3 versions reached". |
@@ -157,6 +168,8 @@ Constraints:
 | **AC-03-16** (new, v0.2) | **Given** versions stored before the change with `daysLate` > 7, **when** the team's student or an assigned supervisor reads the milestone's submissions or a single submission, **then** `200` with those versions and their stored `daysLate` unchanged. |
 | **AC-03-17** (new, v0.2) | **Given** a milestone whose late window has closed, **when** an assigned supervisor extends the deadline (F-05) so that the new `deadline + 7 × 24 h` is in the future and the student submits, **then** `201` with `daysLate` calculated from the new deadline. |
 | **AC-03-18** (new, v0.2) | **Given** a student on `/student/milestones/:id` for a milestone whose late window has closed and fewer than 3 versions, **when** the page loads, **then** the submit form is replaced by "Late submissions are accepted up to 7 days after the deadline" and the existing versions are still listed; **when** the API answers `409 SUBMISSION_WINDOW_CLOSED`, **then** its message is shown in an alert. |
+| **AC-03-19** (new, v0.5) | **Given** a student on `/student/milestones/:id`, **when** the page loads, **then** the milestone card shows "Team: <team name>"; **when** the team read fails, **then** the milestone, versions and form are still shown. |
+| **AC-03-20** (new, v0.7) | **Given** a student navigating between milestones B and A via Back/Forward or `history.go` on `/student/milestones/:id`, **when** the route changes to A while A loads, **then** B's details and submission form disappear immediately and `"Loading…"` is shown (`0` submissions sent to A), and once A loads, A's details and empty form fields appear. (#102) |
 
 ## 7. Software Test Specification (STS)
 
@@ -188,6 +201,11 @@ Constraints:
 | `TEST-03-24` | AC-03-18 | UI | Mocked API: window open in the browser; POST answers `409 SUBMISSION_WINDOW_CLOSED` | Fill and submit the form | Alert with the API message; form values kept; no new version listed | `client/tests/Submissions.test.tsx` › TEST-03-24 |
 | `TEST-03-25` | AC-03-04 (regression) | E2E (existing) | Existing journeys use future deadlines | `npm run test:e2e` | TEST-E2E-01, TEST-E2E-02 and the #54 spec still pass (normal and rejection journeys unaffected) | `e2e/*.spec.ts` |
 
+| `TEST-03-26` | AC-03-09 | Unit | — | `validateSubmissionInput` with `https:example.com/doc`, `https:/example.com/doc`, `https:///example.com`, `http:\\example.com`, `https://`, `https://?q`; controls `https://example.com/doc`, `HTTP://EXAMPLE.COM/a`, `  https://example.com/x  ` | Each invalid value → `details.link = "INVALID_URL"`; controls accepted (trimmed) | `server/tests/unit/submission-link.test.ts` › TEST-03-26 |
+| `TEST-03-27` | AC-03-09 | API + DB | student1 token; milestone on Alpha with a future deadline | POST with link `https:example.com/doc`, then `https:/example.com/doc`; control `https://example.com/doc` | `400 VALIDATION_ERROR` `INVALID_URL` and no version stored for both; control `201` with the link stored as sent | `server/tests/api/submission-link.api.test.ts` › TEST-03-27 |
+| `TEST-03-28` | AC-03-19 | UI | Mocked API: milestone `teamId` 1, team "Team Alpha"; second case: team read answers 500 | Render `/student/milestones/1` | "Team: Team Alpha" in the milestone card; with 500 the title, versions and submit form are still shown | `client/tests/StudentMilestoneTeam.test.tsx` › TEST-03-28 |
+| `TEST-03-29` | AC-03-20 | UI | Mocked API: student; milestones A and B; deferred fetch on returning to A | Navigate `/student` → A → Back → B, type draft title/link, then `window.history.go(-2)` to A while A loads; then resolve A | Immediately on `history.go(-2)`, B's title and **Submit work** disappear and `"Loading…"` shows; after A resolves, A's title shows with empty **Submission title** and **Link** | `client/tests/RouteStateReset.test.tsx` › TEST-03-29 |
+
 **Revised existing tests (v0.2).** `TEST-03-15` and `TEST-03-16` render a milestone with the fixed deadline `2026-11-08T16:59:00.000Z`. Once the window rule exists, a run after 2026-11-15 would hide the form for a reason unrelated to those tests. The test file therefore sets a fake clock (`vi.useFakeTimers({ toFake: ["Date"] })`, `vi.setSystemTime("2026-11-09T00:00:00.000Z")`) so both tests keep checking what they checked before; their assertions are unchanged. `TEST-03-05` (deadline 2 days ago) stays inside the window and is unchanged. No other existing test is changed, skipped or weakened.
 
 ## 8. Definition of Done and evidence
@@ -207,3 +225,15 @@ Constraints:
 - [x] Regression on `8259688`: `npm run build` OK; `npm test` server **101 passed** (12 files), client **21 passed** (6 files); `npm run test:e2e` **4 passed**; `python -m unittest discover -s deploy/tests` **17 OK**; 0 failed, 0 skipped; CI `test-and-docker` on the PR (see PR)
 - [ ] PR into `sprint-2` reviewed by phet526 (approve before merge); released to `main` through the Deploy demo pipeline; post-deployment check of the changed rule and of a preserved Sprint 1 domain/access path
 - [ ] `docs/traceability.md` BR-05 and AC-03-14..AC-03-18 rows updated with actual tests, result and version
+
+### 8.2 Defect #94 group C (`DEF-F03-CONTRACT`, v0.5)
+
+- [x] Contract v0.5 committed before the tests — `c3b766c` (C3 is a contract correction only; no test or code)
+- [x] RED: `9430b8c` (tests only) on the pre-fix code: server **5 failed / 205 passed (210)** — TEST-03-26 `https:example.com/doc`, `https:/example.com/doc`, `https:///example.com`, `http:\\example.com` `expected undefined to be 'INVALID_URL'`, TEST-03-27 `expected 201 to be 400`; client **1 failed / 46 passed (47)** — TEST-03-28 "Team: Team Alpha" not found. Passing at RED as guards: `https://`, `https://?q`, `https:// example.com`, the accepted controls and the team-read-failure case of TEST-03-28
+- [x] GREEN: `898447f` — `ABSOLUTE_HTTP_URL` check in `server/src/utils/submissionValidation.ts`; team name via `getTeamApi` in `StudentMilestone.tsx`; the same tests pass; full regression on `a0f56b6`: `npm run build` OK; `npm test` server **210 passed** (30 files), client **57 passed** (15 files); `npm run test:e2e` **5 passed** ×3 on a temporary database (ports 3197/5197); `python -m unittest discover -s deploy/tests` **17 OK**; 0 failed, 0 skipped
+- [ ] PR reviewed by phet526 (approve before merge) and merged into `sprint-3`
+
+### 8.3 Defect `#102` (`DEF-MILESTONE-STATE`, v0.7) verification
+
+- [x] Contract v0.7 (`0d2d932`) → RED (`70315e0`: `TEST-03-29` failed with stale `Student Milestone B` form instead of `"Loading…"`, client `4 failed / 57 passed (61)`) → GREEN (`b1a8eff`: key `StudentMilestoneContent` by `milestoneId`, CI `45125687400`, `293 / 293` passed; local client `61 / 61`)
+- [ ] PR reviewed by `@ILoveSiesta` and merged into `sprint-3`; recorded in `#85`

@@ -9,6 +9,48 @@ export interface MilestoneInput {
 const TITLE_MAX = 120;
 const DESCRIPTION_MAX = 2000;
 
+// Reject NUL (U+0000) and unpaired UTF-16 surrogates, which PostgreSQL UTF-8 rejects (SQLSTATE 22021).
+// Valid surrogate pairs (high 0xD800..0xDBFF followed by low 0xDC00..0xDFFF) are accepted.
+export function hasInvalidTextCharacters(value: string): boolean {
+  for (let i = 0; i < value.length; i += 1) {
+    const code = value.charCodeAt(i);
+    if (code === 0) return true;
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const next = i + 1 < value.length ? value.charCodeAt(i + 1) : -1;
+      if (next < 0xdc00 || next > 0xdfff) return true;
+      i += 1;
+    } else if (code >= 0xdc00 && code <= 0xdfff) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function isValidMilestoneDate(date: Date): boolean {
+  if (Number.isNaN(date.getTime())) return false;
+  const year = date.getUTCFullYear();
+  return year >= 1 && year <= 9999;
+}
+
+// #94 DEF-DEADLINE (F-02 v0.5 §2, SDS §4): YYYY-MM-DDTHH:mm[:ss[.fff]] with a required zone (Z or ±HH:MM).
+const ISO_DATE_TIME = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?(?:Z|([+-])(\d{2}):(\d{2}))$/;
+
+// Parses a milestone deadline. Returns an invalid Date unless the string has the exact format and its
+// calendar values exist, so `new Date()` cannot repair "2027-02-30" or guess a zone for "2027-05-05T10:00".
+export function parseMilestoneDeadline(value: string): Date {
+  const m = ISO_DATE_TIME.exec(value);
+  if (!m) return new Date(NaN);
+  const [year, month, day, hour, minute] = [1, 2, 3, 4, 5].map((i) => Number(m[i]));
+  const second = m[6] === undefined ? 0 : Number(m[6]);
+  const daysInMonth = month >= 1 && month <= 12 ? new Date(Date.UTC(2000, month, 0)).getUTCDate() : 0;
+  const leapDay = month === 2 && day === 29;
+  const isLeap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  if (month < 1 || month > 12 || day < 1 || day > daysInMonth || (leapDay && !isLeap)) return new Date(NaN);
+  if (hour > 23 || minute > 59 || second > 59) return new Date(NaN);
+  if (m[7] !== undefined && (Number(m[8]) > 23 || Number(m[9]) > 59)) return new Date(NaN);
+  return new Date(value);
+}
+
 // BR-04: title 1–120 characters after trimming, optional description up to 2000 characters,
 // deadline strictly later than `now`. Collects every invalid field before rejecting.
 export function validateMilestoneInput(body: unknown, now: Date): MilestoneInput {
@@ -23,6 +65,7 @@ export function validateMilestoneInput(body: unknown, now: Date): MilestoneInput
   } else {
     title = input.title.trim();
     if (!title) details.title = "REQUIRED";
+    else if (hasInvalidTextCharacters(input.title)) details.title = "INVALID_CHARACTER";
     else if (title.length > TITLE_MAX) details.title = "TOO_LONG";
   }
 
@@ -30,6 +73,8 @@ export function validateMilestoneInput(body: unknown, now: Date): MilestoneInput
   if (input.description !== undefined && input.description !== null) {
     if (typeof input.description !== "string") {
       details.description = "INVALID_TYPE";
+    } else if (hasInvalidTextCharacters(input.description)) {
+      details.description = "INVALID_CHARACTER";
     } else if (input.description.length > DESCRIPTION_MAX) {
       details.description = "TOO_LONG";
     } else {
@@ -43,8 +88,8 @@ export function validateMilestoneInput(body: unknown, now: Date): MilestoneInput
   } else if (typeof input.deadline !== "string") {
     details.deadline = "INVALID_TYPE";
   } else {
-    deadline = new Date(input.deadline);
-    if (Number.isNaN(deadline.getTime())) details.deadline = "INVALID_DATE";
+    deadline = parseMilestoneDeadline(input.deadline);
+    if (!isValidMilestoneDate(deadline)) details.deadline = "INVALID_DATE";
     else if (deadline.getTime() <= now.getTime()) details.deadline = "MUST_BE_FUTURE";
   }
 
@@ -124,6 +169,7 @@ export function validateMilestoneUpdate(body: unknown): MilestoneUpdate {
     } else {
       const title = input.title.trim();
       if (!title) details.title = "REQUIRED";
+      else if (hasInvalidTextCharacters(input.title)) details.title = "INVALID_CHARACTER";
       else if (title.length > TITLE_MAX) details.title = "TOO_LONG";
       else update.title = title;
     }
@@ -134,6 +180,8 @@ export function validateMilestoneUpdate(body: unknown): MilestoneUpdate {
       update.description = null;
     } else if (typeof input.description !== "string") {
       details.description = "INVALID_TYPE";
+    } else if (hasInvalidTextCharacters(input.description)) {
+      details.description = "INVALID_CHARACTER";
     } else if (input.description.length > DESCRIPTION_MAX) {
       details.description = "TOO_LONG";
     } else {
@@ -145,8 +193,8 @@ export function validateMilestoneUpdate(body: unknown): MilestoneUpdate {
     if (typeof input.deadline !== "string") {
       details.deadline = "INVALID_TYPE";
     } else {
-      const deadline = new Date(input.deadline);
-      if (Number.isNaN(deadline.getTime())) details.deadline = "INVALID_DATE";
+      const deadline = parseMilestoneDeadline(input.deadline);
+      if (!isValidMilestoneDate(deadline)) details.deadline = "INVALID_DATE";
       else update.deadline = deadline;
     }
   }
@@ -177,4 +225,44 @@ export function deriveMilestoneStatus(input: {
     return latestSubmission.daysLate > 0 ? "Submitted late" : "Submitted";
   }
   return now.getTime() > deadline.getTime() ? "Overdue" : "Not submitted";
+}
+
+const TEAM_NAME_MAX = 80;
+
+// F-13 (FR-07): team name is a trimmed string 1–80 characters.
+export function validateTeamName(body: unknown): string {
+  const input = (typeof body === "object" && body !== null ? body : {}) as Record<string, unknown>;
+  const raw = input.name;
+
+  if (raw === undefined || raw === null) {
+    throw new HttpError(400, "VALIDATION_ERROR", "Invalid team", { name: "REQUIRED" });
+  }
+  if (typeof raw !== "string") {
+    throw new HttpError(400, "VALIDATION_ERROR", "Invalid team", { name: "INVALID_TYPE" });
+  }
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    throw new HttpError(400, "VALIDATION_ERROR", "Invalid team", { name: "REQUIRED" });
+  }
+  if (hasInvalidTextCharacters(raw)) {
+    throw new HttpError(400, "VALIDATION_ERROR", "Invalid team", { name: "INVALID_CHARACTER" });
+  }
+  if (trimmed.length > TEAM_NAME_MAX) {
+    throw new HttpError(400, "VALIDATION_ERROR", "Invalid team", { name: "TOO_LONG" });
+  }
+  return trimmed;
+}
+
+// F-13 (FR-07): target user ID when adding a student to a team must be a positive integer.
+export function validateAddMemberInput(body: unknown): number {
+  const input = (typeof body === "object" && body !== null ? body : {}) as Record<string, unknown>;
+  const raw = input.studentId;
+
+  if (raw === undefined || raw === null) {
+    throw new HttpError(400, "VALIDATION_ERROR", "Invalid team member", { studentId: "REQUIRED" });
+  }
+  if (typeof raw !== "number" || !Number.isInteger(raw) || raw <= 0) {
+    throw new HttpError(400, "VALIDATION_ERROR", "Invalid team member", { studentId: "INVALID_TYPE" });
+  }
+  return raw;
 }

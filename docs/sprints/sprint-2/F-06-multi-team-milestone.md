@@ -8,6 +8,10 @@
 |---|---|---|---|
 | 0.1 | 2026-11-21 | ILoveSiesta | Initial contract for F-06 (issue #63) |
 | 0.2 | 2026-11-21 | ILoveSiesta | Definition of Done filled with executed results; no behaviour change |
+| 0.3 | 2026-11-22 | ILoveSiesta | Defect #89 (`DEF-INT4`): §2 states that a team ID above the INT4 maximum `2147483647` is an unknown team (`404`, not a format error); AC-06-03 revised to say so; TEST-06-10, TEST-06-11 and §8.1 added. The rule itself is unchanged (v0.1 already required `404` for an unknown ID). Written before the regression tests |
+| 0.4 | 2026-11-22 | ILoveSiesta | §8.1 filled with executed RED, GREEN and regression results of #89; no rule change |
+| 0.5 | 2026-11-23 | ILoveSiesta | §8.1: regression re-run after merging `sprint-3` (PR #91, PR #97) in `8a84210`; traceability revision renumbered from 2.11 to 2.17; no rule change |
+| 0.6 | 2026-11-23 | ILoveSiesta | Defect #94 group A (`DEF-DEADLINE`): §2 notes that `deadline` follows the F-02 v0.5 format through the shared `validateMilestoneInput`; `POST /api/milestones` is covered by F-02 TEST-02-17. No F-06 rule, AC or code change |
 
 ## 1. Linked requirements
 
@@ -25,13 +29,14 @@
 - **Business rules and validation**
   - `teamIds`: required array of 1–20 distinct positive integers.
     - Missing, `null` or empty array → `REQUIRED`; not an array, or an element that is not a positive integer (e.g. `0`, `-1`, `1.5`, `"1"`) → `INVALID_TYPE`; the same ID twice → `DUPLICATE`; more than 20 IDs → `TOO_MANY`.
+    - The format rule has no upper bound (v0.3): an integer above the PostgreSQL INT4 maximum `2147483647` passes it and names a team that cannot exist, so it gets the `404` of the scope check, decided before the database query. It is never `500` and never `INVALID_TYPE`.
     - The limit of 20 bounds one request; it is above the number of teams a supervisor has in the chosen context (A-01, NFR-10 sizes the data set at 20 teams).
-  - `title`, `description`, `deadline`: the same rules as F-02 (BR-04), using the existing `validateMilestoneInput` with the server time at the request.
+  - `title`, `description`, `deadline`: the same rules as F-02 (BR-04), using the existing `validateMilestoneInput` with the server time at the request. Since F-02 v0.5 (#94) this includes the exact deadline format (zone required; impossible and non-ISO dates → `INVALID_DATE`, nothing stored for any team); the F-06 endpoint is tested in F-02 TEST-02-17.
   - **All-or-nothing:** if any listed team does not exist or is not assigned to the supervisor, nothing is created and the response is `404 NOT_FOUND` with no data; it does not say which team failed (NFR-03, same as F-02). All rows are created in **one database transaction**; if one insert fails, none is stored.
 - **Access and check order** (SDS §4–§5): authenticate (401) → role (403) → `teamIds` format (400) → record scope of every team (404) → milestone fields (400) → create.
   - The `teamIds` format is checked before scope because the list must be readable before its teams can be looked up. This is the only 400 that comes before the scope check, and it reveals nothing about other teams.
   - Student → `403 FORBIDDEN` before the body is read; nothing is stored. No token → `401 UNAUTHENTICATED`.
-- **Failure and boundary cases:** 1 team → accepted (same result as F-02 for that team); 20 teams → passes validation; 21 → `400 TOO_MANY`; duplicate → `400 DUPLICATE`; one unassigned or unknown team among assigned ones → `404`, nothing stored; deadline equal to server time → `400 MUST_BE_FUTURE` (BR-04).
+- **Failure and boundary cases:** 1 team → accepted (same result as F-02 for that team); 20 teams → passes validation; 21 → `400 TOO_MANY`; duplicate → `400 DUPLICATE`; one unassigned or unknown team among assigned ones → `404`, nothing stored; `2147483647` and any larger integer, alone or among assigned teams → `404`, nothing stored; the same too-large ID twice → `400 DUPLICATE` and 21 such IDs → `400 TOO_MANY` (format first); a too-large ID with invalid fields → `404` (scope before fields); deadline equal to server time → `400 MUST_BE_FUTURE` (BR-04).
 - **Dependencies:** F-02 (`validateMilestoneInput`, `toMilestoneDto`, scope rules, team detail page), F-01 (`authenticate`, `requireRole`), F-05 (same service and route files; no behaviour shared).
 - **F-02 is unchanged:** `POST /api/teams/:teamId/milestones` keeps its behaviour, request and response; its tests stay as they are.
 
@@ -79,7 +84,7 @@ No schema change and no migration: each team gets an ordinary `Milestone` row (F
 |---|---|
 | AC-06-01 | Given supervisor1 (assigned to Alpha and Beta), when `POST /api/milestones` with `teamIds` [Alpha, Beta] and valid fields, then `201` with two milestones in that order, each with its own `id` and `teamId` and the same title, description and deadline, created by supervisor1; two rows are stored. |
 | AC-06-02 | Given the two milestones of AC-06-01, when student1 (Alpha) and student3 (Beta) list their team's milestones, then each sees only their own team's milestone; student1 reading Beta's milestone gets `404`. |
-| AC-06-03 | Given `teamIds` that include a team not assigned to the supervisor (Gamma) or an unknown ID, when `POST /api/milestones`, then `404 NOT_FOUND` and no milestone with that title exists for any team; the same request without that team succeeds. |
+| AC-06-03 | Given `teamIds` that include a team not assigned to the supervisor (Gamma) or an unknown ID (rev. v0.3: including any integer above `2147483647`, alone or among assigned teams), when `POST /api/milestones`, then `404 NOT_FOUND` and no milestone with that title exists for any team; the same request without that team succeeds. |
 | AC-06-04 | Given a valid request, when student1 sends it, then `403 FORBIDDEN`; without a token, `401 UNAUTHENTICATED`; nothing is stored in either case. |
 | AC-06-05 | Given an assigned supervisor, when `teamIds` is missing, empty, not an array, contains `0`, `-1`, `1.5` or `"1"`, contains a duplicate, or has 21 IDs, then `400 VALIDATION_ERROR` with `details.teamIds` = `REQUIRED` / `INVALID_TYPE` / `DUPLICATE` / `TOO_MANY`; when the teams are valid but the title is blank or the deadline is in the past, then `400` with the field details; nothing is stored. |
 | AC-06-06 | Given the F-02 endpoint `POST /api/teams/:teamId/milestones`, when it is used as in Sprint 1, then its behaviour, responses and tests are unchanged. |
@@ -99,6 +104,8 @@ No schema change and no migration: each team gets an ordinary `Milestone` row (F
 | TEST-06-07 | AC-06-06 | API + UI (existing) | — | Existing F-02 tests | TEST-02-05..TEST-02-08, TEST-02-11, TEST-02-14, TEST-02-15 still pass unchanged | `server/tests/api/teams-milestones.api.test.ts`; `server/tests/unit/milestone-validation.test.ts`; `client/tests/Milestones.test.tsx` |
 | TEST-06-08 | AC-06-07 | UI | Mocked API: supervisor; teams Alpha (1) and Beta (2); Alpha has no milestones | Fill the form, tick Team Beta, create | POST `/api/milestones` body `{ teamIds: [1, 2], title, description, deadline }`; Alpha's list shows the title; status line text; "Team Alpha (this team)" checkbox checked and disabled | `client/tests/MultiTeamMilestone.test.tsx` › TEST-06-08 |
 | TEST-06-09 | AC-06-08 | UI | Mocked API: new endpoint answers 404, then 400 `{ teamIds: "TOO_MANY" }` | Tick Team Beta, create (twice) | Alert "Resource not found"; then "Select at most 20 teams" under Teams; no milestone added | same file › TEST-06-09 |
+| TEST-06-10 (new, v0.3) | AC-06-03 rev. | API + DB | supervisor1, student1, no token; controls: `[2147483647]` and `[Alpha]` | `POST /api/milestones` with `2147483648` alone, before and after an assigned team, with `1e20` and with the largest double; `2147483648` with a blank title, twice, 21 such IDs, as student and without a token | controls 404 / 201; each too-large ID → `404 NOT_FOUND` with the SDS §4 body and no row stored; blank title → 404; twice → 400 `DUPLICATE`; 21 → 400 `TOO_MANY`; student 403; no token 401 | `server/tests/api/multi-team-milestone.api.test.ts` › TEST-06-10 |
+| TEST-06-11 (new, v0.3) | SDS §4 (related check of #89; fixed in PR #88) | API + DB | supervisor1; a team, milestone and submission the supervisor can read (controls) | `GET` team, milestone and submission with ID `2147483648` | controls 200; each too-large route ID → 404 `NOT_FOUND`. Regression guard: passes before the #89 fix | same file › TEST-06-11 |
 
 ## 8. Definition of Done and evidence
 
@@ -107,3 +114,13 @@ No schema change and no migration: each team gets an ordinary `Milestone` row (F
 - [x] TDD red → green: failing tests `29ac32c` (tests only) on the pre-change code `feaafdb`: build OK; server 6 failed — 5 API with `404` because `POST /api/milestones` did not exist (each negative case has a positive control, so none passed vacuously), 1 unit with `validateTeamIds is not a function`; client 2 failed — no **Teams** group → implementation `997b7d1` (all pass). TEST-06-07 (existing F-02 tests) passed at RED and GREEN, as intended
 - [x] SRS: no change needed (FR-11 and BR-04 already state the rule; the details are in this contract). System SDS §3.1 / §4.2 / §5 (v0.8), `docs/traceability.md` (v1.9), `docs/features.md` (v1.3) updated
 - [ ] PR reviewed by phet526 (approve before merge) and merged into `sprint-2`
+
+### 8.1 Defect #89 (v0.3)
+
+- [x] Contract revision committed before the tests: v0.3 in `a4b2dbb`
+- [x] RED (tests only) `d76a7dc`: build OK; server 1 failed / 146 passed. TEST-06-10 failed with `expected 500 to be 404` for `[2147483648]`, `[Alpha, 2147483648]`, `[2147483648, Alpha]`, `[1e20]`, the largest double and a too-large ID with a blank title; its controls passed. TEST-06-11 passed at RED, as intended (route IDs were fixed in PR #88)
+- [x] GREEN `09a5408`: TEST-06-10 and TEST-06-11 pass; nothing is stored for a rejected list
+- [x] Local regression on `09a5408`: `npm run build` OK; `npm test` server 147 and client 33 passed, 0 failed, 0 skipped; `npm run test:e2e` 5 passed in each of three runs; `python -m unittest discover -s deploy/tests` 17 OK. CI `test-and-docker`: recorded on the PR
+- [x] Regression after merging `sprint-3` @ `1c92061` (PR #91, PR #97), on the merge commit `8a84210`: `npm run build` OK; `npm test` server 164 and client 42 passed, 0 failed, 0 skipped; Playwright E2E 5 passed in each of three runs (throwaway database, retries off, no reused server); `python -m unittest discover -s deploy/tests` 17 OK; edge-ID probe 0 of 39 wrong. With the fix line removed on that tree, TEST-06-10 still fails with `expected 500 to be 404`
+- [x] Traceability updated (v2.17, first written as v2.11: FR-11, BR-02, NFR-05, §4). SRS, System SDS and features: no change needed (they already state 404 for an unknown team); no schema, migration or UI change
+- [ ] PR reviewed by phet526 (approve before merge) and merged into `sprint-3`

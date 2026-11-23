@@ -4,6 +4,7 @@ const FIELD_MESSAGES: Record<string, string> = {
   INVALID_DATE: "Invalid date",
   MUST_BE_FUTURE: "Deadline must be in the future",
   INVALID_TYPE: "Invalid value",
+  INVALID_CHARACTER: "Contains an unsupported character",
   NO_CHANGES: "Change at least one field",
 };
 const MAX_LENGTH: Record<string, number> = { title: 120, description: 2000 };
@@ -20,6 +21,16 @@ export function milestoneFieldMessage(field: string, code: string): string {
   if (field === "teamIds") return TEAM_MESSAGES[code] ?? code;
   if (code === "TOO_LONG") return `Too long (max ${MAX_LENGTH[field]} characters)`;
   return FIELD_MESSAGES[code] ?? code;
+}
+
+// #94 DEF-DEADLINE: datetime-local value → ISO string in UTC, or null when the browser cannot turn it into
+// a date with a year in 1–9999 (for example the typo "20266"); the form then shows "Invalid date" and sends nothing.
+export function localDeadlineToIso(value: string): string | null {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const year = date.getUTCFullYear();
+  if (year < 1 || year > 9999) return null;
+  return date.toISOString();
 }
 
 // ISO timestamp → value for <input type="datetime-local"> in the browser's time zone (minutes only).

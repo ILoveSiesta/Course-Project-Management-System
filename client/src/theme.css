@@ -366,6 +366,28 @@ a:hover {
   flex-wrap: wrap;
 }
 
+/* F-08 Grade card (#103): Save grade and Release grade never wrap onto two rows. Each button is half the
+   row at most and Save grade keeps its place with or without Release grade, so a layout change above the
+   row cannot move Release grade under a click meant for Save grade. */
+.grade-actions {
+  flex-wrap: nowrap;
+}
+
+.grade-actions .btn {
+  flex: 0 1 auto;
+  width: calc(50% - 4px);
+  max-width: 14rem;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* The card alert sits below the buttons (#103). */
+.grade-alert {
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
 /* --- Messages --- */
 
 .alert {
@@ -374,6 +396,12 @@ a:hover {
   margin-bottom: 14px;
   background: var(--color-danger-soft);
   color: var(--color-danger);
+}
+
+/* Alert inside a row, e.g. the header's logout error (#94 B3). */
+.alert-inline {
+  margin-bottom: 0;
+  padding: 6px 10px;
 }
 
 .loading {
@@ -440,4 +468,46 @@ a:hover {
 
 .feedback-form {
   margin-top: 10px;
+}
+
+/* --- Team management (F-13) --- */
+
+.member-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.member-info {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 0.85rem;
+}
+
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+  margin-top: 12px;
+}
+
+.inline-form .form-field {
+  flex: 1 1 220px;
+  margin-bottom: 0;
+}
+
+.status-notice {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--color-success-soft);
+  color: var(--color-success);
+  font-size: 0.9rem;
 }
