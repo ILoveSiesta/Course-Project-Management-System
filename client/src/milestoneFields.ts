@@ -23,6 +23,16 @@ export function milestoneFieldMessage(field: string, code: string): string {
   return FIELD_MESSAGES[code] ?? code;
 }
 
+// #94 DEF-DEADLINE: datetime-local value → ISO string in UTC, or null when the browser cannot turn it into
+// a date with a year in 1–9999 (for example the typo "20266"); the form then shows "Invalid date" and sends nothing.
+export function localDeadlineToIso(value: string): string | null {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const year = date.getUTCFullYear();
+  if (year < 1 || year > 9999) return null;
+  return date.toISOString();
+}
+
 // ISO timestamp → value for <input type="datetime-local"> in the browser's time zone (minutes only).
 export function toDateTimeLocal(iso: string): string {
   const d = new Date(iso);

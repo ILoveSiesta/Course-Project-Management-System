@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ApiError, Milestone, MilestoneUpdate } from "../api.js";
-import { milestoneFieldMessage, toDateTimeLocal } from "../milestoneFields.js";
+import { localDeadlineToIso, milestoneFieldMessage, toDateTimeLocal } from "../milestoneFields.js";
 
 interface Props {
   milestone: Milestone;
@@ -32,7 +32,14 @@ export const MilestoneEditForm: React.FC<Props> = ({ milestone, onSave, onCancel
     const update: MilestoneUpdate = {};
     if (title !== initial.title) update.title = title;
     if (description !== initial.description) update.description = description;
-    if (deadline !== initial.deadline) update.deadline = deadline ? new Date(deadline).toISOString() : "";
+    if (deadline !== initial.deadline) {
+      const deadlineIso = deadline ? localDeadlineToIso(deadline) : "";
+      if (deadlineIso === null) {
+        setFieldErrors({ deadline: "INVALID_DATE" });
+        return;
+      }
+      update.deadline = deadlineIso;
+    }
 
     setIsSaving(true);
     try {

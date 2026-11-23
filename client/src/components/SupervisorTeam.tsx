@@ -16,7 +16,7 @@ import {
   removeTeamMemberApi,
 } from "../api.js";
 import { MilestoneList, TeamSummary } from "./TeamDetails.js";
-import { milestoneFieldMessage as fieldMessage } from "../milestoneFields.js";
+import { localDeadlineToIso, milestoneFieldMessage as fieldMessage } from "../milestoneFields.js";
 
 
 const byDeadline = (a: Milestone, b: Milestone) => a.deadline.localeCompare(b.deadline) || a.id - b.id;
@@ -43,6 +43,8 @@ export const SupervisorTeam: React.FC = () => {
 
   // F-13: unassigned student picker and member add/remove state.
   const [availableStudents, setAvailableStudents] = useState<Person[]>([]);
+  // #94 B6 (F-13 v0.12): the list failed to load; "No unassigned students available" is only for an empty list.
+  const [studentsError, setStudentsError] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState("");
   const [memberError, setMemberError] = useState<string | null>(null);
   const [memberStatus, setMemberStatus] = useState<string | null>(null);
@@ -82,9 +84,14 @@ export const SupervisorTeam: React.FC = () => {
 
     getAvailableStudentsApi(token)
       .then((students) => {
-        if (active) setAvailableStudents(students);
+        if (!active) return;
+        setAvailableStudents(students);
+        setStudentsError(false);
       })
-      .catch(() => undefined);
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) return logout();
+        if (active) setStudentsError(true);
+      });
 
     return () => {
       active = false;
@@ -94,8 +101,14 @@ export const SupervisorTeam: React.FC = () => {
   const refreshAvailableStudents = () => {
     if (!token) return;
     getAvailableStudentsApi(token)
-      .then((students) => setAvailableStudents(students))
-      .catch(() => undefined);
+      .then((students) => {
+        setAvailableStudents(students);
+        setStudentsError(false);
+      })
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) return logout();
+        setStudentsError(true);
+      });
   };
 
   const handleAddMember = async (e: React.FormEvent) => {
@@ -149,11 +162,17 @@ export const SupervisorTeam: React.FC = () => {
     setFieldErrors({});
     setFormError(null);
     setCreatedFor(null);
+
+    // datetime-local has no zone: it is read in the browser's time zone and sent as UTC.
+    const deadlineIso = deadline ? localDeadlineToIso(deadline) : "";
+    if (deadlineIso === null) {
+      setFieldErrors({ deadline: "INVALID_DATE" });
+      return;
+    }
     setIsSaving(true);
 
     try {
-      // datetime-local has no zone: it is read in the browser's time zone and sent as UTC.
-      const draft = { title, description, deadline: deadline ? new Date(deadline).toISOString() : "" };
+      const draft = { title, description, deadline: deadlineIso };
       if (otherTeamIds.length === 0) {
         const created = await createMilestoneApi(token, teamId, draft);
         setMilestones((list) => [...list, created].sort(byDeadline));
@@ -197,6 +216,11 @@ export const SupervisorTeam: React.FC = () => {
           <TeamSummary team={team} onRemoveMember={handleRemoveMember} removingMemberId={removingMemberId}>
             {memberError && <p role="alert" className="alert">{memberError}</p>}
             {memberStatus && <p role="status" className="status-notice">{memberStatus}</p>}
+            {studentsError && (
+              <p role="alert" className="alert">
+                Could not load the list of unassigned students. Reload the page to try again.
+              </p>
+            )}
             <form onSubmit={handleAddMember} className="inline-form" noValidate>
               <div className="form-field">
                 <label htmlFor="add-member-student">Student</label>
@@ -204,10 +228,12 @@ export const SupervisorTeam: React.FC = () => {
                   id="add-member-student"
                   aria-label="Student"
                   value={selectedStudentId}
-                  disabled={availableStudents.length === 0 || isAddingMember}
+                  disabled={studentsError || availableStudents.length === 0 || isAddingMember}
                   onChange={(e) => setSelectedStudentId(e.target.value)}
                 >
-                  {availableStudents.length === 0 ? (
+                  {studentsError ? (
+                    <option value="">Could not load students</option>
+                  ) : availableStudents.length === 0 ? (
                     <option value="">No unassigned students available</option>
                   ) : (
                     <>
@@ -224,7 +250,7 @@ export const SupervisorTeam: React.FC = () => {
               <button
                 type="submit"
                 className="btn"
-                disabled={availableStudents.length === 0 || !selectedStudentId || isAddingMember}
+                disabled={studentsError || availableStudents.length === 0 || !selectedStudentId || isAddingMember}
               >
                 {isAddingMember ? "Adding…" : "Add member"}
               </button>

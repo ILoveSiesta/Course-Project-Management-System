@@ -10,6 +10,8 @@
 | 0.2 | 2026-11-21 | ILoveSiesta | Definition of Done filled with executed results; no behaviour change |
 | 0.3 | 2026-11-21 | ILoveSiesta | §2 note on the BR-05 7-day late window (CHG-03, Lab 7 #59): an extension also moves the window; no F-05 behaviour, code or test change (covered by TEST-03-22 in F-03 v0.2) |
 | 0.4 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): reject NUL (`U+0000`) and unpaired UTF-16 surrogates in `title`/`description` (`INVALID_CHARACTER`, `"Contains an unsupported character"`), bound `deadline` UTC years to `1–9999` (`INVALID_DATE`), and link SDS §4 |
+| 0.5 | 2026-11-23 | ILoveSiesta | Defect #94 group A (`DEF-DEADLINE`): §2 `deadline` uses the exact F-02 v0.5 format (zone required; impossible and non-ISO dates → `INVALID_DATE`, nothing stored); §3 the edit form shows "Invalid date" for a date the browser cannot convert, without a request; AC-05-05 revised, AC-05-10 new; TEST-05-11, TEST-05-12 new; §8.1 added. Written before the regression tests |
+| 0.6 | 2026-11-23 | ILoveSiesta | §8.1 filled with executed RED, GREEN and regression results of #94 group A; no rule change |
 
 ## 1. Linked requirements
 
@@ -26,7 +28,7 @@
 - **Business rules and validation (shared rules in SDS §4)**
   - `title` (if present): string, trimmed, 1–120 characters, no NUL (`U+0000`) or unpaired UTF-16 surrogates (`INVALID_CHARACTER`).
   - `description` (if present): string ≤ 2000 characters or `null`, no NUL or unpaired UTF-16 surrogates (`INVALID_CHARACTER`); an empty or blank string clears it (stored as `null`), as on creation (BR-04).
-  - `deadline` (if present): ISO 8601 date-time string with UTC year in `1–9999` (`INVALID_DATE` for `year >= 10000` or `< 1`, `9999` accepted).
+  - `deadline` (if present): ISO 8601 date-time `YYYY-MM-DDTHH:mm[:ss[.fff]]` with a **required** zone (`Z` or `±HH:MM`), UTC year in `1–9999`, and a date and time that exist in the calendar (29 February only in leap years) — the same rule and examples as F-02 §2 (v0.5, #94). Anything else is `INVALID_DATE` and nothing in the request is stored; before v0.5 strings such as `2027-02-30T12:00:00Z` were stored as another date, which BR-13 then prevented from being moved back.
   - At least one of `title`, `description`, `deadline` must be present; an empty body is a validation error.
   - **BR-13 (extend only):** a new deadline must be **later than or equal to** the stored deadline. An earlier deadline, even by 1 ms, is rejected with `409 DEADLINE_NOT_EXTENDED` and **nothing in the request is stored** (also not the title or description sent with it). The same deadline is accepted (no change).
   - A deadline that has already passed may be extended, including to another past time (used to reopen work for a team); the creation rule "deadline later than now" (BR-04) applies only when a milestone is created.
@@ -48,6 +50,7 @@
 | Student pages (`/student`, `/student/milestones/:id`) | — | No UI change: they already read the milestone through F-02 and show the stored values | — |
 | Supervisor team detail (`/supervisor/teams/:teamId`) | — | No UI change: the milestone list reads the stored values | — |
 
+- **Client date check (v0.5, #94):** if the browser cannot turn the Deadline input into a date with a year in `1–9999`, the form shows "Invalid date" under Deadline, sends no request and keeps the form open; no uncaught exception.
 - Only fields whose value differs from the loaded milestone are sent. The deadline input shows minutes only, so an untouched deadline is **not** sent (sending the minute-rounded value could move it earlier by the seconds part and be rejected).
 - Field error texts: `REQUIRED` → "Required"; `TOO_LONG` → "Too long (max N characters)"; `INVALID_DATE` → "Invalid date"; `INVALID_TYPE` → "Invalid value"; `INVALID_CHARACTER` → "Contains an unsupported character"; `NO_CHANGES` → "Change at least one field".
 - Students have no edit control (usability only; the API enforces BR-03).
@@ -89,7 +92,8 @@ No schema change and no migration: `Milestone.title`, `description` and `deadlin
 | AC-05-02 | Given a milestone, when the assigned supervisor sends a later deadline, then `200` and the new deadline is stored; the same deadline is accepted unchanged; a deadline that has already passed can be extended. |
 | AC-05-03 | Given a milestone, when the assigned supervisor sends a deadline earlier than the stored one (also 1 ms earlier), then `409 DEADLINE_NOT_EXTENDED` and nothing in the request is stored (deadline, title and description unchanged). |
 | AC-05-04 | Given a milestone on Alpha, when student1 sends `PATCH`, then `403 FORBIDDEN`; when supervisor2 (not assigned) sends it, or the ID is unknown or non-numeric, then `404 NOT_FOUND` without data; without a token, `401 UNAUTHENTICATED`. In every case nothing changes, while supervisor1 can edit the same milestone. |
-| AC-05-05 | Given invalid input (blank or 121-character title, 2001-character description, invalid date, wrong types, empty body), when the assigned supervisor sends `PATCH`, then `400 VALIDATION_ERROR` with per-field `details` and nothing changes. A 120-character title is accepted. |
+| AC-05-05 | Given invalid input (blank or 121-character title, 2001-character description, invalid date, wrong types, empty body), when the assigned supervisor sends `PATCH`, then `400 VALIDATION_ERROR` with per-field `details` and nothing changes. A 120-character title is accepted. *(rev. v0.5, #94)* An invalid date includes an impossible calendar date, a date-only value, a value without a zone and any non-ISO string (F-02 §2); nothing else in the request is stored. |
+| AC-05-10 | Given the Edit milestone form, when the Deadline input holds a value the browser cannot convert to a date with a year in `1–9999`, then "Invalid date" is shown under Deadline, no request is sent and the card keeps the old values (v0.5, #94). |
 | AC-05-06 | Given a milestone whose deadline has passed and a version submitted late (`daysLate` > 0), when the deadline is extended into the future and the team submits again, then the earlier version keeps its stored `daysLate` and the new version has `daysLate = 0` (BR-13, BR-05). |
 | AC-05-07 | Given two concurrent `PATCH` requests extending the same deadline to +5 days and +3 days, then the stored deadline is +5 days afterwards, whichever request runs first (the deadline never ends earlier than an accepted extension). |
 | AC-05-08 | Given a supervisor on Supervisor milestone detail, when they edit the title and extend the deadline and save, then the card shows the new title and deadline (ICT) and the request contains only the changed fields. |
@@ -109,6 +113,8 @@ No schema change and no migration: `Milestone.title`, `description` and `deadlin
 | TEST-05-08 | AC-05-05 | Unit | — | `validateMilestoneUpdate` boundaries | 120 ok / 121 `TOO_LONG`; blank `REQUIRED`; `""` description → `null`; invalid date `INVALID_DATE`; `{}` → `body: NO_CHANGES`; wrong types `INVALID_TYPE` | `server/tests/unit/milestone-update-validation.test.ts` |
 | TEST-05-09 | AC-05-08 | UI | Mocked API: supervisor, milestone, no submissions | Edit title + deadline on `/supervisor/milestones/10`, save | PATCH body has only `title` and `deadline`; card shows new title and ICT deadline | `client/tests/MilestoneEdit.test.tsx` › TEST-05-09 |
 | TEST-05-10 | AC-05-09 | UI | Mocked API returns 409, then 400 details | Save | Alert "The deadline can only be extended, not moved earlier"; "Required" under Title; old title still on the card | same file › TEST-05-10 |
+| TEST-05-11 | AC-05-05 | API + DB | supervisor1 token; milestone on Alpha with deadline +1 day | `PATCH` `{ title: "Changed", deadline }` with `2027-02-30T12:00:00.000Z`, `2027-04-31T12:00:00Z`, `x 2030`, `05/06/2027`, `2027-05-05T10:00:00`; control `2028-02-29T12:00:00.000Z` | 400 `INVALID_DATE` and DB title and deadline unchanged for each invalid value; control 200 with that instant stored | `server/tests/api/deadline-format.api.test.ts` › TEST-05-11 |
+| TEST-05-12 | AC-05-10 | UI | Mocked API: supervisor, milestone | Open Edit milestone, enter Deadline `20266-05-05T10:00`, Save | "Invalid date" under Deadline; no PATCH sent; card still shows the old deadline | `client/tests/DeadlineInput.test.tsx` › TEST-05-12 |
 
 ## 8. Definition of Done and evidence
 
@@ -117,3 +123,10 @@ No schema change and no migration: `Milestone.title`, `description` and `deadlin
 - [x] TDD red → green: failing tests `931814a` (F-05 files only: server 12 failed — 7 API with 404 because the route did not exist, 5 unit with `validateMilestoneUpdate is not a function`; client 2 failed — no "Edit milestone" button) → implementation `fdfdff4` (all pass). TEST-05-06 was corrected before the test commit: its first version set the deadline exactly 2 days back, so the late version counted 3 days (BR-05 rounds up) and failed for the wrong reason
 - [x] SRS BR-13 (v0.6), System SDS §3.1 / §4 / §4.2 / §5 (v0.6), `docs/traceability.md` (v1.5), `docs/features.md` (v1.0) updated
 - [ ] PR reviewed by phet526 (approve before merge) and merged into `sprint-2`
+
+### 8.1 Defect #94 group A (`DEF-DEADLINE`, v0.5)
+
+- [x] Contract v0.5 committed before the tests — `6056d1b`
+- [x] RED: `33d0cdf` — TEST-05-11 `expected 200 to be 400` for `2028-02-30T12:00:00.000Z`; TEST-05-12 "Invalid date" not found and an uncaught `RangeError: Invalid time value` (full counts in F-02 §8.1)
+- [x] GREEN: `6eeb7c5`; the same tests pass; full regression on `a0f56b6`: `npm run build` OK; `npm test` server **210 passed** (30 files), client **57 passed** (15 files); `npm run test:e2e` **5 passed** ×3 on a temporary database (ports 3197/5197); `python -m unittest discover -s deploy/tests` **17 OK**; 0 failed, 0 skipped
+- [ ] PR reviewed by phet526 (approve before merge) and merged into `sprint-3`
