@@ -11,6 +11,7 @@
 | 0.3 | 2026-11-21 | ILoveSiesta | §8.1 filled with executed RED/GREEN/regression results (#59). TEST-03-22 precondition corrected from "now − 1 d" to "now − 23 h" before the test commit: an extension to exactly 1 day back makes the next submission slightly more than 24 h late, which BR-05 rounds up to 2 days. No rule change |
 | 0.4 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): reject NUL (`U+0000`) and unpaired UTF-16 surrogates in submission `title`, `description` and `link` (`INVALID_CHARACTER`, `"Contains an unsupported character"`), linking SDS §4 |
 | 0.5 | 2026-11-23 | ILoveSiesta | Defect #94 group C (`DEF-F03-CONTRACT`): BR-08 `link` must start with `http://` or `https://` followed by a host (C1: `https:example.com`, `https:/example.com` were accepted and opened inside CPMS); §3 student page shows the team name as §2 already required (C2); §5 corrected: `daysLate >= 0` is guaranteed by the service, no database CHECK exists or is added (C3); AC-03-09 revised, AC-03-19 new; TEST-03-26..TEST-03-28 new; §8.2 added. Written before the regression tests |
+| 0.6 | 2026-11-23 | ILoveSiesta | §8.2 filled with executed RED, GREEN and regression results of #94 group C; no rule change |
 
 ## 1. Linked requirements
 
@@ -222,7 +223,7 @@ Constraints:
 
 ### 8.2 Defect #94 group C (`DEF-F03-CONTRACT`, v0.5)
 
-- [ ] Contract v0.5 committed before the tests (C3 is a contract correction only)
-- [ ] RED: TEST-03-26..TEST-03-28 fail on the pre-fix code for the reported behaviour
-- [ ] GREEN: the same tests pass; full regression passes
+- [x] Contract v0.5 committed before the tests — `c3b766c` (C3 is a contract correction only; no test or code)
+- [x] RED: `9430b8c` (tests only) on the pre-fix code: server **5 failed / 205 passed (210)** — TEST-03-26 `https:example.com/doc`, `https:/example.com/doc`, `https:///example.com`, `http:\\example.com` `expected undefined to be 'INVALID_URL'`, TEST-03-27 `expected 201 to be 400`; client **1 failed / 46 passed (47)** — TEST-03-28 "Team: Team Alpha" not found. Passing at RED as guards: `https://`, `https://?q`, `https:// example.com`, the accepted controls and the team-read-failure case of TEST-03-28
+- [x] GREEN: `898447f` — `ABSOLUTE_HTTP_URL` check in `server/src/utils/submissionValidation.ts`; team name via `getTeamApi` in `StudentMilestone.tsx`; the same tests pass; full regression on `a0f56b6`: `npm run build` OK; `npm test` server **210 passed** (30 files), client **57 passed** (15 files); `npm run test:e2e` **5 passed** ×3 on a temporary database (ports 3197/5197); `python -m unittest discover -s deploy/tests` **17 OK**; 0 failed, 0 skipped
 - [ ] PR reviewed by phet526 (approve before merge) and merged into `sprint-3`

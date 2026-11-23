@@ -11,6 +11,7 @@
 | 0.3 | 2026-11-21 | ILoveSiesta | §2 note on the BR-05 7-day late window (CHG-03, Lab 7 #59): an extension also moves the window; no F-05 behaviour, code or test change (covered by TEST-03-22 in F-03 v0.2) |
 | 0.4 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): reject NUL (`U+0000`) and unpaired UTF-16 surrogates in `title`/`description` (`INVALID_CHARACTER`, `"Contains an unsupported character"`), bound `deadline` UTC years to `1–9999` (`INVALID_DATE`), and link SDS §4 |
 | 0.5 | 2026-11-23 | ILoveSiesta | Defect #94 group A (`DEF-DEADLINE`): §2 `deadline` uses the exact F-02 v0.5 format (zone required; impossible and non-ISO dates → `INVALID_DATE`, nothing stored); §3 the edit form shows "Invalid date" for a date the browser cannot convert, without a request; AC-05-05 revised, AC-05-10 new; TEST-05-11, TEST-05-12 new; §8.1 added. Written before the regression tests |
+| 0.6 | 2026-11-23 | ILoveSiesta | §8.1 filled with executed RED, GREEN and regression results of #94 group A; no rule change |
 
 ## 1. Linked requirements
 
@@ -125,7 +126,7 @@ No schema change and no migration: `Milestone.title`, `description` and `deadlin
 
 ### 8.1 Defect #94 group A (`DEF-DEADLINE`, v0.5)
 
-- [ ] Contract v0.5 committed before the tests
-- [ ] RED: TEST-05-11, TEST-05-12 fail on the pre-fix code for the reported behaviour
-- [ ] GREEN: the same tests pass; full regression passes
+- [x] Contract v0.5 committed before the tests — `6056d1b`
+- [x] RED: `33d0cdf` — TEST-05-11 `expected 200 to be 400` for `2028-02-30T12:00:00.000Z`; TEST-05-12 "Invalid date" not found and an uncaught `RangeError: Invalid time value` (full counts in F-02 §8.1)
+- [x] GREEN: `6eeb7c5`; the same tests pass; full regression on `a0f56b6`: `npm run build` OK; `npm test` server **210 passed** (30 files), client **57 passed** (15 files); `npm run test:e2e` **5 passed** ×3 on a temporary database (ports 3197/5197); `python -m unittest discover -s deploy/tests` **17 OK**; 0 failed, 0 skipped
 - [ ] PR reviewed by phet526 (approve before merge) and merged into `sprint-3`

@@ -11,6 +11,7 @@
 | 0.3 | 2026-11-05 | ILoveSiesta | §3: screens use the shared stylesheet (CHG-01); no behaviour, text or test change |
 | 0.4 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): reject NUL (`U+0000`) and unpaired UTF-16 surrogates in `title`/`description` (`INVALID_CHARACTER`, `"Contains an unsupported character"`), bound `deadline` UTC years to `1–9999` (`INVALID_DATE`), and link SDS §4 |
 | 0.5 | 2026-11-23 | ILoveSiesta | Defect #94 group A (`DEF-DEADLINE`): §2 the exact accepted `deadline` format (zone required, no date-only, impossible dates and non-ISO strings → `INVALID_DATE`); §3 the form shows "Invalid date" for a date the browser cannot convert (for example a five-digit year) without sending a request; AC-02-08 revised, AC-02-13 new; TEST-02-16..TEST-02-18 new; §8.1 added. Written before the regression tests |
+| 0.6 | 2026-11-23 | ILoveSiesta | §8.1 filled with executed RED, GREEN and regression results of #94 group A; no rule change |
 
 ## 1. Linked requirements
 
@@ -151,7 +152,7 @@ Index `(teamId, deadline)`. Back-relations: `Team.milestones`, `User.milestonesC
 
 ### 8.1 Defect #94 group A (`DEF-DEADLINE`, v0.5)
 
-- [ ] Contract v0.5 committed before the tests
-- [ ] RED: TEST-02-16..TEST-02-18 fail on the pre-fix code for the reported behaviour
-- [ ] GREEN: the same tests pass; full regression (build, server, client, E2E, deploy) passes
+- [x] Contract v0.5 committed before the tests — `6056d1b` (with F-05 v0.5, F-06 v0.6, SDS 0.22)
+- [x] RED: `33d0cdf` (tests only) on the pre-fix code: server **13 failed / 188 passed (201)** — TEST-02-16 11 values (`2028-02-30…`, `2028-04-31…`, `2029-02-29…`, `T24:00`, `2028`, `2028-05-05`, no zone ×2, `05/06/2028`, space separator, `x 2028`) `expected undefined to deeply equal { deadline: 'INVALID_DATE' }`, TEST-02-17 `expected 201 to be 400`, TEST-05-11 `expected 200 to be 400`; client **2 failed / 43 passed (45)** + 1 unhandled `RangeError: Invalid time value` from `MilestoneEditForm.tsx` — TEST-02-18 and TEST-05-12 "Invalid date" not found. Values that `new Date()` already rejects (month 13, minute/second 60, offset `+24:00`, one-digit month, leading space) and all accepted examples passed at RED as regression guards
+- [x] GREEN: `6eeb7c5` — `parseMilestoneDeadline` in `server/src/utils/validation.ts`, `localDeadlineToIso` in `client/src/milestoneFields.ts`, used in `SupervisorTeam.tsx` and `MilestoneEditForm.tsx`; the same tests pass; full regression on `a0f56b6`: `npm run build` OK; `npm test` server **210 passed** (30 files), client **57 passed** (15 files); `npm run test:e2e` **5 passed** ×3 on a temporary database (ports 3197/5197); `python -m unittest discover -s deploy/tests` **17 OK**; 0 failed, 0 skipped
 - [ ] PR reviewed by phet526 (approve before merge) and merged into `sprint-3`

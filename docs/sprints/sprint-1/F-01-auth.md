@@ -18,6 +18,7 @@
 | 0.10 | 2026-11-23 | phet526 | Record clean pre-fix `9b05789 -- server/src` RED verification against `9eabab2` tests (local unit `3 failed`; CI `45108984909` server `7 failed / 165 passed (172)`) and 3 consecutive CI GREEN passes on `9eabab2` (`45108602555`, `45108892694`, `45109129623`, `236 / 236` passed) in §8.2 |
 | 0.11 | 2026-11-23 | phet526 | Address PR #99 round-2 review: clarify in §8.2 that only `TEST-01-15u`, `TEST-01-17u`, and `TEST-92-01` failed for the defect on `c310768` while `TEST-01-15`'s delegate spy broke `TEST-01-16`/`TEST-01-17` (and failed on `d888ee7`), aligning §8.2 with `docs/traceability.md` `2.19` |
 | 0.12 | 2026-11-23 | ILoveSiesta | Defect #94 group B (`DEF-CLIENT-SESSION`): §3 client session lifecycle — a 401 ends the session with a message on the login page; a failed session check (`/api/auth/me` not 401) keeps the token and offers **Try again**; a failed logout request keeps the user signed in with a message; a late session response is ignored; connection and non-JSON errors have fixed texts. AC-01-16..AC-01-20 and TEST-01-19..TEST-01-24 new; §8.3 added. Server behaviour unchanged. Written before the regression tests |
+| 0.13 | 2026-11-23 | ILoveSiesta | §8.3 filled with executed RED, GREEN and regression results of #94 group B; no rule change |
 
 ## 1. Linked requirements
 
@@ -202,7 +203,7 @@ Models added to `server/prisma/schema.prisma` with migration `f01_auth_teams`:
 
 ### 8.3 Defect #94 group B (`DEF-CLIENT-SESSION`, v0.12)
 
-- [ ] Contract v0.12 committed before the tests
-- [ ] RED: TEST-01-19..TEST-01-24 and F-13 TEST-13-21 fail on the pre-fix code for the reported behaviour
-- [ ] GREEN: the same tests pass; full regression passes; `GradeCard.tsx` unchanged
+- [x] Contract v0.12 committed before the tests — `fa8bda1` (with F-13 v0.12, SDS 0.23)
+- [x] RED: `5e687d5` (tests only) on the pre-fix code: server 210 passed; client **8 failed / 49 passed (57)** in `client/tests/ClientSession.test.tsx` — TEST-01-19 ×2 (no session-ended message), TEST-01-20 (token deleted, no session-check message), TEST-01-21 (no logout-failed message), TEST-01-22 (the late `/api/auth/me` signed the user back in, no login button), TEST-01-23 and TEST-01-24 (no connection message), TEST-13-21 (no "Could not load students"). Passing at RED as guards: TEST-01-21 logout answered `401`, TEST-13-21 empty list
+- [x] GREEN: `a0f56b6` — `client/src/api.ts` (`sendRequest`), `context/AuthContext.tsx`, `ProtectedRoute.tsx`, `Header.tsx`, `Login.tsx`, `SupervisorTeam.tsx`, `theme.css` (`.alert-inline`); `GradeCard.tsx` unchanged; the same tests pass; full regression on `a0f56b6`: `npm run build` OK; `npm test` server **210 passed** (30 files), client **57 passed** (15 files); `npm run test:e2e` **5 passed** ×3 on a temporary database (ports 3197/5197); `python -m unittest discover -s deploy/tests` **17 OK**; 0 failed, 0 skipped
 - [ ] PR reviewed by phet526 (approve before merge) and merged into `sprint-3`
