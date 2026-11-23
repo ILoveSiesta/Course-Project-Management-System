@@ -19,6 +19,7 @@
 | 0.11 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): reject NUL (`U+0000`) and unpaired UTF-16 surrogates in team `name` (`INVALID_CHARACTER`, `"Contains an unsupported character"`), linking SDS §4 |
 | 0.12 | 2026-11-23 | ILoveSiesta | Defect #94 group B6 (`DEF-CLIENT-SESSION`): §3 the student picker shows a load error instead of "No unassigned students available" when `GET /api/teams/available-students` fails; AC-13-14 and TEST-13-21 new. No API change |
 | 0.13 | 2026-11-23 | phet526 | Address PR #105 review (`#102 DEF-MILESTONE-STATE`): revise §3, add `AC-13-15` and `TEST-13-22` so changing `:teamId` via Back/Forward / `history.go` on `/supervisor/teams/:teamId` immediately resets team details, **Add member** selection, and **New milestone** drafts (`F-02` `0.7`) to `"Loading…"` until the new team loads |
+| 0.14 | 2026-11-23 | phet526 | Record Defect #102 (`DEF-MILESTONE-STATE`) PR #105 review verification (`5bb2620` contract → `822cd03` `TEST-13-22` verified failing against `326e66a -- client/src` and passing on `b1a8eff`) in §8.1 |
 
 ## 1. Linked requirements
 
@@ -158,3 +159,8 @@ Seed persistence (`NFR-08`): `server/prisma/seed.ts` creates the baseline teams 
   - Round-4 in-flight submission lock (`dbbb31e` contract → `5a1d169` RED on CI `45005525513`: server `1 failed / 144 passed (145)`, `TEST-13-20` `AssertionError: expected 201 to be 404` → `1397c2e` GREEN, CI `45005779308`, server `145/145`, `200/200` total)
 - [x] SRS FR-07 / BR-14 (`0.10`), System SDS §1.3 / §2.4 / §3.1 / §4 / §4.3 / §5 (`0.14`), `docs/traceability.md` (`2.8`), `docs/features.md` (`1.7`) updated
 - [ ] PR `#88` reviewed by `@ILoveSiesta` (approve before merge) and merged into `sprint-3`
+
+### 8.1 Defect `#102` (`DEF-MILESTONE-STATE`, PR `#105` review follow-up)
+
+- [x] Contract alignment `5bb2620` (`F-13` `0.13`, `F-02` `0.7`: `AC-13-15`, `AC-02-14`, `TEST-13-22`) → runtime fix `b1a8eff` (`SupervisorTeamContent` keyed by `teamId`) → post-fix test commit `822cd03` (`client/tests/RouteStateReset.test.tsx` › `TEST-13-22`, **not** a RED commit; `docs/traceability.md` `2.25`)
+- [x] Proven failing against pre-fix `git checkout 326e66a -- client/src` (`npm --prefix client test -- --run -- tests/RouteStateReset.test.tsx`: **6 failed | 57 passed (63)**; `TEST-13-22` kept `Team Beta` & drafts instead of `"Loading…"`); restored `HEAD` (`npm --prefix client run build` OK; `npm --prefix client test -- --run` **16 files / 63 passed**)

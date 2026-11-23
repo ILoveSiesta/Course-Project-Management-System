@@ -13,6 +13,7 @@
 | 0.5 | 2026-11-23 | ILoveSiesta | Defect #94 group A (`DEF-DEADLINE`): §2 the exact accepted `deadline` format (zone required, no date-only, impossible dates and non-ISO strings → `INVALID_DATE`); §3 the form shows "Invalid date" for a date the browser cannot convert (for example a five-digit year) without sending a request; AC-02-08 revised, AC-02-13 new; TEST-02-16..TEST-02-18 new; §8.1 added. Written before the regression tests |
 | 0.6 | 2026-11-23 | ILoveSiesta | §8.1 filled with executed RED, GREEN and regression results of #94 group A; no rule change |
 | 0.7 | 2026-11-23 | phet526 | Address PR #105 review (`#102 DEF-MILESTONE-STATE`): revise §3, add `AC-02-14` and STS `TEST-13-22` reference so changing `:teamId` via Back/Forward / `history.go` on `/supervisor/teams/:teamId` resets the **Create milestone** draft immediately to `"Loading…"` and clears **Title**, **Description**, and **Deadline** |
+| 0.8 | 2026-11-23 | phet526 | Record Defect #102 (`DEF-MILESTONE-STATE`) PR #105 review verification (`5bb2620` contract → `822cd03` `TEST-13-22` verified failing against `326e66a -- client/src` and passing on `b1a8eff`) in §8.2 |
 
 ## 1. Linked requirements
 
@@ -159,3 +160,8 @@ Index `(teamId, deadline)`. Back-relations: `Team.milestones`, `User.milestonesC
 - [x] RED: `33d0cdf` (tests only) on the pre-fix code: server **13 failed / 188 passed (201)** — TEST-02-16 11 values (`2028-02-30…`, `2028-04-31…`, `2029-02-29…`, `T24:00`, `2028`, `2028-05-05`, no zone ×2, `05/06/2028`, space separator, `x 2028`) `expected undefined to deeply equal { deadline: 'INVALID_DATE' }`, TEST-02-17 `expected 201 to be 400`, TEST-05-11 `expected 200 to be 400`; client **2 failed / 43 passed (45)** + 1 unhandled `RangeError: Invalid time value` from `MilestoneEditForm.tsx` — TEST-02-18 and TEST-05-12 "Invalid date" not found. Values that `new Date()` already rejects (month 13, minute/second 60, offset `+24:00`, one-digit month, leading space) and all accepted examples passed at RED as regression guards
 - [x] GREEN: `6eeb7c5` — `parseMilestoneDeadline` in `server/src/utils/validation.ts`, `localDeadlineToIso` in `client/src/milestoneFields.ts`, used in `SupervisorTeam.tsx` and `MilestoneEditForm.tsx`; the same tests pass; full regression on `a0f56b6`: `npm run build` OK; `npm test` server **210 passed** (30 files), client **57 passed** (15 files); `npm run test:e2e` **5 passed** ×3 on a temporary database (ports 3197/5197); `python -m unittest discover -s deploy/tests` **17 OK**; 0 failed, 0 skipped
 - [ ] PR reviewed by phet526 (approve before merge) and merged into `sprint-3`
+
+### 8.2 Defect `#102` (`DEF-MILESTONE-STATE`, PR `#105` review follow-up)
+
+- [x] Contract alignment `5bb2620` (`F-02` `0.7`, `F-13` `0.13`: `AC-02-14`, `TEST-13-22`) → runtime fix `b1a8eff` (`SupervisorTeamContent` keyed by `teamId`) → post-fix test commit `822cd03` (`client/tests/RouteStateReset.test.tsx` › `TEST-13-22`, **not** a RED commit; `docs/traceability.md` `2.25`)
+- [x] Proven failing against pre-fix `git checkout 326e66a -- client/src` (`npm --prefix client test -- --run -- tests/RouteStateReset.test.tsx`: **6 failed | 57 passed (63)**; `TEST-13-22` kept `Team Beta` & drafts instead of `"Loading…"`); restored `HEAD` (`npm --prefix client run build` OK; `npm --prefix client test -- --run` **16 files / 63 passed**)

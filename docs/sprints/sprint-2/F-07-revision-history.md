@@ -9,6 +9,7 @@
 | 0.1 | 2026-11-21 | phet526 | Initial contract for F-07 (issue #64) |
 | 0.2 | 2026-11-21 | phet526 | Definition of Done filled with executed RED/GREEN and regression results (#64) |
 | 0.3 | 2026-11-23 | phet526 | Address PR #105 review (`#102 DEF-MILESTONE-STATE`): add §3 route-change note, `AC-07-08`, and `TEST-07-09` so navigating between two milestones' `/history` routes via Back/Forward / `history.go` immediately clears the previous milestone's history to `"Loading…"` and resets sort order to `Newest first` (`desc`) |
+| 0.4 | 2026-11-23 | phet526 | Record Defect #102 (`DEF-MILESTONE-STATE`) PR #105 review verification (`5bb2620` contract → `822cd03` `TEST-07-09` verified failing against `326e66a -- client/src` and passing on `b1a8eff`) in §8.1 |
 
 ## 1. Linked requirements
 
@@ -170,3 +171,8 @@ No schema change and no migration. The query reads existing `Milestone`, `Team`,
 - [x] TDD red → green evidence recorded — contract `7b80e0c` → RED `38f7515` (build OK; server **6 failed / 108 passed**: `TEST-07-01..05` returned `404` because `GET /api/milestones/:milestoneId/history` did not exist yet, `TEST-07-06` `parseHistoryOrder is not a function`; client **2 failed / 23 passed**: `TEST-07-07/08` route/screen missing) → GREEN `9751f0f` (all pass; existing Sprint 1 tests unchanged)
 - [x] System SDS (`docs/system-sds.md` v0.10), `docs/traceability.md` (v2.1), `docs/features.md` (v1.5), and `docs/ai-use.md` updated
 - [ ] PR reviewed by ILoveSiesta (approve before merge) and merged into `sprint-2`
+
+### 8.1 Defect `#102` (`DEF-MILESTONE-STATE`, PR `#105` review follow-up)
+
+- [x] Contract alignment `5bb2620` (`F-07` `0.3`: `AC-07-08`, `TEST-07-09`) → runtime fix `b1a8eff` (`RevisionHistoryContent` keyed by `milestoneId`) → post-fix test commit `822cd03` (`client/tests/RouteStateReset.test.tsx` › `TEST-07-09`, **not** a RED commit; `docs/traceability.md` `2.25`)
+- [x] Proven failing against pre-fix `git checkout 326e66a -- client/src` (`npm --prefix client test -- --run -- tests/RouteStateReset.test.tsx`: **6 failed | 57 passed (63)**; `TEST-07-09` kept `"Milestone B — Revision history"` visible while A loaded); restored `HEAD` (`npm --prefix client run build` OK; `npm --prefix client test -- --run` **16 files / 63 passed**)
