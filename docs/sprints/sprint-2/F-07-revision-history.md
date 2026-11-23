@@ -8,6 +8,7 @@
 |---|---|---|---|
 | 0.1 | 2026-11-21 | phet526 | Initial contract for F-07 (issue #64) |
 | 0.2 | 2026-11-21 | phet526 | Definition of Done filled with executed RED/GREEN and regression results (#64) |
+| 0.3 | 2026-11-23 | phet526 | Address PR #105 review (`#102 DEF-MILESTONE-STATE`): add §3 route-change note, `AC-07-08`, and `TEST-07-09` so navigating between two milestones' `/history` routes via Back/Forward / `history.go` immediately clears the previous milestone's history to `"Loading…"` and resets sort order to `Newest first` (`desc`) |
 
 ## 1. Linked requirements
 
@@ -54,7 +55,7 @@ The Sprint 1 milestone pages (`StudentMilestone`, `SupervisorMilestone`, `Submis
 
 | Screen | Route | Change | States |
 |---|---|---|---|
-| Revision history (Student / Supervisor) | `/student/milestones/:milestoneId/history`<br/>`/supervisor/milestones/:milestoneId/history` | New read-only `RevisionHistory` component: back link (`← Back to milestone`), milestone header card (`title`, `teamName`, `Due: <ICT time>`, `Total versions: N / 3`), order toggle buttons (`Newest first`, `Oldest first`), and ordered revision list showing `Version N: <title>`, `Latest` badge (when `isLatest`), `On time` / `Late (+N d)` badge, submitter + ICT timestamp, description, link, `Feedback (K)` with author + ICT timestamp per entry (or `No feedback on this version.`) | Loading (`Loading…`); empty (`No submissions in revision history yet.`); `404` (`Milestone not found or not allowed`, no partial data); `401` (logout → `/login`) |
+| Revision history (Student / Supervisor) | `/student/milestones/:milestoneId/history`<br/>`/supervisor/milestones/:milestoneId/history` | New read-only `RevisionHistory` component: back link (`← Back to milestone`), milestone header card (`title`, `teamName`, `Due: <ICT time>`, `Total versions: N / 3`), order toggle buttons (`Newest first`, `Oldest first`), and ordered revision list showing `Version N: <title>`, `Latest` badge (when `isLatest`), `On time` / `Late (+N d)` badge, submitter + ICT timestamp, description, link, `Feedback (K)` with author + ICT timestamp per entry (or `No feedback on this version.`) | Loading (`Loading…`); empty (`No submissions in revision history yet.`); `404` (`Milestone not found or not allowed`, no partial data); `401` (logout → `/login`); route change to another `:milestoneId` (`v0.3`, #102): resets immediately to `Loading…` and default `Newest first` order until the new history loads |
 | Student milestone detail | `/student/milestones/:milestoneId` | Add link `View revision history` to `/student/milestones/:milestoneId/history` in the milestone header card | Unchanged |
 | Supervisor milestone detail | `/supervisor/milestones/:milestoneId` | Add link `View revision history` to `/supervisor/milestones/:milestoneId/history` in the milestone header card | Unchanged |
 
@@ -146,6 +147,7 @@ No schema change and no migration. The query reads existing `Milestone`, `Team`,
 | AC-07-05 | **Given** an invalid `order` query parameter (e.g. `?order=invalid`), **when** called on an in-scope milestone, **then** return `400 VALIDATION_ERROR` with `details: { order: "INVALID_ORDER" }`; **when** called on an out-of-scope milestone, **then** return `404 NOT_FOUND` (scope checked before validation). |
 | AC-07-06 | **Given** a student on `/student/milestones/:id/history` for a milestone with 2 versions (v1 with feedback, v2 without), **when** the page loads, **then** it displays milestone context, `Total versions: 2 / 3`, `Latest` badge only on v2, late/on-time badges, submitter and time, feedback author and time on v1, `"No feedback on this version."` on v2, and clicking **Oldest first** re-fetches `?order=asc` and renders v1 before v2; `StudentMilestone` includes a link to this page. |
 | AC-07-07 | **Given** a supervisor on `/supervisor/milestones/:id/history`, **when** the milestone has no submissions, **then** display `"No submissions in revision history yet."`; **when** the API returns `404`, **then** display `"Milestone not found or not allowed"` with no partial data. |
+| AC-07-08 | **Given** a supervisor navigating between two milestones' revision history pages (A and B) via Back/Forward or `history.go`, when returning to A while A's fetch loads, then B's history disappears immediately and `"Loading…"` is shown; once A loads, A's history is shown with default `Newest first` (`desc`) ordering (v0.3, #102). |
 
 ## 7. Software Test Specification (STS)
 
@@ -159,6 +161,7 @@ No schema change and no migration. The query reads existing `Milestone`, `Team`,
 | `TEST-07-06` | AC-07-01, AC-07-03, AC-07-05 | Unit | Pure helpers `parseHistoryOrder` & `buildRevisionHistory` (`server/src/utils/submissionValidation.ts`) | Valid/invalid order values; 0, 1, and 2 submissions in `desc` and `asc` order | Parses `undefined`/`"desc"`/`"asc"`, rejects invalid with `400 INVALID_ORDER`; computes `totalVersions`, `latestVersion`, `isLatest`, `isLate`, `feedbackCount`, and ordering accurately | `server/tests/unit/revision-history.test.ts` › TEST-07-06 |
 | `TEST-07-07` | AC-07-06 | UI | Mocked API: student1; milestone 10 with 2 versions (v1 with feedback, v2 without) | Render `/student/milestones/10/history`, inspect default `desc` view, click `Oldest first`; also render `/student/milestones/10` | Shows team name, `Total versions: 2 / 3`, `Latest` badge only on v2, feedback author/time on v1, empty feedback note on v2; clicking `Oldest first` requests `?order=asc` and lists v1 before v2; detail page has `View revision history` link | `client/tests/RevisionHistory.test.tsx` › TEST-07-07 |
 | `TEST-07-08` | AC-07-07 | UI | Mocked API: supervisor1; empty history, then 404 | Render `/supervisor/milestones/10/history` | Empty state shows `"No submissions in revision history yet."`; 404 shows `"Milestone not found or not allowed"` alert with no partial data | same file › TEST-07-08 |
+| `TEST-07-09` | AC-07-08 | UI | Mocked API: supervisor1; `/supervisor/milestones/10/history` (A) and `/supervisor/milestones/20/history` (B); deferred return fetch to A | Visit A → Back → B, switch B to `Oldest first`, then `window.history.go(-2)` to A while A loads; resolve A | Immediately on `history.go(-2)`, B's history heading disappears and `"Loading…"` shows; after A resolves, A's history heading shows with `Newest first` (`aria-pressed="true"`) | `client/tests/RouteStateReset.test.tsx` › TEST-07-09 |
 
 ## 8. Definition of Done and evidence
 

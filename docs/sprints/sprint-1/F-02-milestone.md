@@ -12,6 +12,7 @@
 | 0.4 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): reject NUL (`U+0000`) and unpaired UTF-16 surrogates in `title`/`description` (`INVALID_CHARACTER`, `"Contains an unsupported character"`), bound `deadline` UTC years to `1–9999` (`INVALID_DATE`), and link SDS §4 |
 | 0.5 | 2026-11-23 | ILoveSiesta | Defect #94 group A (`DEF-DEADLINE`): §2 the exact accepted `deadline` format (zone required, no date-only, impossible dates and non-ISO strings → `INVALID_DATE`); §3 the form shows "Invalid date" for a date the browser cannot convert (for example a five-digit year) without sending a request; AC-02-08 revised, AC-02-13 new; TEST-02-16..TEST-02-18 new; §8.1 added. Written before the regression tests |
 | 0.6 | 2026-11-23 | ILoveSiesta | §8.1 filled with executed RED, GREEN and regression results of #94 group A; no rule change |
+| 0.7 | 2026-11-23 | phet526 | Address PR #105 review (`#102 DEF-MILESTONE-STATE`): revise §3, add `AC-02-14` and STS `TEST-13-22` reference so changing `:teamId` via Back/Forward / `history.go` on `/supervisor/teams/:teamId` resets the **Create milestone** draft immediately to `"Loading…"` and clears **Title**, **Description**, and **Deadline** |
 
 ## 1. Linked requirements
 
@@ -46,7 +47,7 @@
 |---|---|---|---|
 | My team | `/student` | Team name; members (name, e-mail); supervisors; milestone list (title, deadline, description) | Loading: "Loading…"; no team: "You are not assigned to a team yet."; no milestones: "No milestones yet."; error: message from API |
 | My teams | `/supervisor` | One card per assigned team: name, members; link "Open team" | Loading; no teams: "You are not assigned to any team yet."; error |
-| Team detail | `/supervisor/teams/:teamId` | Team name, members, supervisors; milestone list; Create milestone form (Title, Description, Deadline) | Loading; not found/not allowed: "Team not found or not allowed"; empty list; field errors under inputs; submit button disabled while saving |
+| Team detail | `/supervisor/teams/:teamId` | Team name, members, supervisors; milestone list; Create milestone form (Title, Description, Deadline) | Loading; not found/not allowed: "Team not found or not allowed"; empty list; field errors under inputs; submit button disabled while saving; route change to another `:teamId` (`v0.7`, #102): resets immediately to `"Loading…"` and clears **Create milestone** draft fields |
 
 - Deadlines are displayed in Asia/Bangkok time, e.g. `8 Nov 2026, 23:59 (ICT)` (A-04).
 - The deadline input is `datetime-local`; its value is interpreted in the browser's time zone and sent as an ISO string in UTC.
@@ -114,6 +115,7 @@ Index `(teamId, deadline)`. Back-relations: `Team.milestones`, `User.milestonesC
 | AC-02-07 | Given student1, when `POST /api/teams/{Alpha}/milestones`, then `403 FORBIDDEN` and no milestone is stored. |
 | AC-02-08 | Given invalid input (missing/blank/121-char title, 2001-char description, missing/invalid/past/now deadline), when creating, then `400 VALIDATION_ERROR` with per-field `details` and nothing is stored. A 120-char title and a deadline 1 s in the future are accepted. *(rev. v0.5, #94)* An invalid deadline includes an impossible calendar date, a date-only value, a value without a zone and any non-ISO string (§2); 29 February of a leap year and a `±HH:MM` offset are accepted. |
 | AC-02-13 | Given the Create milestone form, when the Deadline input holds a value the browser cannot convert to a date with a year in `1–9999` (for example year `20266`), then "Invalid date" is shown under Deadline, no request is sent and no other error appears (v0.5, #94). |
+| AC-02-14 | Given a supervisor navigating between teams Beta and Alpha via Back/Forward or `history.go` on `/supervisor/teams/:teamId`, when the URL changes to Alpha while Alpha loads, then `"Loading…"` is shown (`Create milestone` absent) and once Alpha loads **Title**, **Description**, and **Deadline** are cleared (v0.7, #102). |
 | AC-02-09 | Given milestones of a team, when an in-scope user lists them, then they are ordered by deadline ascending; an out-of-scope user gets 404. |
 | AC-02-10 | Given a milestone, when `GET /api/milestones/:id`, then in-scope users get `200`; out-of-scope users, unknown IDs and non-numeric IDs get `404`. |
 | AC-02-11 | Given a logged-in student, when `/student` loads, then the team, members, supervisors and milestones with deadlines in Asia/Bangkok time are shown; with no milestones the empty message is shown. |
@@ -141,6 +143,7 @@ Index `(teamId, deadline)`. Back-relations: `Team.milestones`, `User.milestonesC
 | TEST-02-16 | AC-02-08 | Unit | — | `validateMilestoneInput` and `validateMilestoneUpdate` with each invalid string of §2 (impossible dates, date-only, year only, no zone, `05/06/2027`, space separator, free text, offset `+24:00`) and each accepted example | Every invalid string → `details.deadline = "INVALID_DATE"`; every accepted example passes and keeps its instant | `server/tests/unit/deadline-format.test.ts` › TEST-02-16 |
 | TEST-02-17 | AC-02-08 | API + DB | supervisor1 token; Alpha (and Beta for F-06) | `POST /api/teams/{Alpha}/milestones` and `POST /api/milestones` with `2027-02-30T12:00:00.000Z`, `2027`, `2027-05-05T10:00:00`; control `2028-02-29T12:00:00.000Z` | 400 `INVALID_DATE` and milestone count unchanged for each invalid value; control 201 with the same instant stored | `server/tests/api/deadline-format.api.test.ts` › TEST-02-17 |
 | TEST-02-18 | AC-02-13 | UI | Mocked API | On `/supervisor/teams/1` enter title and Deadline `20266-05-05T10:00`, submit | "Invalid date" under Deadline; no POST sent; no "Invalid time value" text | `client/tests/DeadlineInput.test.tsx` › TEST-02-18 |
+| `TEST-13-22` | AC-02-14, AC-13-15 | UI | Mocked API: supervisor; Team Alpha (1) and Team Beta (2); deferred return fetch to Alpha | Navigate `/supervisor` → Alpha → Back → Beta, enter **New milestone** draft (`Title`, `Description`, `Deadline`) and select a student, then `window.history.go(-2)` back to Alpha; resolve Alpha | Immediately on `history.go(-2)`, `"Loading…"` shows and **Create milestone** is absent; after Alpha loads, **Team Alpha** is shown with empty **Title**, **Description**, and **Deadline** | `client/tests/RouteStateReset.test.tsx` › TEST-13-22 |
 
 ## 8. Definition of Done and evidence
 
