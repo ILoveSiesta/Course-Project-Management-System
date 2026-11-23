@@ -18,9 +18,14 @@ import { SubmissionList } from "./SubmissionList.js";
 import { MilestoneEditForm } from "./MilestoneEditForm.js";
 import { SupervisorGradeCard } from "./GradeCard.js";
 
+// Keyed by milestoneId so Back/Forward navigation never carries previous milestone/form state (#102).
 export const SupervisorMilestone: React.FC = () => {
-  const { token, logout } = useAuth();
   const milestoneId = Number(useParams().milestoneId);
+  return <SupervisorMilestoneContent key={milestoneId} milestoneId={milestoneId} />;
+};
+
+const SupervisorMilestoneContent: React.FC<{ milestoneId: number }> = ({ milestoneId }) => {
+  const { token, logout } = useAuth();
 
   const [milestone, setMilestone] = useState<Milestone | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);

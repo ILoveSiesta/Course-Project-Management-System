@@ -9,9 +9,17 @@ interface RevisionHistoryProps {
 }
 
 // Dedicated read-only milestone revision history (F-07, FR-15).
+// Keyed by milestoneId so Back/Forward navigation clears previous milestone history while loading (#102).
 export const RevisionHistory: React.FC<RevisionHistoryProps> = ({ role }) => {
-  const { token, logout } = useAuth();
   const milestoneId = Number(useParams().milestoneId);
+  return <RevisionHistoryContent key={milestoneId} role={role} milestoneId={milestoneId} />;
+};
+
+const RevisionHistoryContent: React.FC<RevisionHistoryProps & { milestoneId: number }> = ({
+  role,
+  milestoneId,
+}) => {
+  const { token, logout } = useAuth();
 
   const [order, setOrder] = useState<HistoryOrder>("desc");
   const [history, setHistory] = useState<MilestoneRevisionHistory | null>(null);
