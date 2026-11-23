@@ -3,6 +3,9 @@ import { getPrisma } from "../prisma.js";
 import { signToken } from "../utils/jwt.js";
 import { hasInvalidTextCharacters } from "../utils/validation.js";
 
+// Precomputed valid cost-10 bcrypt hash so unknown-email login performs equivalent bcrypt work (#92).
+const DUMMY_PASSWORD_HASH = "$2b$10$5LX0/AcvJCLksUFWipWu4.pEqD/yomwk8htzGf/3j8/PD1ntLjDgK";
+
 export class AuthError extends Error {
   code: string;
   status: number;
@@ -45,12 +48,8 @@ export async function loginService(email?: string, password?: string) {
     where: { email: normalizedEmail },
   });
 
-  if (!user) {
-    throw new AuthError(401, "INVALID_CREDENTIALS", "Invalid email or password");
-  }
-
-  const isPasswordValid = await bcrypt.compare(password!, user.passwordHash);
-  if (!isPasswordValid) {
+  const isPasswordValid = await bcrypt.compare(password!, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
+  if (!user || !isPasswordValid) {
     throw new AuthError(401, "INVALID_CREDENTIALS", "Invalid email or password");
   }
 
@@ -71,12 +70,9 @@ export async function logoutService(jti: string, exp?: number) {
   const prisma = getPrisma();
   const expiresAt = exp ? new Date(exp * 1000) : new Date(Date.now() + 2 * 60 * 60 * 1000);
 
-  await prisma.revokedToken.upsert({
-    where: { jti },
-    update: {},
-    create: {
-      jti,
-      expiresAt,
-    },
+  // Idempotent insert avoids concurrent upsert P2002 races when one token logs out in parallel (#92).
+  await prisma.revokedToken.createMany({
+    data: [{ jti, expiresAt }],
+    skipDuplicates: true,
   });
 }
