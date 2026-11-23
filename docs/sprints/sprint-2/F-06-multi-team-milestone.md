@@ -11,6 +11,7 @@
 | 0.3 | 2026-11-22 | ILoveSiesta | Defect #89 (`DEF-INT4`): §2 states that a team ID above the INT4 maximum `2147483647` is an unknown team (`404`, not a format error); AC-06-03 revised to say so; TEST-06-10, TEST-06-11 and §8.1 added. The rule itself is unchanged (v0.1 already required `404` for an unknown ID). Written before the regression tests |
 | 0.4 | 2026-11-22 | ILoveSiesta | §8.1 filled with executed RED, GREEN and regression results of #89; no rule change |
 | 0.5 | 2026-11-23 | ILoveSiesta | §8.1: regression re-run after merging `sprint-3` (PR #91, PR #97) in `8a84210`; traceability revision renumbered from 2.11 to 2.17; no rule change |
+| 0.6 | 2026-11-23 | ILoveSiesta | Defect #94 group A (`DEF-DEADLINE`): §2 notes that `deadline` follows the F-02 v0.5 format through the shared `validateMilestoneInput`; `POST /api/milestones` is covered by F-02 TEST-02-17. No F-06 rule, AC or code change |
 
 ## 1. Linked requirements
 
@@ -30,7 +31,7 @@
     - Missing, `null` or empty array → `REQUIRED`; not an array, or an element that is not a positive integer (e.g. `0`, `-1`, `1.5`, `"1"`) → `INVALID_TYPE`; the same ID twice → `DUPLICATE`; more than 20 IDs → `TOO_MANY`.
     - The format rule has no upper bound (v0.3): an integer above the PostgreSQL INT4 maximum `2147483647` passes it and names a team that cannot exist, so it gets the `404` of the scope check, decided before the database query. It is never `500` and never `INVALID_TYPE`.
     - The limit of 20 bounds one request; it is above the number of teams a supervisor has in the chosen context (A-01, NFR-10 sizes the data set at 20 teams).
-  - `title`, `description`, `deadline`: the same rules as F-02 (BR-04), using the existing `validateMilestoneInput` with the server time at the request.
+  - `title`, `description`, `deadline`: the same rules as F-02 (BR-04), using the existing `validateMilestoneInput` with the server time at the request. Since F-02 v0.5 (#94) this includes the exact deadline format (zone required; impossible and non-ISO dates → `INVALID_DATE`, nothing stored for any team); the F-06 endpoint is tested in F-02 TEST-02-17.
   - **All-or-nothing:** if any listed team does not exist or is not assigned to the supervisor, nothing is created and the response is `404 NOT_FOUND` with no data; it does not say which team failed (NFR-03, same as F-02). All rows are created in **one database transaction**; if one insert fails, none is stored.
 - **Access and check order** (SDS §4–§5): authenticate (401) → role (403) → `teamIds` format (400) → record scope of every team (404) → milestone fields (400) → create.
   - The `teamIds` format is checked before scope because the list must be readable before its teams can be looked up. This is the only 400 that comes before the scope check, and it reveals nothing about other teams.

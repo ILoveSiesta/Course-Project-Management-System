@@ -10,6 +10,7 @@
 | 0.2 | 2026-11-05 | ILoveSiesta | Definition of Done filled with executed results; no behaviour change |
 | 0.3 | 2026-11-05 | ILoveSiesta | §3: screens use the shared stylesheet (CHG-01); no behaviour, text or test change |
 | 0.4 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): reject NUL (`U+0000`) and unpaired UTF-16 surrogates in `title`/`description` (`INVALID_CHARACTER`, `"Contains an unsupported character"`), bound `deadline` UTC years to `1–9999` (`INVALID_DATE`), and link SDS §4 |
+| 0.5 | 2026-11-23 | ILoveSiesta | Defect #94 group A (`DEF-DEADLINE`): §2 the exact accepted `deadline` format (zone required, no date-only, impossible dates and non-ISO strings → `INVALID_DATE`); §3 the form shows "Invalid date" for a date the browser cannot convert (for example a five-digit year) without sending a request; AC-02-08 revised, AC-02-13 new; TEST-02-16..TEST-02-18 new; §8.1 added. Written before the regression tests |
 
 ## 1. Linked requirements
 
@@ -27,7 +28,9 @@
 - **Business rules and validation (BR-04, shared rules in SDS §4)**
   - `title`: required, trimmed, 1–120 characters, no NUL (`U+0000`) or unpaired UTF-16 surrogates (`INVALID_CHARACTER`).
   - `description`: optional; empty string is stored as `null`; at most 2000 characters, no NUL or unpaired UTF-16 surrogates (`INVALID_CHARACTER`).
-  - `deadline`: required ISO 8601 date-time with UTC year in `1–9999` (`INVALID_DATE` for `year >= 10000` or `< 1`, `9999` accepted); must be **strictly later** than the server's current time at the moment of creation.
+  - `deadline`: required ISO 8601 date-time `YYYY-MM-DDTHH:mm[:ss[.fff]]` with a **required** zone (`Z` or `±HH:MM`), UTC year in `1–9999`, and a date and time that exist in the calendar (29 February only in leap years); must be **strictly later** than the server's current time at the moment of creation.
+    - `INVALID_DATE` (v0.5, #94): year `>= 10000` or `< 1` (`9999` accepted); an impossible date such as `2027-02-30T12:00:00Z`, `2027-04-31T12:00:00Z` or `2027-02-29T12:00:00Z`; a date-only value (`2027-05-05`), a year alone (`2027`), a value without a zone (`2027-05-05T10:00:00`, whose meaning would depend on the server time zone), other separators or orders (`05/06/2027`, `2027-05-05 10:00Z`) and free text (`x 2030`). Before v0.5 such strings were repaired by `new Date()` and stored as another date.
+    - Accepted examples: `2028-02-29T12:00:00Z`, `2027-05-05T10:00+07:00`, `9999-12-31T23:59:59.999Z` and every value produced by `Date.prototype.toISOString()` for years `1–9999`.
 - **Access (BR-01..BR-03, SDS §4–§5)** — check order: authenticate (401) → role (403) → record scope (404) → validation (400).
   - Student: own team only. Supervisor: teams with a `SupervisorAssignment`.
   - Out-of-scope or non-existent team/milestone → `404 NOT_FOUND` (no disclosure). A non-numeric or non-positive ID is treated as not found.
@@ -46,6 +49,7 @@
 
 - Deadlines are displayed in Asia/Bangkok time, e.g. `8 Nov 2026, 23:59 (ICT)` (A-04).
 - The deadline input is `datetime-local`; its value is interpreted in the browser's time zone and sent as an ISO string in UTC.
+- **Client date check (v0.5, #94):** if the browser cannot turn the input into a date with a year in `1–9999` (for example the typo `20266`), the form shows "Invalid date" under Deadline and sends no request; no other error text and no uncaught exception.
 - Field error texts: `REQUIRED` → "Required"; `TOO_LONG` → "Too long (max N characters)"; `INVALID_DATE` → "Invalid date"; `MUST_BE_FUTURE` → "Deadline must be in the future"; `INVALID_CHARACTER` → "Contains an unsupported character".
 - A `401` from any F-02 call logs the user out (token cleared) and returns to `/login` (SDS §3.2).
 - Students have no create form, and there is no student route to a supervisor screen. This is only for usability; the API enforces BR-03.
@@ -107,7 +111,8 @@ Index `(teamId, deadline)`. Back-relations: `Team.milestones`, `User.milestonesC
 | AC-02-05 | Given supervisor1 and valid input, when `POST /api/teams/{Alpha}/milestones`, then `201` with the milestone, and it is stored with `teamId` = Alpha and `createdById` = supervisor1. |
 | AC-02-06 | Given supervisor2 (not assigned to Alpha), when creating a milestone for Alpha, then `404 NOT_FOUND` and no milestone is stored. |
 | AC-02-07 | Given student1, when `POST /api/teams/{Alpha}/milestones`, then `403 FORBIDDEN` and no milestone is stored. |
-| AC-02-08 | Given invalid input (missing/blank/121-char title, 2001-char description, missing/invalid/past/now deadline), when creating, then `400 VALIDATION_ERROR` with per-field `details` and nothing is stored. A 120-char title and a deadline 1 s in the future are accepted. |
+| AC-02-08 | Given invalid input (missing/blank/121-char title, 2001-char description, missing/invalid/past/now deadline), when creating, then `400 VALIDATION_ERROR` with per-field `details` and nothing is stored. A 120-char title and a deadline 1 s in the future are accepted. *(rev. v0.5, #94)* An invalid deadline includes an impossible calendar date, a date-only value, a value without a zone and any non-ISO string (§2); 29 February of a leap year and a `±HH:MM` offset are accepted. |
+| AC-02-13 | Given the Create milestone form, when the Deadline input holds a value the browser cannot convert to a date with a year in `1–9999` (for example year `20266`), then "Invalid date" is shown under Deadline, no request is sent and no other error appears (v0.5, #94). |
 | AC-02-09 | Given milestones of a team, when an in-scope user lists them, then they are ordered by deadline ascending; an out-of-scope user gets 404. |
 | AC-02-10 | Given a milestone, when `GET /api/milestones/:id`, then in-scope users get `200`; out-of-scope users, unknown IDs and non-numeric IDs get `404`. |
 | AC-02-11 | Given a logged-in student, when `/student` loads, then the team, members, supervisors and milestones with deadlines in Asia/Bangkok time are shown; with no milestones the empty message is shown. |
@@ -132,6 +137,9 @@ Index `(teamId, deadline)`. Back-relations: `Team.milestones`, `User.milestonesC
 | TEST-02-13 | AC-02-11 | UI | Mocked API: team, no milestones | Render `/student` | "No milestones yet." | same file › TEST-02-13 |
 | TEST-02-14 | AC-02-12 | UI | Mocked API | Fill form on `/supervisor/teams/1`, submit | POST body sent; new milestone listed | same file › TEST-02-14 |
 | TEST-02-15 | AC-02-12 | UI | Mocked API returns 400 details | Submit form | "Required" / "Deadline must be in the future" under fields | same file › TEST-02-15 |
+| TEST-02-16 | AC-02-08 | Unit | — | `validateMilestoneInput` and `validateMilestoneUpdate` with each invalid string of §2 (impossible dates, date-only, year only, no zone, `05/06/2027`, space separator, free text, offset `+24:00`) and each accepted example | Every invalid string → `details.deadline = "INVALID_DATE"`; every accepted example passes and keeps its instant | `server/tests/unit/deadline-format.test.ts` › TEST-02-16 |
+| TEST-02-17 | AC-02-08 | API + DB | supervisor1 token; Alpha (and Beta for F-06) | `POST /api/teams/{Alpha}/milestones` and `POST /api/milestones` with `2027-02-30T12:00:00.000Z`, `2027`, `2027-05-05T10:00:00`; control `2028-02-29T12:00:00.000Z` | 400 `INVALID_DATE` and milestone count unchanged for each invalid value; control 201 with the same instant stored | `server/tests/api/deadline-format.api.test.ts` › TEST-02-17 |
+| TEST-02-18 | AC-02-13 | UI | Mocked API | On `/supervisor/teams/1` enter title and Deadline `20266-05-05T10:00`, submit | "Invalid date" under Deadline; no POST sent; no "Invalid time value" text | `client/tests/DeadlineInput.test.tsx` › TEST-02-18 |
 
 ## 8. Definition of Done and evidence
 
@@ -140,3 +148,10 @@ Index `(teamId, deadline)`. Back-relations: `Team.milestones`, `User.milestonesC
 - [x] TDD red → green: failing tests `9de3700` (server 10 failed + unit file failed to load, client 4 failed) → implementation `b97f30d` (all pass)
 - [x] `docs/traceability.md`, `docs/features.md`, sprint-1 README updated
 - [ ] PR reviewed by phet526 and merged into `sprint-1`
+
+### 8.1 Defect #94 group A (`DEF-DEADLINE`, v0.5)
+
+- [ ] Contract v0.5 committed before the tests
+- [ ] RED: TEST-02-16..TEST-02-18 fail on the pre-fix code for the reported behaviour
+- [ ] GREEN: the same tests pass; full regression (build, server, client, E2E, deploy) passes
+- [ ] PR reviewed by phet526 (approve before merge) and merged into `sprint-3`
