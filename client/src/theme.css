@@ -366,6 +366,28 @@ a:hover {
   flex-wrap: wrap;
 }
 
+/* F-08 Grade card (#103): Save grade and Release grade never wrap onto two rows. Each button is half the
+   row at most and Save grade keeps its place with or without Release grade, so a layout change above the
+   row cannot move Release grade under a click meant for Save grade. */
+.grade-actions {
+  flex-wrap: nowrap;
+}
+
+.grade-actions .btn {
+  flex: 0 1 auto;
+  width: calc(50% - 4px);
+  max-width: 14rem;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* The card alert sits below the buttons (#103). */
+.grade-alert {
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
 /* --- Messages --- */
 
 .alert {

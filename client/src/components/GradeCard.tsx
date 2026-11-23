@@ -134,7 +134,6 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
       ) : (
         <>
           {state.grade && <p className="muted">Not released</p>}
-          {formError && <p role="alert" className="alert">{formError}</p>}
           <form onSubmit={save} noValidate>
             <div className={fieldClass("score")}>
               <label htmlFor="grade-score">Score</label>
@@ -166,7 +165,9 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
               </select>
               {errorFor("version")}
             </div>
-            <div className="form-actions">
+            {/* #103: one row at every width, and messages below it, so a double-click on Save grade
+                can never land on Release grade (a release cannot be undone, G4). */}
+            <div className="form-actions grade-actions">
               <button type="submit" className="btn" disabled={isBusy}>
                 Save grade
               </button>
@@ -181,6 +182,7 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
                 </button>
               )}
             </div>
+            {formError && <p role="alert" className="alert grade-alert">{formError}</p>}
             {hasUnsavedChanges && (
               <p className="muted" role="status">
                 Save the grade before releasing
