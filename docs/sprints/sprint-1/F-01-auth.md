@@ -16,6 +16,7 @@
 | 0.8 | 2026-11-23 | phet526 | Record Defect #92 (`DEF-SERVER-ERR`) RED (`c310768`, CI `45052861149`) → GREEN (`d888ee7`, test spy fix `ef503c9`, CI `45053582959`, `235 / 235` passed) verification evidence in §8.2 |
 | 0.9 | 2026-11-23 | phet526 | Address PR #99 review: revise §2, §6 (`AC-01-13`), and §7 (`TEST-01-16`) so concurrent HTTP `POST /api/auth/logout` requests for one token each return `204` or `401 UNAUTHENTICATED` (at least one `204`, never `500`), and add deterministic `logoutService` concurrency spec `TEST-01-16s` |
 | 0.10 | 2026-11-23 | phet526 | Record clean pre-fix `9b05789 -- server/src` RED verification against `9eabab2` tests (local unit `3 failed`; CI `45108984909` server `7 failed / 165 passed (172)`) and 3 consecutive CI GREEN passes on `9eabab2` (`45108602555`, `45108892694`, `45109129623`, `236 / 236` passed) in §8.2 |
+| 0.11 | 2026-11-23 | phet526 | Address PR #99 round-2 review: clarify in §8.2 that only `TEST-01-15u`, `TEST-01-17u`, and `TEST-92-01` failed for the defect on `c310768` while `TEST-01-15`'s delegate spy broke `TEST-01-16`/`TEST-01-17` (and failed on `d888ee7`), aligning §8.2 with `docs/traceability.md` `2.19` |
 
 ## 1. Linked requirements
 
@@ -171,9 +172,9 @@ Models added to `server/prisma/schema.prisma` with migration `f01_auth_teams`:
 
 ### 8.2 Defect `#92` (`DEF-SERVER-ERR`) verification
 
-- [x] Owner triage posted on `#92` (`issuecomment-7083244946`); `F-01` (`0.7`–`0.10`), `SDS` (`0.19`–`0.20`), and `docs/traceability.md` (`2.18`–`2.20`) updated
+- [x] Owner triage posted on `#92` (`issuecomment-7083244946`); `F-01` (`0.7`–`0.11`), `SDS` (`0.19`–`0.20`), and `docs/traceability.md` (`2.18`–`2.20`) updated
 - [x] Initial TDD RED → GREEN on `fix/auth-and-error-status`:
-  - Contract (`2b6edd3`) → initial RED (`c310768`, CI `45052861149` `6 failed | 165 passed (171)`) → runtime fix (`d888ee7`) + `getPrisma` spy fix (`ef503c9`, CI `45053582959`, `235 / 235` passed)
+  - Contract (`2b6edd3`) → initial RED (`c310768`, CI `45052861149` `6 failed | 165 passed (171)`; only `TEST-01-15u`, `TEST-01-17u`, and `TEST-92-01` failed for the defect, while `TEST-01-15`'s delegate spy broke `TEST-01-16`/`TEST-01-17` and also failed on GREEN `d888ee7` CI `45053202752`, so the valid RED for those API tests is the pre-fix re-run below) → runtime fix (`d888ee7`) + `getPrisma` spy fix (`ef503c9`, CI `45053582959`, `235 / 235` passed)
 - [x] PR #99 round-1 review verification (`f127555` → `9eabab2`):
   - **Pre-fix RED check of final `9eabab2` tests against `9b05789 -- server/src`:**
     - Local (`git checkout 9b05789 -- server/src; npx --prefix server vitest run tests/unit/auth-timing.test.ts tests/unit/static-errors.test.ts`): `3 failed` (`TEST-01-15u` expected `401` to be `500`, `TEST-01-17u` `compare` called `0` times, `TEST-92-01` expected `500` to be `416`)
