@@ -22,6 +22,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.16 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): §4 add `400 BAD_REQUEST`, `413 PAYLOAD_TOO_LARGE`, `415 UNSUPPORTED_MEDIA_TYPE`, document pre-auth request parsing order, shared text-character rule (`INVALID_CHARACTER` for NUL `U+0000` and unpaired UTF-16 surrogates) and milestone year range (`1–9999` → `INVALID_DATE`); §9.1 regression test IDs (`TEST-90-U01..U03`, `TEST-90-01..13`) |
 | 0.17 | 2026-11-22 | phet526 | Address PR #91 review: §4 cover undecodable `gzip`/`deflate` stream errors (`Z_DATA_ERROR`/`Z_BUF_ERROR`/`Z_NEED_DICT` → `400 BAD_REQUEST` `"Request body could not be read"`), correct request check order so body parsing precedes auth (`401`) while URL parameter decoding (`%zz`) runs after auth (`401`) and before role (`403`); update §6 login 400 rule and §9.1 (`TEST-90-14`, `TEST-90-UI01..06`) |
 | 0.18 | 2026-11-22 | phet526 | Address PR #91 round-3 review: clarify in §4 that missing, non-JSON, or array login bodies return `400 VALIDATION_ERROR` while JSON primitives including `null` return `400 BAD_REQUEST` |
+| 0.19 | 2026-11-23 | ILoveSiesta | Defect #100 (`DEF-GRADE-STALE`): §4 add `409 GRADE_CHANGED` (release naming a grade other than the stored one); §4.2 the release request carries the shown `{ score, version }` |
 
 Requirement IDs (FR/BR/NFR/D) refer to `docs/srs.md`. Feature contracts in `docs/sprints/sprint-N/` give the
 exact endpoint request/response shapes; this document defines the shared structure and conventions they follow.
@@ -210,6 +211,7 @@ other role redirects to the user's own home.
 | 409 | `NOTHING_TO_GRADE` | Grade for a milestone with no submission (BR-11) |
 | 409 | `GRADE_RELEASED` | Change or release after the milestone's grades were released (BR-11) |
 | 409 | `NO_GRADE` | Release without a grade (BR-11) |
+| 409 | `GRADE_CHANGED` | Release whose body (`score`, `version` the page shows) differs from the stored grade; nothing is released (BR-11, #100); checked after `GRADE_RELEASED` and `NO_GRADE` |
 | 409 | `SUBMISSION_WINDOW_CLOSED` | Submission later than `deadline + 7 × 24 h` (BR-05, CHG-03); checked after `VERSION_LIMIT_REACHED` |
 | 409 | `TEAM_NAME_EXISTS` | Creating a team whose trimmed name matches an existing team (case-insensitive) |
 | 409 | `STUDENT_ALREADY_IN_TEAM` | Adding a student who already has a `TeamMembership` (BR-10) |
@@ -252,7 +254,7 @@ Exact request/response shapes are defined in each feature contract.
 | PATCH | `/api/milestones/:milestoneId` | Supervisor, assigned (student 403) | F-05 |
 | GET | `/api/milestones/:milestoneId/grade` | Any, in scope (student: no score before release) | F-08 |
 | PUT | `/api/milestones/:milestoneId/grade` | Supervisor, assigned (student 403) | F-08 |
-| POST | `/api/milestones/:milestoneId/grade/release` | Supervisor, assigned (student 403) | F-08 |
+| POST | `/api/milestones/:milestoneId/grade/release` | Supervisor, assigned (student 403); body = shown `{ score, version }`, mismatch → 409 `GRADE_CHANGED` (#100) | F-08 |
 | POST | `/api/milestones` | Supervisor, assigned to every listed team (student 403; any unassigned/unknown team → 404, nothing stored) | F-06 |
 | GET | `/api/milestones/:milestoneId/history` | Any, in scope (`?order=desc\|asc`, default `desc`; out-of-scope → 404) | F-07 |
 | Milestone endpoints (list, detail, create, edit) | — | Every serialized `Milestone` includes server-derived `status` (BR-12, never stored) | F-09 |
