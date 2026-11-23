@@ -12,6 +12,7 @@
 | 0.4 | 2026-11-22 | phet526 | Defect #90 (`DEF-BAD-INPUT`): reject NUL (`U+0000`) and unpaired UTF-16 surrogates in `title`/`description` (`INVALID_CHARACTER`, `"Contains an unsupported character"`), bound `deadline` UTC years to `1–9999` (`INVALID_DATE`), and link SDS §4 |
 | 0.5 | 2026-11-23 | ILoveSiesta | Defect #94 group A (`DEF-DEADLINE`): §2 `deadline` uses the exact F-02 v0.5 format (zone required; impossible and non-ISO dates → `INVALID_DATE`, nothing stored); §3 the edit form shows "Invalid date" for a date the browser cannot convert, without a request; AC-05-05 revised, AC-05-10 new; TEST-05-11, TEST-05-12 new; §8.1 added. Written before the regression tests |
 | 0.6 | 2026-11-23 | ILoveSiesta | §8.1 filled with executed RED, GREEN and regression results of #94 group A; no rule change |
+| 0.7 | 2026-11-23 | phet526 | Defect #102 (`DEF-MILESTONE-STATE`): note in §3 that changing `:milestoneId` via Back/Forward / `history.go` closes and resets `MilestoneEditForm` so edits typed for one milestone cannot overwrite another (`TEST-08-21`) |
 
 ## 1. Linked requirements
 
@@ -51,6 +52,7 @@
 | Supervisor team detail (`/supervisor/teams/:teamId`) | — | No UI change: the milestone list reads the stored values | — |
 
 - **Client date check (v0.5, #94):** if the browser cannot turn the Deadline input into a date with a year in `1–9999`, the form shows "Invalid date" under Deadline, sends no request and keeps the form open; no uncaught exception.
+- **Route parameter change (v0.7, #102):** navigating to another `:milestoneId` via Back/Forward or `history.go` immediately closes and resets the edit form (so stale fields from another milestone cannot remain open or be submitted against the new milestone; covered by `TEST-08-21`).
 - Only fields whose value differs from the loaded milestone are sent. The deadline input shows minutes only, so an untouched deadline is **not** sent (sending the minute-rounded value could move it earlier by the seconds part and be rejected).
 - Field error texts: `REQUIRED` → "Required"; `TOO_LONG` → "Too long (max N characters)"; `INVALID_DATE` → "Invalid date"; `INVALID_TYPE` → "Invalid value"; `INVALID_CHARACTER` → "Contains an unsupported character"; `NO_CHANGES` → "Change at least one field".
 - Students have no edit control (usability only; the API enforces BR-03).
