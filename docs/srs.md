@@ -14,6 +14,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.8 | 2026-11-21 | ILoveSiesta | BR-11 detailed for Sprint 2 (F-08, #66; decisions G1–G7 agreed in #66): integer score 0–100, one grade per milestone linked to a version of that milestone, changeable until release, release per milestone and irreversible, nothing to grade without a submission |
 | 0.9 | 2026-11-21 | phet526 | BR-12 detailed for Sprint 2 (F-09, #67): 5-status precedence, `now ≤ deadline` boundary, latest-version resubmission rule, Overdue covering closed 7-day window (CHG-03), and BR-13 extension effect |
 | 0.10 | 2026-11-22 | phet526 | FR-07 and BR-14 detailed for Sprint 3 (F-13, #83): supervisors create teams (assigned automatically) and add/remove student members; membership deletion keeps `Submission.submittedById` unchanged and revokes the removed student's access to the old team |
+| 0.11 | 2026-11-23 | ILoveSiesta | Release candidate `v0.3.0` (#107): actors, §3.1, A-02 and D-06 describe team management as implemented in Sprint 3 (F-13, #83) instead of planned; no requirement or rule changed |
 
 ## 1. Stakeholder problem and context
 
@@ -34,8 +35,8 @@ supervisor feedback against the exact version reviewed, and shows progress acros
 | Actor | Description | Responsibilities in the system |
 |---|---|---|
 | Student | A course student who is a member of exactly one project team | View own team and its milestones; submit and revise milestone work for own team; view own team's submissions, feedback and released grades; view own team's progress |
-| Supervisor | An instructor or teaching assistant assigned to supervise one or more teams | View assigned teams; create and maintain milestones for assigned teams; review submissions; record feedback and grades; release grades; view progress and summary reports of assigned teams; manage team membership (Sprint 3, planned) |
-| System operator (outside the application UI) | Course staff who prepare the deployment | Create accounts, teams and supervisor assignments through the documented seed procedure; configure environment variables |
+| Supervisor | An instructor or teaching assistant assigned to supervise one or more teams | View assigned teams; create and maintain milestones for assigned teams; review submissions; record feedback and grades; release grades; view progress and summary reports of assigned teams; create teams and manage their membership (FR-07, F-13, Sprint 3) |
+| System operator (outside the application UI) | Course staff who prepare the deployment | Create accounts and the initial teams, memberships and supervisor assignments through the documented seed procedure (supervisors manage teams and members afterwards, FR-07); configure environment variables |
 
 Each account has exactly one role (Student or Supervisor). Multiple roles per account are not supported.
 
@@ -44,7 +45,7 @@ Each account has exactly one role (Student or Supervisor). Multiple roles per ac
 ### 3.1 In scope
 
 - Login, logout, current-user identity, role-based access enforced by the backend
-- Teams, team membership and supervisor assignment (seeded in Sprint 1; team management planned for Sprint 3)
+- Teams, team membership and supervisor assignment (seeded baseline; supervisors create teams and manage members from Sprint 3, F-13)
 - Milestones per team with a deadline
 - Link-based submissions with title, description and URL; revision history (versions)
 - Feedback on a specific submission version; grades with controlled release
@@ -158,7 +159,7 @@ Sprint = the sprint planned to implement the requirement (see `docs/sprints/plan
 | ID | Assumption |
 |---|---|
 | A-01 | The deployment serves one course offering; all teams, milestones and accounts belong to it. |
-| A-02 | Accounts, teams and supervisor assignments for Sprint 1 are created by the documented seed procedure, not through the UI. |
+| A-02 | Accounts, teams and supervisor assignments for Sprint 1 are created by the documented seed procedure, not through the UI. From Sprint 3, supervisors also create teams and manage memberships through the UI (FR-07); re-running the seed never overwrites those changes (BR-14, NFR-08). Accounts are still created only by the seed. |
 | A-03 | Submission links point to external storage (GitHub, Google Drive, etc.). The system validates the URL format but does not check that the link is reachable or inspect its content. |
 | A-04 | Deadlines are stored in UTC and displayed in the Asia/Bangkok time zone. The server clock is authoritative for deadline checks. |
 | A-05 | Instructors and teaching assistants have the same Supervisor permissions; scope is limited only by team assignment. |
@@ -175,7 +176,7 @@ Status: **Proposed** = drafted, awaiting review; **Agreed** = accepted by both s
 | D-03 | When may students see feedback and grades? | Feedback is visible to the team as soon as it is recorded. Grades are hidden until the supervisor releases them for the milestone (BR-11). | Agreed | 2026-11-04 |
 | D-04 | Can a team have more than one supervisor? | Yes. A team has one or more assigned supervisors; any of them may act on the team (BR-02). | Agreed | 2026-11-04 |
 | D-05 | Can a student be in more than one team? | No. A student belongs to at most one team (BR-10). | Agreed | 2026-11-04 |
-| D-06 | Who manages teams? (Theme 6 defines only Student and Supervisor roles; the brief says the product "manages teams" but does not name who.) | Sprint 1: teams, membership and supervisor assignments come from seed data only. Sprint 3 (planned): supervisors manage teams they supervise (FR-07). | Agreed | 2026-11-04 |
+| D-06 | Who manages teams? (Theme 6 defines only Student and Supervisor roles; the brief says the product "manages teams" but does not name who.) | Sprint 1: teams, membership and supervisor assignments come from seed data only. Sprint 3: supervisors create teams they supervise and add or remove their members (FR-07, implemented in F-13, #83). | Agreed | 2026-11-04; implemented 2026-11-22 |
 | D-07 | What does a submission contain? | Title, optional description and one link; no file upload (A-03). | Agreed | 2026-11-04 |
 | D-08 | Can feedback be edited? | No. Feedback is append-only; a supervisor adds a new feedback entry to correct or extend earlier feedback (BR-09). | Agreed | 2026-11-04 |
 | D-09 | How does logout work with tokens? | Logout revokes the current token on the server so it is rejected even before it expires (FR-03, NFR-04). Details in the System SDS. | Agreed | 2026-11-04 |

@@ -6,6 +6,7 @@ CPE334 Software Engineering — Group Project, Theme 6 (Semester 1/2026)
 
 - Requirements: [docs/srs.md](docs/srs.md)
 - Features / traceability: [docs/features.md](docs/features.md), [docs/traceability.md](docs/traceability.md)
+- Change and defect register: [docs/change-register.md](docs/change-register.md)
 - Design: [docs/system-sds.md](docs/system-sds.md)
 - Sprint plan & contracts: [docs/sprints/](docs/sprints/)
 
@@ -54,7 +55,7 @@ docker-compose.yml  PostgreSQL for development; full app stack (db, migrate, app
    ```bash
    npm run db:up
    ```
-4. Migrate และ seed ข้อมูลตัวอย่าง (มี models User, Team, Milestone, Submission, Feedback ครบสำหรับ Sprint 1)
+4. Migrate และ seed ข้อมูลตัวอย่าง (apply migration ทั้งหมดใน `server/prisma/migrations/` แล้วสร้างบัญชี ทีม และ supervisor assignment ตามตารางใน `docs/system-sds.md` §2.4; seed รันซ้ำได้และไม่เขียนทับสมาชิกทีมที่ supervisor แก้ผ่านหน้าเว็บ — ถ้าต้องการคืนข้อมูล demo เดิมใช้ `npx prisma migrate reset` ใน `server/`)
    ```bash
    npm run prisma:migrate --prefix server
    npm run prisma:seed --prefix server
@@ -87,14 +88,14 @@ docker compose down            # ข้อมูลยังอยู่ใน v
 ## Git workflow
 
 1. สร้าง Issue ที่ผูกกับ feature/contract
-2. แตก branch `feature/F-XX-short-name` (หรือ `fix/...`) จาก sprint staging branch (`sprint-1`, `sprint-2`, ...)
+2. แตก branch `feature/F-XX-short-name` (หรือ `fix/...`) จาก sprint staging branch (`sprint-1`, `sprint-2`, `sprint-3`)
 3. Commit ตามลำดับนี้ใน branch (เป็นหลักฐาน TDD):
    1. `docs(F-XX): contract` — contract ใน `docs/sprints/sprint-N/` (ใช้ `_contract-template.md`)
    2. `test(F-XX): ...` — test ของพฤติกรรมที่ต้องการ ซึ่งยัง fail (red)
    3. `feat(F-XX): ...` — implement จน test ผ่าน (green) แล้วอัปเดต docs/traceability
 4. เปิด PR เข้า sprint staging — เพื่อนในทีมรีวิว (ห้าม approve PR ตัวเอง)
 5. รวม feature แล้วรัน integration/acceptance checks บน staging
-6. เปิด release PR จาก staging → `main` แล้ว tag (`v0.1.0`, ...)
+6. เปิด release PR จาก staging → `main` แล้ว tag (`v0.1.0`, ..., `v0.3.0`); merge เข้า `main` = deploy อัตโนมัติ (Deploy demo)
 
 ## Demo accounts
 

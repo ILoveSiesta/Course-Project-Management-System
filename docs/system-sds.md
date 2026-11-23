@@ -29,6 +29,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.23 | 2026-11-23 | ILoveSiesta | Defect #94 group B (`DEF-CLIENT-SESSION`): §3.2 session ended / session check failed / logout failed / connection error states (F-01 v0.12, F-13 v0.12) |
 | 0.24 | 2026-11-23 | phet526 | Defect #102 (`DEF-MILESTONE-STATE`): §3.2 require detail pages keyed by a route parameter (`:milestoneId` / `:teamId`, including Supervisor/Student milestone detail, Grade card, Edit milestone, Feedback, Revision history, and Supervisor team detail) to reset page and child-form state to Loading immediately when the route parameter changes |
 | 0.25 | 2026-11-23 | ILoveSiesta | Defect #103 (`DEF-GRADE-BUTTON-SHIFT`): §3.2 an action that cannot be undone is never placed where a moving layout can put it under a click meant for another button; the F-08 Grade card keeps **Save grade** and **Release grade** on one row and its alert after the buttons (F-08 v0.16) |
+| 0.26 | 2026-11-23 | ILoveSiesta | Release candidate `v0.3.0` (#107): §2.1/§3.1 headings and the navigation diagram describe the current product; §2.2 `daysLate` is guaranteed by the service (no database check, F-03 v0.5) and only `TeamMembership` rows are ever deleted (F-13); §2.3 records what was added after Sprint 1; §3.2 validation is done by the API (the client does not repeat length checks); §4 `GET /api/ready` needs no token; §9 the test database is reset once per test run and E2E covers F-13 and F-08 |
 
 Requirement IDs (FR/BR/NFR/D) refer to `docs/srs.md`. Feature contracts in `docs/sprints/sprint-N/` give the
 exact endpoint request/response shapes; this document defines the shared structure and conventions they follow.
@@ -88,7 +89,7 @@ by the API.
 
 ## 2. Data model
 
-### 2.1 Entity–relationship diagram (Sprint 1)
+### 2.1 Entity–relationship diagram (current)
 
 ```mermaid
 erDiagram
@@ -121,7 +122,7 @@ All `id` columns are auto-increment integers. All timestamps are `timestamptz` s
 | **TeamMembership** | `id`, `teamId` → Team, `studentId` → User, `createdAt` | `studentId` unique (BR-10); user must have role `STUDENT` (checked by seed/service) | F-01 |
 | **SupervisorAssignment** | `id`, `teamId` → Team, `supervisorId` → User, `createdAt` | unique (`teamId`, `supervisorId`); user must have role `SUPERVISOR`; a team may have several (D-04) | F-01 |
 | **Milestone** | `id`, `teamId` → Team, `title` (≤ 120), `description` (≤ 2000, nullable), `deadline`, `createdById` → User, `createdAt` | index (`teamId`, `deadline`); deadline in the future at creation (BR-04, service) | F-02 |
-| **Submission** | `id`, `milestoneId` → Milestone, `submittedById` → User, `version`, `title` (≤ 120), `description` (≤ 2000, nullable), `link` (≤ 2048), `submittedAt`, `daysLate` | unique (`milestoneId`, `version`); `version` 1..3 (BR-06, BR-07); `daysLate >= 0` (BR-05); never updated or deleted | F-03 |
+| **Submission** | `id`, `milestoneId` → Milestone, `submittedById` → User, `version`, `title` (≤ 120), `description` (≤ 2000, nullable), `link` (≤ 2048), `submittedAt`, `daysLate` | unique (`milestoneId`, `version`); `version` 1..3 (BR-06, BR-07); `daysLate >= 0` set by the service (BR-05; no database check, F-03 v0.5 §5); never updated or deleted | F-03 |
 | **Feedback** | `id`, `submissionId` → Submission, `authorId` → User, `comment` (1–5000), `createdAt` | append-only, no update/delete (BR-09); several entries per submission allowed (D-08) | F-04 |
 | **Grade** | `id`, `milestoneId` → Milestone, `submissionId` → Submission, `score`, `gradedById` → User, `createdAt`, `updatedAt` | `milestoneId` unique (one grade per milestone); submission must belong to the same milestone (service); `score` 0–100 (DB check); updated until release, then locked (BR-11) | F-08 |
 | **Milestone** (F-08 column) | `gradesReleasedAt` (nullable) | set once on release; never cleared (BR-11) | F-08 |
@@ -130,13 +131,14 @@ All `id` columns are auto-increment integers. All timestamps are `timestamptz` s
 team; Feedback → its submission's milestone's team. A milestone belongs to exactly one team, so a submission
 needs no separate `teamId`.
 
-Foreign keys use `ON DELETE RESTRICT`: no Sprint 1 operation deletes teams, milestones, submissions or feedback.
+Foreign keys use `ON DELETE RESTRICT`: no operation deletes users, teams, milestones, submissions, feedback or grades. The only delete is a `TeamMembership` row when a supervisor removes or moves a member (F-13, BR-14).
 
-### 2.3 Planned additions (Sprint 2–3, direction only)
+### 2.3 Additions after Sprint 1
 
-- ~~Grades and grade release (FR-18, FR-19)~~ — added by F-08 (§2.2).
-- Team–milestone status (FR-20, BR-12) is **derived** from existing data, not stored.
-- Team management (FR-07, Sprint 3) reuses `Team`, `TeamMembership` and `SupervisorAssignment`.
+- Grades and grade release (FR-18, FR-19): `Grade` and `Milestone.gradesReleasedAt`, migration `f08_grades` (F-08, §2.2). This is the only migration after Sprint 1.
+- Team–milestone status (FR-20, BR-12) is **derived** from existing data at request time, not stored (F-09).
+- Team management (FR-07, F-13) reuses `Team`, `TeamMembership` and `SupervisorAssignment`; no migration.
+- F-10, F-11 and F-12 (planned) read existing data only; their contracts state no schema change and no migration.
 
 ### 2.4 Migrations and seed data
 
@@ -154,15 +156,17 @@ Foreign keys use `ON DELETE RESTRICT`: no Sprint 1 operation deletes teams, mile
 
 ## 3. UI structure and conventions
 
-### 3.1 Screens and navigation (Sprint 1)
+### 3.1 Screens and navigation (current)
 
 ```mermaid
 flowchart TD
   L["/login"] -->|Student| SH["/student — My team<br/>team, members, milestones"]
-  L -->|Supervisor| PH["/supervisor — My teams"]
-  SH --> SM["/student/milestones/:id<br/>submit · versions · feedback"]
+  L -->|Supervisor| PH["/supervisor — My teams<br/>create team"]
+  SH --> SM["/student/milestones/:id<br/>submit · versions · feedback · grade"]
+  SM --> SR["/student/milestones/:id/history"]
   PH --> PT["/supervisor/teams/:id<br/>members · milestones · create milestone"]
-  PT --> PM["/supervisor/milestones/:id<br/>versions · add feedback"]
+  PT --> PM["/supervisor/milestones/:id<br/>versions · feedback · edit · grade"]
+  PM --> PR["/supervisor/milestones/:id/history"]
 ```
 
 | Screen | Role | Purpose | Feature |
@@ -184,7 +188,7 @@ other role redirects to the user's own home.
 |---|---|
 | Loading | A loading indicator replaces the content area; buttons that submit are disabled while a request is in flight |
 | Empty | A short message, e.g. "No milestones yet" or "No submissions yet" |
-| Validation | Field-level messages next to inputs. The client checks required fields and lengths for convenience; the API's `VALIDATION_ERROR` details are shown per field |
+| Validation | Field-level messages next to inputs. The API validates every field and its `VALIDATION_ERROR` details are shown per field; the client does not repeat the length checks. It only blocks a deadline the browser cannot convert ("Invalid date", #94) and uses `required` on the login fields |
 | Rule rejection | Message from the API error (NFR-12), e.g. "Maximum of 3 versions reached" |
 | 401 from any call | Clear the token and go to `/login` with "Your session has ended. Please log in again." (no logout request: the server already rejected the token). Only a 401 ends the session (#94) |
 | Session check failed | `/api/auth/me` fails for another reason (network, non-JSON, 5xx): keep the token, show "Could not check your session. Check your connection and try again." with **Try again** (#94) |
@@ -199,7 +203,7 @@ other role redirects to the user's own home.
 ## 4. API conventions
 
 - Base path `/api`; JSON request and response bodies; UTF-8.
-- Authentication with `Authorization: Bearer <token>` on every endpoint except `POST /api/auth/login` and `GET /api/health`.
+- Authentication with `Authorization: Bearer <token>` on every endpoint except `POST /api/auth/login`, `GET /api/health` and `GET /api/ready`.
 - Timestamps are ISO 8601 strings in UTC (e.g. `2026-11-08T16:59:00.000Z`).
 - Resource IDs appear in the path; the acting user always comes from the token, never from the body or query.
 - Success: `200` (read), `201` (created, body = created resource), `204` (logout).
@@ -378,9 +382,9 @@ flowchart LR
 | Unit | Vitest | Pure rules: `daysLate`, URL/length validation, version selection | `server/tests/unit/` |
 | API / integration | Vitest + Supertest + real PostgreSQL test DB | Endpoints, persistence, 401/403/404 access tests, concurrency (NFR-06) | `server/tests/api/` |
 | UI component | Vitest + Testing Library | Forms, states, error display | `client/tests/` |
-| End-to-end | Playwright | Critical journeys and one rejection journey (issue #6) | `e2e/` |
+| End-to-end | Playwright | Sprint 1 critical and rejection journeys (#6), long-text wrapping (#54), F-13 team management (#83), F-08 double-click at phone width (#103) | `e2e/` |
 
-Integration tests reset the test database and reseed before each test file. Test IDs in each feature's STS map
+The test database is recreated from the committed migrations once per test run (`server/tests/support/global-setup.ts`); each test file creates the data it needs. Test IDs in each feature's STS map
 to test names so results can be traced to acceptance criteria.
 
 ### 9.1 Defect `#90` (`DEF-BAD-INPUT`) regression tests
