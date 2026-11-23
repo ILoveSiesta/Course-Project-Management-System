@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ApiError, GradeState, Submission, releaseGradeApi, saveGradeApi } from "../api.js";
+import { ApiError, GradeState, Submission, getGradeApi, releaseGradeApi, saveGradeApi } from "../api.js";
 import { formatDeadline } from "../format.js";
 
 // F-08 Grade card (contract docs/sprints/sprint-2/F-08-grades.md §3).
@@ -92,14 +92,23 @@ export const SupervisorGradeCard: React.FC<SupervisorGradeCardProps> = ({
   };
 
   const release = async () => {
-    if (hasUnsavedChanges) return;
+    if (hasUnsavedChanges || !state.grade) return;
     setFieldErrors({});
     setFormError(null);
     setIsBusy(true);
     try {
-      onChange(await releaseGradeApi(token, milestoneId));
+      // Release the grade the card shows, not the form values (#100).
+      onChange(await releaseGradeApi(token, milestoneId, { score: state.grade.score, version: state.grade.version }));
     } catch (err) {
       handleError(err);
+      // The stored grade changed after this page loaded: show the current grade so it can be checked first.
+      if (err instanceof ApiError && err.code === "GRADE_CHANGED") {
+        try {
+          onChange(await getGradeApi(token, milestoneId));
+        } catch (reloadErr) {
+          if (reloadErr instanceof ApiError && reloadErr.status === 401) onUnauthorized();
+        }
+      }
     } finally {
       setIsBusy(false);
     }
