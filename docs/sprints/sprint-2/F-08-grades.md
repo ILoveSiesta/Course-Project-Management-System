@@ -22,6 +22,7 @@
 | 0.14 | 2026-11-23 | phet526 | Address PR #105 review: correct §3 and `AC-08-13` to note that typed feedback drafts did not persist after milestone A loaded (`SubmissionList` keys by `s.id`; the feedback risk was only displaying/submitting B's feedback form on A's URL while A loaded); expand `TEST-08-20` (both differing and equal grades) and `TEST-08-21` (Title, Description, Deadline) in `RouteStateReset.test.tsx` |
 | 0.15 | 2026-11-23 | phet526 | Address PR #105 review: align `TEST-08-21` STS row (Title, Description, Deadline, post-load feedback-draft guard note) and record `5bb2620` → `822cd03` verification against pre-fix `326e66a -- client/src` (`6 failed / 57 passed (63)`) and `b1a8eff` (`63 / 63`) in §8.3 |
 | 0.16 | 2026-11-23 | ILoveSiesta | Defect #103 (`DEF-GRADE-BUTTON-SHIFT`): §3 adds the button layout rule of the Grade card (**Save grade** and **Release grade** on one row at every width, each at most half the row, **Save grade** in the same place whether or not **Release grade** is shown) and moves the card alert after `.form-actions`; §6 `AC-08-14`; §7 `TEST-08-22` (UI) and `TEST-08-23` (browser E2E at 320 px and 375 px with a 20 px font). Written before the tests; no API or data change |
+| 0.17 | 2026-11-23 | ILoveSiesta | §8.4 filled with the #103 RED → GREEN and regression results; no behaviour change |
 
 ## 1. Linked requirements
 
@@ -210,8 +211,8 @@ Existing tests that render the milestone pages (`Submissions.test.tsx`, `Feedbac
 
 ### 8.4 Defect `#103` (`DEF-GRADE-BUTTON-SHIFT`) verification
 
-- [ ] Owner triage on #103; contract v0.16 (§3 button layout rule, `AC-08-14`, `TEST-08-22`, `TEST-08-23`) committed before the tests
-- [ ] RED (tests only) on the pre-fix code: `TEST-08-22` and `TEST-08-23` fail for the reported reason; the controls pass
-- [ ] GREEN: the same tests pass; build, `npm test`, `npm run test:e2e`, `deploy/tests` pass; the #103 browser probe releases nothing
-- [ ] `docs/traceability.md` and `docs/ai-use.md` updated
+- [x] Owner triage on #103 (comment 7095576939); contract v0.16 (§3 button layout rule, `AC-08-14`, `TEST-08-22`, `TEST-08-23`) committed before the tests (`d4f07fc`)
+- [x] RED `5342792` (tests only, client source as on `sprint-3` @ `cef176a`): `npm test` client **2 failed / 63 passed (65)** (TEST-08-22: the alert comes before the buttons, `expected false to be true`; no `grade-actions` container), server unchanged; `e2e/f08-grade-double-click.spec.ts` **9 failed / 1 passed** on a throwaway database: case (a) released `95` at 320 px (16 and 20 px font) and 375 px (20 px), case (b) released `95` at 320 px with a 20 px font, the other cases had **Release grade** on a second row (`50.5`/`58` px lower); the control passed
+- [x] GREEN `6523f7a` (`.form-actions.grade-actions` one row, each button at most half the row, card alert after the buttons): `npm run build` OK; `npm test` server **210 passed**, client **65 passed**; `npm run test:e2e` **15 passed** ×3 on a throwaway database (ports 3197/5197; the new spec 10/10 in each run); `python -m unittest discover -s deploy/tests` **17 OK**; 0 failed, 0 skipped. #103 browser probe on the built client (`.planning/sprint3/f08-p13/repro.sh`): `shift-alert-cleared` (8 cases), `shift-grade-line-shorter` (8) and `field-error-shift` (1) all `not released`, scroll and keyboard cases 30 `not released` and 9 with the button off screen
+- [x] `docs/traceability.md` (2.26 planned, 2.27 results) and `docs/ai-use.md` updated
 - [ ] PR reviewed by `@phet526` (approve before merge) and merged into `sprint-3`; re-tested on the release that contains the fix (#85)
