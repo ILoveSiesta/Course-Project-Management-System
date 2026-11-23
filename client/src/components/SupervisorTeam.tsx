@@ -16,7 +16,7 @@ import {
   removeTeamMemberApi,
 } from "../api.js";
 import { MilestoneList, TeamSummary } from "./TeamDetails.js";
-import { milestoneFieldMessage as fieldMessage } from "../milestoneFields.js";
+import { localDeadlineToIso, milestoneFieldMessage as fieldMessage } from "../milestoneFields.js";
 
 
 const byDeadline = (a: Milestone, b: Milestone) => a.deadline.localeCompare(b.deadline) || a.id - b.id;
@@ -149,11 +149,17 @@ export const SupervisorTeam: React.FC = () => {
     setFieldErrors({});
     setFormError(null);
     setCreatedFor(null);
+
+    // datetime-local has no zone: it is read in the browser's time zone and sent as UTC.
+    const deadlineIso = deadline ? localDeadlineToIso(deadline) : "";
+    if (deadlineIso === null) {
+      setFieldErrors({ deadline: "INVALID_DATE" });
+      return;
+    }
     setIsSaving(true);
 
     try {
-      // datetime-local has no zone: it is read in the browser's time zone and sent as UTC.
-      const draft = { title, description, deadline: deadline ? new Date(deadline).toISOString() : "" };
+      const draft = { title, description, deadline: deadlineIso };
       if (otherTeamIds.length === 0) {
         const created = await createMilestoneApi(token, teamId, draft);
         setMilestones((list) => [...list, created].sort(byDeadline));

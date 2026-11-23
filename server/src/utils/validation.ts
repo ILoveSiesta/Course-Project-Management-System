@@ -32,6 +32,25 @@ export function isValidMilestoneDate(date: Date): boolean {
   return year >= 1 && year <= 9999;
 }
 
+// #94 DEF-DEADLINE (F-02 v0.5 §2, SDS §4): YYYY-MM-DDTHH:mm[:ss[.fff]] with a required zone (Z or ±HH:MM).
+const ISO_DATE_TIME = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?(?:Z|([+-])(\d{2}):(\d{2}))$/;
+
+// Parses a milestone deadline. Returns an invalid Date unless the string has the exact format and its
+// calendar values exist, so `new Date()` cannot repair "2027-02-30" or guess a zone for "2027-05-05T10:00".
+export function parseMilestoneDeadline(value: string): Date {
+  const m = ISO_DATE_TIME.exec(value);
+  if (!m) return new Date(NaN);
+  const [year, month, day, hour, minute] = [1, 2, 3, 4, 5].map((i) => Number(m[i]));
+  const second = m[6] === undefined ? 0 : Number(m[6]);
+  const daysInMonth = month >= 1 && month <= 12 ? new Date(Date.UTC(2000, month, 0)).getUTCDate() : 0;
+  const leapDay = month === 2 && day === 29;
+  const isLeap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  if (month < 1 || month > 12 || day < 1 || day > daysInMonth || (leapDay && !isLeap)) return new Date(NaN);
+  if (hour > 23 || minute > 59 || second > 59) return new Date(NaN);
+  if (m[7] !== undefined && (Number(m[8]) > 23 || Number(m[9]) > 59)) return new Date(NaN);
+  return new Date(value);
+}
+
 // BR-04: title 1–120 characters after trimming, optional description up to 2000 characters,
 // deadline strictly later than `now`. Collects every invalid field before rejecting.
 export function validateMilestoneInput(body: unknown, now: Date): MilestoneInput {
@@ -69,7 +88,7 @@ export function validateMilestoneInput(body: unknown, now: Date): MilestoneInput
   } else if (typeof input.deadline !== "string") {
     details.deadline = "INVALID_TYPE";
   } else {
-    deadline = new Date(input.deadline);
+    deadline = parseMilestoneDeadline(input.deadline);
     if (!isValidMilestoneDate(deadline)) details.deadline = "INVALID_DATE";
     else if (deadline.getTime() <= now.getTime()) details.deadline = "MUST_BE_FUTURE";
   }
@@ -174,7 +193,7 @@ export function validateMilestoneUpdate(body: unknown): MilestoneUpdate {
     if (typeof input.deadline !== "string") {
       details.deadline = "INVALID_TYPE";
     } else {
-      const deadline = new Date(input.deadline);
+      const deadline = parseMilestoneDeadline(input.deadline);
       if (!isValidMilestoneDate(deadline)) details.deadline = "INVALID_DATE";
       else update.deadline = deadline;
     }
