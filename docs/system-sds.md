@@ -26,6 +26,7 @@ Course Project Management System — CPE334 Theme 6
 | 0.20 | 2026-11-23 | phet526 | Address PR #99 review: clarify §6 concurrent HTTP logout semantics (`204` or `401 UNAUTHENTICATED`, never `500`; idempotent `logoutService`) and update §9.2 (`TEST-01-16`, `TEST-01-16s`) |
 | 0.21 | 2026-11-23 | ILoveSiesta | Defect #100 (`DEF-GRADE-STALE`): §4 add `409 GRADE_CHANGED` (release naming a grade other than the stored one); §4.2 the release request carries the shown `{ score, version }` (first written as 0.19 in `66f0d93`; renumbered after #92 PR #99 took 0.19–0.20) |
 | 0.22 | 2026-11-23 | ILoveSiesta | Defect #94 group A (`DEF-DEADLINE`): §4 milestone `deadline` must be an ISO 8601 date-time with a required zone and a real calendar date; impossible dates, date-only values, values without a zone and other strings → `INVALID_DATE` (F-02 v0.5, F-05 v0.5) |
+| 0.23 | 2026-11-23 | ILoveSiesta | Defect #94 group B (`DEF-CLIENT-SESSION`): §3.2 session ended / session check failed / logout failed / connection error states (F-01 v0.12, F-13 v0.12) |
 
 Requirement IDs (FR/BR/NFR/D) refer to `docs/srs.md`. Feature contracts in `docs/sprints/sprint-N/` give the
 exact endpoint request/response shapes; this document defines the shared structure and conventions they follow.
@@ -183,7 +184,10 @@ other role redirects to the user's own home.
 | Empty | A short message, e.g. "No milestones yet" or "No submissions yet" |
 | Validation | Field-level messages next to inputs. The client checks required fields and lengths for convenience; the API's `VALIDATION_ERROR` details are shown per field |
 | Rule rejection | Message from the API error (NFR-12), e.g. "Maximum of 3 versions reached" |
-| 401 from any call | Clear the token and go to `/login` with "Your session has ended" |
+| 401 from any call | Clear the token and go to `/login` with "Your session has ended. Please log in again." (no logout request: the server already rejected the token). Only a 401 ends the session (#94) |
+| Session check failed | `/api/auth/me` fails for another reason (network, non-JSON, 5xx): keep the token, show "Could not check your session. Check your connection and try again." with **Try again** (#94) |
+| Logout failed | `POST /api/auth/logout` fails (network, 5xx): stay signed in, keep the token, header alert "Could not log out. Check your connection and try again."; a 401 counts as signed out (#94) |
+| Connection error | Network failure: "Cannot reach the server. Check your connection and try again."; non-JSON error response: "The server is not available right now (HTTP <status>). Please try again later."; JSON errors keep the API message (#94) |
 | 403 / 404 | A "Not found or not allowed" page; never shows partial data |
 | Times | Displayed in Asia/Bangkok with the zone shown (A-04) |
 | Visual style | One shared stylesheet, `client/src/theme.css`, defines colour tokens, typography and reusable classes (app header/main/footer, `card`, `badge`, `form-field` with `has-error`, `field-error`, `btn`/`btn-secondary`, `alert`, `empty-state`, `milestone-list`). Components use these classes, not inline styles, so every feature looks consistent. Responsive verification at 375 px / 1280 px remains Sprint 3 (SR-06, NFR-11). |
